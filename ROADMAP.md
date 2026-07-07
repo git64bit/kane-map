@@ -108,8 +108,8 @@ Completed in Batch 007:
 Remaining tasks:
 
 - [ ] Add conflict status between public record and field observation
-- [ ] Add record edit/delete controls
-- [ ] Add per-building summary panel
+- [x] Add record delete controls
+- [x] Add per-building summary panel
 - [ ] Add better import merge behavior
 
 Exit condition:
@@ -224,11 +224,10 @@ Batch 007 completed the first structured field-ledger pass. Batch 008 fixed desi
 Next likely batch:
 
 ```text
-record edit/delete
-selected-building summary
-latest observed unit count
-latest confidence and visit status
-revisit-needed highlighting
+building-status overlay from saved records
+revisit-needed highlighting on the map
+conflict highlighting on the map
+summary totals by visible grid cell
 ```
 
 
@@ -242,8 +241,25 @@ Completed:
 - [x] Version 3 and version 2 local records migrate forward
 - [x] Inconsistent older records with visible designators and `0` unit count normalize to the designator count
 
+## Batch 009 — Record management and building summary
+
+Completed:
+
+- [x] Add delete control for individual records
+- [x] Keep schema version 4 because exported record shape did not change
+- [x] Add selected-building summary panel
+- [x] Highlight recent records for the selected building
+- [x] Refresh storage and summary panels after delete/import/clear/add
+- [x] Document conservative correction workflow
+
+Correction workflow:
+
+```text
+incorrect local observation → delete record → enter corrected observation
+```
+
 Next recommended batch:
 
 ```text
-Batch 009 — record edit/delete and selected-building summary
+Batch 010 — building-status overlay from saved records
 ```

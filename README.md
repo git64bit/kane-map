@@ -116,3 +116,21 @@ The prototype now includes a structured offline field ledger. A selected buildin
 Visible designators are parsed locally in the browser. If the unit count field is blank, the parsed designator count becomes the observed unit count.
 
 Records remain local to the browser and can be exported or imported as JSON.
+
+## Batch 009 record management status
+
+Batch 009 adds the first correction workflow for local field observations:
+
+- delete one local observation record without clearing all records
+- highlight recent records associated with the selected building
+- show a selected-building summary panel
+- show latest observed unit count, visit status, and confidence for the selected building
+- warn in the summary when the latest selected-building record is `conflict` or `revisit-needed`
+
+The correction workflow is intentionally conservative:
+
+```text
+bad local observation → delete record → enter corrected observation
+```
+
+The exported record schema remains version 4 because the record shape did not change.
