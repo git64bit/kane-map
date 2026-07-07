@@ -8,22 +8,29 @@ Phase 0 — Project memory.
 
 The repository exists and is public.
 
-The project currently needs documentation before application code.
+The first documentation batch has been pushed by the project owner.
+
+This batch adds the next documentation files needed before application code.
 
 ## Current repository state
 
-Known files:
+Known existing files after the first documentation push:
 
 ```text
 LICENSE
-```
-
-Planned first documentation files:
-
-```text
 README.md
 ROADMAP.md
 docs/PROJECT_STATE.md
+```
+
+This batch should add or update:
+
+```text
+docs/ARCHITECTURE.md
+docs/DATA_MODEL.md
+docs/FIELDWORK_RULES.md
+docs/PROJECT_STATE.md
+ROADMAP.md
 ```
 
 ## Project purpose
@@ -64,15 +71,15 @@ The fieldwork model is visible observation only.
 
 Do not:
 
-* touch mailboxes
-* open mailboxes
-* insert anything into mailboxes
-* remove anything from mailboxes
-* read mail
-* record resident names
-* enter locked or restricted areas
-* bypass access control
-* treat an unlocked area as automatically lawful access
+- touch mailboxes
+- open mailboxes
+- insert anything into mailboxes
+- remove anything from mailboxes
+- read mail
+- record resident names
+- enter locked or restricted areas
+- bypass access control
+- treat an unlocked area as automatically lawful access
 
 The useful observation is the visible unit designator, not resident identity and not mail content.
 
@@ -95,27 +102,25 @@ local cache for base geometry
 network sync for points of interest
 ```
 
-The concept image showed a dark technical dashboard with a local Kane grid and browser-rendered vector objects.
-
 ## Architecture direction
 
 The base map should be locally renderable in the browser.
 
 Use the network for:
 
-* initial static data download
-* data updates
-* points of interest
-* field-observation sync, if enabled later
+- initial static data download
+- data updates
+- points of interest
+- field-observation sync, if enabled later
 
 Use local browser storage for:
 
-* cached base geometry
-* grid state
-* field notes
-* visit status
-* observation records
-* last viewed map position
+- cached base geometry
+- grid state
+- field notes
+- visit status
+- observation records
+- last viewed map position
 
 Preferred storage split:
 
@@ -176,24 +181,24 @@ Do not import real GIS data until the rendering model works.
 
 The first prototype should prove:
 
-* grid rendering
-* grid labels
-* red building extrusion
-* 1 to 3 story height field
-* roads
-* ponds
-* forests
-* dark background
-* browser-only interaction
+- grid rendering
+- grid labels
+- red building extrusion
+- 1 to 3 story height field
+- roads
+- ponds
+- forests
+- dark background
+- browser-only interaction
 
 ## Immediate next step
 
-Add the first documentation files:
+Add this documentation batch.
+
+Then create the first browser-only prototype:
 
 ```text
-README.md
-ROADMAP.md
-docs/PROJECT_STATE.md
+index.html
 ```
 
-Then add the first browser-only prototype.
+The prototype should use synthetic data and no build system.
