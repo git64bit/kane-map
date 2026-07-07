@@ -87,14 +87,22 @@
       <footer class="status-bar" aria-label="Map status">
         <span id="renderStatus">Render: OK</span>
         <span id="viewStatus">Zoom 1.00 / Bearing 0°</span>
-        <span>Mode: offline canvas</span>
+        <span id="chunkStatus">Chunks 0/0</span>
+        <span id="visibleCellStatus">Visible cells 0/0</span>
+        <span>Mode: offline chunked canvas</span>
         <span id="storageStatus">Storage: checking</span>
         <span>No CDN · No server · No database</span>
       </footer>
     </section>
   </main>
 
-  <script src="src/data/demoFeatures.js"></script>
+  <script src="src/data/geometry.js"></script>
+  <script src="src/data/chunkRegistry.js"></script>
+  <script src="src/data/demoCatalog.js"></script>
+  <script src="src/data/chunks/regionalOrientation.js"></script>
+  <script src="src/data/chunks/westNeighborhood.js"></script>
+  <script src="src/data/chunks/centralTownhomes.js"></script>
+  <script src="src/data/chunks/eastApartments.js"></script>
   <script src="src/map/grid.js"></script>
   <script src="src/storage/recordSchema.js"></script>
   <script src="src/storage/localStore.js"></script>

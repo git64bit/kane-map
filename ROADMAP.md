@@ -48,7 +48,10 @@ Current structure:
 index.html
 styles/app.css
 src/app.js
-src/data/demoFeatures.js
+src/data/geometry.js
+src/data/chunkRegistry.js
+src/data/demoCatalog.js
+src/data/chunks/*.js
 src/map/grid.js
 src/map/renderer.js
 src/storage/recordSchema.js
@@ -56,6 +59,7 @@ src/storage/localStore.js
 docs/OFFLINE_FIRST.md
 docs/PROXY_LAYER.md
 docs/LOCAL_RECORDS.md
+docs/CHUNKED_DATA.md
 docs/PROJECT_STATE.md
 ```
 
@@ -74,7 +78,7 @@ Opening `index.html` directly shows the working offline prototype.
 
 ## Phase 3 — Local saved observations
 
-Status: current.
+Status: complete enough to proceed.
 
 Goal: make field observation records durable without introducing a server or database.
 
@@ -138,6 +142,26 @@ Tasks:
 Exit condition:
 
 The app can load only the local files needed for the current view.
+
+## Phase 5.5 — Chunked local data
+
+Goal: avoid the one-giant-array model before real Kane County data is imported.
+
+Status: implemented in Batch 006.
+
+Tasks:
+
+- [x] Add local data catalog
+- [x] Add data chunk registry
+- [x] Split synthetic data into local chunks
+- [x] Select render chunks from visible grid cells
+- [x] Add footer status for visible cells
+- [x] Add footer status for selected chunks
+- [x] Document chunked data model
+
+Exit condition:
+
+The app still opens directly as `index.html`, but the code no longer assumes all geometry should live in one giant feature file.
 
 ## Phase 6 — Real geometry import
 
