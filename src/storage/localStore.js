@@ -32,6 +32,17 @@
       return snapshot();
     }
 
+    function deleteRecord(recordId) {
+      const before = records.length;
+      records = records.filter((record) => record.id !== recordId);
+      if (records.length !== before) saveToBrowser();
+      return before !== records.length;
+    }
+
+    function recordsForBuilding(buildingId) {
+      return snapshot().filter((record) => record.buildingId === buildingId);
+    }
+
     function clear() {
       records = [];
       if (storageAvailable) {
@@ -123,9 +134,11 @@
     return {
       addRecord,
       clear,
+      deleteRecord,
       download,
       exportJson,
       importJson,
+      recordsForBuilding,
       replaceAll,
       snapshot,
       storageStatus

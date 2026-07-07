@@ -20,6 +20,7 @@
     selectedCell: document.getElementById("selectedCell"),
     selectedBuilding: document.getElementById("selectedBuilding"),
     selectedStories: document.getElementById("selectedStories"),
+    buildingSummary: document.getElementById("buildingSummary"),
     observationForm: document.getElementById("observationForm"),
     siteLabel: document.getElementById("siteLabel"),
     entranceId: document.getElementById("entranceId"),
@@ -60,6 +61,7 @@
     updateSelectedPanel();
     updateDesignatorPreview();
     updateRecordPanel();
+    updateBuildingSummary();
     updateStorageStatus();
     updateViewAndChunkStatus();
   }
@@ -126,6 +128,19 @@
       if (!ok) return;
       store.clear();
       updateRecordPanel();
+      updateBuildingSummary();
+      updateStorageStatus();
+    });
+
+    els.recordList.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-record-delete]");
+      if (!button) return;
+      const recordId = button.getAttribute("data-record-delete");
+      const ok = confirm(`Delete local observation record ${recordId}?`);
+      if (!ok) return;
+      store.deleteRecord(recordId);
+      updateRecordPanel();
+      updateBuildingSummary();
       updateStorageStatus();
     });
   }
@@ -165,6 +180,7 @@
 
       clearObservationForm();
       updateRecordPanel();
+      updateBuildingSummary();
       updateStorageStatus();
     });
   }
@@ -205,6 +221,7 @@
     selected = { cell: hit.cell, building: hit.building };
     renderer.setSelected(hit.building, hit.cell);
     updateSelectedPanel();
+    updateRecordPanel();
   }
 
   function updateSelectedPanel() {
@@ -213,6 +230,38 @@
       ? `${selected.building.label} · ${selected.building.name}`
       : "None";
     els.selectedStories.textContent = selected.building ? `${selected.building.stories}` : "—";
+    updateBuildingSummary();
+  }
+
+  function updateBuildingSummary() {
+    if (!selected.building) {
+      els.buildingSummary.textContent = "Select a building to view saved observations.";
+      return;
+    }
+
+    const records = store.recordsForBuilding(selected.building.id);
+    if (!records.length) {
+      els.buildingSummary.innerHTML = [
+        `<strong>${escapeHtml(selected.building.label)}</strong>`,
+        `<br>No saved observations for this building.`
+      ].join("");
+      return;
+    }
+
+    const latest = records.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    const count = latest.observedUnitCount === null ? "unknown" : String(latest.observedUnitCount);
+    const warning = latest.visitStatus === "revisit-needed" || latest.visitStatus === "conflict"
+      ? `<br><span class="status-warning">${escapeHtml(latest.visitStatus)}</span>`
+      : "";
+
+    els.buildingSummary.innerHTML = [
+      `<strong>${escapeHtml(selected.building.label)}</strong>`,
+      `<br>${records.length} saved observation${records.length === 1 ? "" : "s"}`,
+      `<br>Latest count: ${escapeHtml(count)}`,
+      `<br>Latest status: ${escapeHtml(latest.visitStatus)}`,
+      `<br>Confidence: ${escapeHtml(latest.confidence)}`,
+      warning
+    ].join("");
   }
 
   function updateRecordPanel() {
@@ -225,8 +274,13 @@
       const count = record.observedUnitCount === null ? "unknown count" : `${record.observedUnitCount} units`;
       const date = record.createdAt ? record.createdAt.slice(0, 10) : "undated";
       const designatorText = formatDesignatorList(record);
+      if (selected.building && record.buildingId === selected.building.id) {
+        item.classList.add("record-selected-building");
+      }
+
       item.innerHTML = [
-        `<strong>${escapeHtml(record.buildingLabel)}</strong>`,
+        `<div class="record-header"><strong>${escapeHtml(record.buildingLabel)}</strong>`,
+        `<button type="button" data-record-delete="${escapeHtml(record.id)}">Delete</button></div>`,
         ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
         `<br><span class="muted">${escapeHtml(record.id)} · ${escapeHtml(date)} · ${escapeHtml(record.visitStatus)}</span>`,
         record.siteLabel ? `<br>Site: ${escapeHtml(record.siteLabel)}` : "",
@@ -293,6 +347,7 @@
       try {
         store.importJson(String(reader.result || ""));
         updateRecordPanel();
+        updateBuildingSummary();
         updateStorageStatus();
       } catch (error) {
         alert(`Import failed: ${error.message}`);
