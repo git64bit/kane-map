@@ -4,9 +4,9 @@ Last updated: 2026-07-07
 
 ## Current phase
 
-Phase 5.5 — Chunked local data prototype.
+Phase 5.6 — Local field-ledger record management.
 
-The app is now an offline-first Canvas prototype with local saved observations and a first scale-oriented chunk layer.
+The app is an offline-first Canvas prototype with local saved observations, chunked local geometry, and basic per-record management.
 
 ## Current repository state
 
@@ -20,6 +20,7 @@ src/data/geometry.js
 src/data/chunkRegistry.js
 src/data/demoCatalog.js
 src/data/chunks/*.js
+src/field/designators.js
 src/map/grid.js
 src/map/renderer.js
 src/storage/localStore.js
@@ -44,12 +45,15 @@ Working features:
 - green forests
 - pan, zoom, rotate, reset
 - building and grid selection
-- local field observations
+- chunked local demo geometry
+- visible-cell and selected-chunk footer status
+- structured field observations
+- visible-designator parsing and unit-count derivation
 - `localStorage` persistence
 - JSON export/import
-- chunk status in footer
-- visible-cell status in footer
-- JavaScript data chunks registered locally
+- single-record delete
+- selected-building summary panel
+- selected-building record highlighting
 
 ## Current data mode
 
@@ -67,6 +71,31 @@ east-apartments
 The app computes visible grid cells and materializes the matching chunks for rendering.
 
 This prepares the project for larger local data without requiring a remote database.
+
+## Current record mode
+
+The field ledger writes schema version 4 records to browser-local storage.
+
+The app supports:
+
+```text
+add record
+list recent records
+delete one record
+clear all local records
+export JSON
+import JSON
+```
+
+Correction workflow for now:
+
+```text
+delete incorrect local record
+enter corrected local record
+export JSON backup if needed
+```
+
+Full edit-in-place is deferred until audit/version behavior is defined.
 
 ## Important architecture decision
 
@@ -103,51 +132,17 @@ The useful observation is the visible unit designator and the countable building
 
 ## Immediate next step
 
-Recommended Batch 009:
+Recommended Batch 010:
 
 ```text
-Add edit/delete controls for individual field records.
-Add a selected-building summary panel using saved records.
+Add a building-status layer from saved records.
 ```
 
 Possible additions:
 
-- latest observed count by selected building
-- latest confidence and visit status
-- revisit-needed highlighting
-- delete single record
-- export filtered building history
+- tint or outline selected buildings based on saved observation status
+- show `revisit-needed` and `conflict` buildings more clearly
+- add a map legend entry for observation status
+- add building summary totals by visible grid cell
 
 Do not import real Kane County data yet.
-
-
-## Batch 008 state
-
-The app now has a structured field ledger for the primary Kane-Map use case.
-
-Current working capabilities:
-
-```text
-select a building
-enter site/address note
-enter entrance id
-enter mailbox bank id
-enter visible designators
-parse and count visible designators
-record observed unit count
-record confidence
-record visit status
-record access context
-record notes
-save locally in browser storage
-export/import JSON
-```
-
-The record schema is version 4. The app writes to `kane-map.local-observations.v4` and attempts to migrate records from version 3 and version 2 local storage. Batch 008 fixes an inconsistent-record case where visible designators exist but the saved unit count is `0`; normalization now uses the visible-designator count.
-
-Current next step:
-
-```text
-Add edit/delete controls for individual records.
-Add a selected-building summary panel using saved records.
-```
