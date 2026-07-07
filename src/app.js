@@ -1,17 +1,19 @@
 (function bootKaneMap(global) {
   "use strict";
 
-  const data = global.KaneMapDemoFeatures;
-  const grid = global.KaneMapGrid.makeKaneGrid(data.meta.bounds, {
+  const catalog = global.KaneMapDemoCatalog;
+  const grid = global.KaneMapGrid.makeKaneGrid(catalog.meta.bounds, {
     rows: 4,
     cols: 6,
     startNorth: 11,
     startEast: 5
   });
 
+  const featureStore = global.KaneMapChunkRegistry.createFeatureStore(catalog);
+  const initialData = featureStore.buildDataForCells(grid.cells.map((cell) => cell.code));
   const store = global.KaneMapLocalStore.createLocalObservationStore();
   const canvas = document.getElementById("mapCanvas");
-  const renderer = global.KaneMapRenderer.createRenderer(canvas, data, grid);
+  const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
 
   const els = {
     selectedCell: document.getElementById("selectedCell"),
@@ -25,6 +27,8 @@
     recordList: document.getElementById("recordList"),
     storageStatus: document.getElementById("storageStatus"),
     viewStatus: document.getElementById("viewStatus"),
+    chunkStatus: document.getElementById("chunkStatus"),
+    visibleCellStatus: document.getElementById("visibleCellStatus"),
     zoomIn: document.getElementById("zoomIn"),
     zoomOut: document.getElementById("zoomOut"),
     rotateLeft: document.getElementById("rotateLeft"),
@@ -35,10 +39,8 @@
     clearRecords: document.getElementById("clearRecords")
   };
 
-  let selected = {
-    cell: null,
-    building: null
-  };
+  let selected = { cell: null, building: null };
+  let visibleCellCodes = [];
 
   function init() {
     bindCanvasEvents();
@@ -49,12 +51,13 @@
     updateSelectedPanel();
     updateRecordPanel();
     updateStorageStatus();
-    updateViewStatus();
+    updateViewAndChunkStatus();
   }
 
   function handleResize() {
     renderer.resize();
-    updateViewStatus();
+    updateActiveChunks();
+    updateViewAndChunkStatus();
   }
 
   function bindCanvasEvents() {
@@ -70,12 +73,15 @@
       if (!renderer.state.dragging) return;
       moved = true;
       renderer.dragTo(pointerPosition(event));
-      updateViewStatus();
+      updateActiveChunks();
+      updateViewAndChunkStatus();
     });
 
     canvas.addEventListener("pointerup", (event) => {
       renderer.endDrag();
       if (!moved) selectAt(event);
+      updateActiveChunks();
+      updateViewAndChunkStatus();
     });
 
     canvas.addEventListener("pointercancel", () => {
@@ -85,35 +91,17 @@
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
       renderer.zoomBy(event.deltaY < 0 ? 1.12 : 0.88);
-      updateViewStatus();
+      updateActiveChunks();
+      updateViewAndChunkStatus();
     }, { passive: false });
   }
 
   function bindControlEvents() {
-    els.zoomIn.addEventListener("click", () => {
-      renderer.zoomBy(1.18);
-      updateViewStatus();
-    });
-
-    els.zoomOut.addEventListener("click", () => {
-      renderer.zoomBy(0.84);
-      updateViewStatus();
-    });
-
-    els.rotateLeft.addEventListener("click", () => {
-      renderer.rotateBy(-12);
-      updateViewStatus();
-    });
-
-    els.rotateRight.addEventListener("click", () => {
-      renderer.rotateBy(12);
-      updateViewStatus();
-    });
-
-    els.resetView.addEventListener("click", () => {
-      renderer.resetView();
-      updateViewStatus();
-    });
+    els.zoomIn.addEventListener("click", () => changeView(() => renderer.zoomBy(1.18)));
+    els.zoomOut.addEventListener("click", () => changeView(() => renderer.zoomBy(0.84)));
+    els.rotateLeft.addEventListener("click", () => changeView(() => renderer.rotateBy(-12)));
+    els.rotateRight.addEventListener("click", () => changeView(() => renderer.rotateBy(12)));
+    els.resetView.addEventListener("click", () => changeView(() => renderer.resetView()));
 
     els.exportRecords.addEventListener("click", () => {
       const filename = `kane-map-observations-${dateStamp()}.json`;
@@ -160,12 +148,22 @@
     });
   }
 
+  function changeView(action) {
+    action();
+    updateActiveChunks();
+    updateViewAndChunkStatus();
+  }
+
+  function updateActiveChunks() {
+    const visibleBounds = global.KaneMapGrid.expandBounds(renderer.visibleWorldBounds(), 90);
+    const visibleCells = global.KaneMapGrid.findCellsIntersectingBounds(grid, visibleBounds);
+    visibleCellCodes = visibleCells.map((cell) => cell.code);
+    renderer.setData(featureStore.buildDataForCells(visibleCellCodes));
+  }
+
   function selectAt(event) {
     const hit = renderer.hitTest(pointerPosition(event));
-    selected = {
-      cell: hit.cell,
-      building: hit.building
-    };
+    selected = { cell: hit.cell, building: hit.building };
     renderer.setSelected(hit.building, hit.cell);
     updateSelectedPanel();
   }
@@ -175,9 +173,7 @@
     els.selectedBuilding.textContent = selected.building
       ? `${selected.building.label} · ${selected.building.name}`
       : "None";
-    els.selectedStories.textContent = selected.building
-      ? `${selected.building.stories}`
-      : "—";
+    els.selectedStories.textContent = selected.building ? `${selected.building.stories}` : "—";
   }
 
   function updateRecordPanel() {
@@ -206,11 +202,15 @@
     els.storageStatus.title = status.detail;
   }
 
-  function updateViewStatus() {
+  function updateViewAndChunkStatus() {
+    const chunkStatus = featureStore.statusForCells(visibleCellCodes);
     els.viewStatus.textContent = [
       `Zoom ${renderer.state.zoom.toFixed(2)}`,
       `Bearing ${Math.round(renderer.state.bearing)}°`
     ].join(" / ");
+    els.chunkStatus.textContent = `Chunks ${chunkStatus.selected}/${chunkStatus.total}`;
+    els.chunkStatus.title = chunkStatus.ids.join(", ");
+    els.visibleCellStatus.textContent = `Visible cells ${visibleCellCodes.length}/${grid.cells.length}`;
   }
 
   function handleImportRecords(event) {
