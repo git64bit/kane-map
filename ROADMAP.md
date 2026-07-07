@@ -6,16 +6,16 @@ This roadmap is organized so the project can pause and resume without losing dir
 
 Goal: make the repository self-explaining before adding application code.
 
-Status: in progress.
+Status: started.
 
 Tasks:
 
 - [x] Add `README.md`
 - [x] Add `ROADMAP.md`
 - [x] Add `docs/PROJECT_STATE.md`
-- [ ] Add `docs/ARCHITECTURE.md`
-- [ ] Add `docs/DATA_MODEL.md`
-- [ ] Add `docs/FIELDWORK_RULES.md`
+- [x] Add `docs/ARCHITECTURE.md`
+- [x] Add `docs/DATA_MODEL.md`
+- [x] Add `docs/FIELDWORK_RULES.md`
 
 Exit condition:
 
@@ -25,20 +25,22 @@ A future reader can understand what Kane-Map is, why it exists, what the first p
 
 Goal: prove the visual model without real GIS data.
 
+Status: in progress.
+
 Tasks:
 
-- [ ] Add `index.html`
-- [ ] Add a dark map canvas
-- [ ] Add synthetic Kane-style grid cells
-- [ ] Add readable grid labels such as `N12-E07`
-- [ ] Add red residential building blocks
-- [ ] Add 1, 2, and 3 story height differences
-- [ ] Add white roads
-- [ ] Add blue ponds
-- [ ] Add green forest polygons
-- [ ] Add basic pan, zoom, pitch, and rotate controls
-- [ ] Add a small legend
-- [ ] Add a simple status panel
+- [x] Add `index.html`
+- [x] Add a dark map canvas
+- [x] Add synthetic Kane-style grid cells
+- [x] Add readable grid labels such as `N12-E07`
+- [x] Add red residential building blocks
+- [x] Add 1, 2, and 3 story height differences
+- [x] Add white roads
+- [x] Add blue ponds
+- [x] Add green forest polygons
+- [x] Add basic pan, zoom, pitch, and rotate controls
+- [x] Add a small legend
+- [x] Add a simple status panel
 
 Exit condition:
 
@@ -116,15 +118,15 @@ Goal: define the address/unit reconstruction ledger.
 Core entities:
 
 ```text
-Grid cell
-Site
-Building
-Entrance
-Mailbox bank
-Observed designator
-Observation event
-Source record
-Conflict record
+grid_cell
+site
+building
+entrance
+mailbox_bank
+visible_designator
+observation_event
+source_record
+conflict_record
 ```
 
 Tasks:
@@ -180,9 +182,9 @@ Tasks:
 - [ ] Verify licensing and reuse terms
 - [ ] Normalize geometry
 - [ ] Clip to Kane County
-- [ ] simplify geometry for browser rendering
-- [ ] assign layer styles
-- [ ] generate static bundles
+- [ ] Simplify geometry for browser rendering
+- [ ] Assign layer styles
+- [ ] Generate static bundles
 
 Exit condition:
 
@@ -248,12 +250,6 @@ Kane-Map can support durable civic recordkeeping without turning field observati
 
 ## Current next step
 
-Complete Phase 0 by adding:
+Confirm that the single-file prototype renders in the browser.
 
-```text
-docs/ARCHITECTURE.md
-docs/DATA_MODEL.md
-docs/FIELDWORK_RULES.md
-```
-
-After Phase 0, create the first browser-only synthetic prototype.
+After that, split the code into modules.
