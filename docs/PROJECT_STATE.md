@@ -4,70 +4,90 @@ Last updated: 2026-07-07
 
 ## Current phase
 
-Phase 0 — Project memory.
+Phase 1 — Browser-only synthetic prototype.
 
-The repository exists and is public.
+Phase 0 documentation has been started. The next repo batch adds the first runnable prototype.
 
-The first documentation batch has been pushed by the project owner.
+## Current repository direction
 
-This batch adds the next documentation files needed before application code.
-
-## Current repository state
-
-Known existing files after the first documentation push:
+The repository should now contain documentation plus a single-file prototype:
 
 ```text
 LICENSE
 README.md
 ROADMAP.md
-docs/PROJECT_STATE.md
+docs/
+  ARCHITECTURE.md
+  DATA_MODEL.md
+  FIELDWORK_RULES.md
+  PROJECT_STATE.md
+index.html
 ```
 
-This batch should add or update:
+## What `index.html` does
+
+The first prototype is intentionally synthetic.
+
+It renders:
+
+- dark gray map background
+- Kane-style grid cells
+- readable grid labels such as `N11-E05`
+- red residential building blocks
+- visible 1, 2, and 3 story height differences
+- white road lines
+- blue ponds
+- green forest polygons
+- basic map controls for zoom, pitch, and rotation
+- a legend and status panels
+
+No real Kane County data has been imported yet.
+
+## Why synthetic data comes first
+
+The visual and technical model should be proven before importing real GIS layers.
+
+Synthetic data lets the project test:
+
+- browser-side rendering
+- MapLibre setup
+- grid labeling
+- building extrusion
+- visual contrast
+- layer ordering
+- simple fieldwork-oriented UI
+
+## Current technical stack
+
+The prototype uses:
 
 ```text
-docs/ARCHITECTURE.md
-docs/DATA_MODEL.md
-docs/FIELDWORK_RULES.md
-docs/PROJECT_STATE.md
-ROADMAP.md
+MapLibre GL JS from CDN
+single HTML file
+inline JavaScript
+inline synthetic GeoJSON
+browser WebGL rendering
 ```
 
-## Project purpose
+This is not the final structure. It is a proof-of-rendering milestone.
 
-Kane-Map is a county-local residential mapping and field-observation tool for Kane County, Illinois.
+## Next technical step
 
-The project is designed around a browser-rendered map with a Plus Code-like local grid, simple orientation layers, and residential building rectangles that can carry field observation records.
-
-## Primary operational problem
-
-Some HOAs and residential buildings do not expose unit numbers in normal public-facing records.
-
-The project needs to help reconstruct residential unit counts by recording visible unit designators and observed building-level evidence.
-
-Example visible designators:
+After confirming that `index.html` renders correctly in the browser, split the code into modules:
 
 ```text
-100A
-100B
-100C
-100D
+src/main.js
+src/data/demoFeatures.js
+src/map/initMap.js
+src/map/grid.js
+src/map/layers.js
 ```
 
-or:
+Do not split the code until the single-file prototype is confirmed working.
 
-```text
-1A
-1B
-2A
-2B
-```
+## Fieldwork boundary remains unchanged
 
-The goal is to count addressable units per building or mailbox-bank service area.
-
-## Hard boundary
-
-The fieldwork model is visible observation only.
+Kane-Map field observation is visible observation only.
 
 Do not:
 
@@ -81,124 +101,4 @@ Do not:
 - bypass access control
 - treat an unlocked area as automatically lawful access
 
-The useful observation is the visible unit designator, not resident identity and not mail content.
-
-## Visual model
-
-The working visual target is:
-
-```text
-dark gray background
-thin wireframe grid
-human-readable grid labels
-red residential buildings
-1, 2, and 3 story block heights
-white roads
-blue ponds
-green forests
-simple geometry
-browser-side rendering
-local cache for base geometry
-network sync for points of interest
-```
-
-## Architecture direction
-
-The base map should be locally renderable in the browser.
-
-Use the network for:
-
-- initial static data download
-- data updates
-- points of interest
-- field-observation sync, if enabled later
-
-Use local browser storage for:
-
-- cached base geometry
-- grid state
-- field notes
-- visit status
-- observation records
-- last viewed map position
-
-Preferred storage split:
-
-```text
-CacheStorage  = static app assets and downloaded map bundles
-IndexedDB     = local structured records and field observations
-Memory        = currently visible render objects
-Network       = POI and sync records
-```
-
-## Grid rule
-
-The grid should stay short and human-readable.
-
-Draft grid example:
-
-```text
-KANE-N12-E07
-KANE-N12-E07-04
-KANE-N12-E07-04-C3
-```
-
-The grid locates a place.
-
-The address ledger records what was observed there.
-
-The unit list must not be encoded directly into the public grid name.
-
-## Data model direction
-
-Expected entities:
-
-```text
-grid_cell
-site
-building
-entrance
-mailbox_bank
-visible_designator
-observation_event
-source_record
-conflict_record
-```
-
-A building may have one or more mailbox banks.
-
-A grid cell may contain many buildings.
-
-A building may have field observations from multiple visits.
-
-## Development approach
-
-Start simple.
-
-The first technical prototype should use fake data.
-
-Do not import real GIS data until the rendering model works.
-
-The first prototype should prove:
-
-- grid rendering
-- grid labels
-- red building extrusion
-- 1 to 3 story height field
-- roads
-- ponds
-- forests
-- dark background
-- browser-only interaction
-
-## Immediate next step
-
-Add this documentation batch.
-
-Then create the first browser-only prototype:
-
-```text
-index.html
-```
-
-The prototype should use synthetic data and no build system.
+The useful observation is the visible unit designator and building/unit-count pattern, not resident identity and not mail content.
