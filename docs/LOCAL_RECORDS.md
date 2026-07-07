@@ -6,7 +6,7 @@ This is not a remote database and does not require a server.
 
 ## Current storage mode
 
-Batch 005 uses `localStorage` for simple durable browser-local storage.
+Batch 007 uses `localStorage` for simple durable browser-local storage.
 
 The app also supports JSON export/import so records can be backed up, moved, reviewed, or archived outside the browser.
 
@@ -15,17 +15,31 @@ The app also supports JSON export/import so records can be backed up, moved, rev
 The following records persist after the browser is closed and reopened:
 
 - selected building observations
+- site/address note
+- entrance ID
+- mailbox bank ID
+- observed visible designators
+- parsed visible-designator list
 - observed unit count
 - visible designator pattern
+- confidence
+- visit status
+- access context
 - notes
 - grid cell
-- building ID and label
+- building ID, label, and name
 - story count
 - fieldwork boundary flags
 - creation date
 - schema version
 
 The current storage key is:
+
+```text
+kane-map.local-observations.v3
+```
+
+Batch 007 attempts to migrate records from:
 
 ```text
 kane-map.local-observations.v2
@@ -51,8 +65,8 @@ Exports use an envelope format:
 
 ```json
 {
-  "format": "kane-map-offline-observations",
-  "version": 2,
+  "format": "kane-map-observation-records",
+  "version": 3,
   "exportedAt": "2026-07-07T00:00:00.000Z",
   "records": []
 }
@@ -66,19 +80,26 @@ A current observation record looks like this:
 
 ```json
 {
-  "id": "OBS-000001",
-  "schemaVersion": 2,
+  "id": "KMO-000001",
+  "schemaVersion": 3,
   "createdAt": "2026-07-07T00:00:00.000Z",
   "updatedAt": "2026-07-07T00:00:00.000Z",
   "gridCell": "N12-E07",
-  "buildingId": "B04",
-  "buildingLabel": "B04",
-  "stories": 3,
-  "observedUnitCount": 12,
-  "designatorPattern": "100A–100L",
+  "buildingId": "B-006",
+  "buildingLabel": "B06",
+  "buildingName": "Central townhome row 1",
+  "stories": 2,
+  "siteLabel": "Building 2 / 1420 Example Dr",
+  "entranceId": "E01",
+  "mailboxBankId": "M01",
+  "observedUnitCount": 4,
+  "designatorPattern": "number+letter",
+  "designatorRaw": "100A, 100B, 100C, 100D",
+  "visibleDesignators": ["100A", "100B", "100C", "100D"],
+  "confidence": "high",
+  "visitStatus": "counted",
+  "accessContext": "visible from open common area",
   "notes": "Visible designators only.",
-  "confidence": "unreviewed",
-  "visitStatus": "observed",
   "observationMethod": "visible designators only",
   "mailboxTouched": false,
   "mailboxOpened": false,
@@ -112,10 +133,10 @@ It is not the final storage choice for large datasets.
 Later storage options:
 
 ```text
-localStorage  = simple settings and small record sets
-IndexedDB     = larger local observation ledger
-JSON files    = portable backup and review format
-static bundles = base geometry and tile-like chunks
+localStorage    = simple settings and small record sets
+IndexedDB       = larger local observation ledger
+JSON files      = portable backup and review format
+static bundles  = base geometry and tile-like chunks
 ```
 
 ## Important limitation

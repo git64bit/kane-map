@@ -103,21 +103,51 @@ The useful observation is the visible unit designator and the countable building
 
 ## Immediate next step
 
-Recommended Batch 007:
+Recommended Batch 009:
 
 ```text
-Add building-detail fields and visit-status workflow.
+Add edit/delete controls for individual field records.
+Add a selected-building summary panel using saved records.
 ```
 
 Possible additions:
 
-- visit status selector
-- confidence selector
-- access context selector
-- mailbox bank ID field
-- observed designator list field
-- conflict status field
-- building summary panel
-- per-building observation history
+- latest observed count by selected building
+- latest confidence and visit status
+- revisit-needed highlighting
+- delete single record
+- export filtered building history
 
 Do not import real Kane County data yet.
+
+
+## Batch 008 state
+
+The app now has a structured field ledger for the primary Kane-Map use case.
+
+Current working capabilities:
+
+```text
+select a building
+enter site/address note
+enter entrance id
+enter mailbox bank id
+enter visible designators
+parse and count visible designators
+record observed unit count
+record confidence
+record visit status
+record access context
+record notes
+save locally in browser storage
+export/import JSON
+```
+
+The record schema is version 4. The app writes to `kane-map.local-observations.v4` and attempts to migrate records from version 3 and version 2 local storage. Batch 008 fixes an inconsistent-record case where visible designators exist but the saved unit count is `0`; normalization now uses the visible-designator count.
+
+Current next step:
+
+```text
+Add edit/delete controls for individual records.
+Add a selected-building summary panel using saved records.
+```
