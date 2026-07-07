@@ -4,13 +4,13 @@ Last updated: 2026-07-07
 
 ## Current phase
 
-Phase 2 — Offline-first modular prototype.
+Phase 3 — Local saved observations.
 
 ## What changed in this batch
 
-This batch replaces the CDN-dependent MapLibre prototype direction with a pure Canvas prototype.
+Batch 005 keeps the app offline and database-free, but makes observation records durable across browser sessions.
 
-The reason is practical: a pure Canvas renderer can run directly from `index.html` with no internet, no server, no database, no build step, and no vendored third-party library.
+Records now save in browser-local `localStorage` and can still be exported/imported as JSON.
 
 ## Current working rule
 
@@ -21,7 +21,7 @@ That means:
 ```text
 field runtime: local browser
 base rendering: local files
-observation records: local memory and JSON export/import
+observation records: local browser storage and JSON export/import
 server/proxy: optional later for data preparation and bundle publishing
 ```
 
@@ -34,13 +34,17 @@ src/app.js
 src/data/demoFeatures.js
 src/map/grid.js
 src/map/renderer.js
-src/storage/offlineRecords.js
+src/storage/recordSchema.js
+src/storage/localStore.js
 docs/OFFLINE_FIRST.md
 docs/PROXY_LAYER.md
+docs/LOCAL_RECORDS.md
 docs/PROJECT_STATE.md
 ROADMAP.md
 README.md
 ```
+
+The older `src/storage/offlineRecords.js` file may still exist in the repository if it was pushed in Batch 004. It is no longer loaded by `index.html`.
 
 ## Current prototype behavior
 
@@ -59,8 +63,32 @@ The map renders:
 - zoom by wheel or buttons
 - rotate by buttons
 - click selection for buildings/grid cells
-- simple offline observation records
+- local saved observation records
 - JSON export/import
+
+## Current local record behavior
+
+Records save under this browser storage key:
+
+```text
+kane-map.local-observations.v2
+```
+
+Export format:
+
+```text
+kane-map-offline-observations
+version 2
+```
+
+Each exported record includes fieldwork boundary fields:
+
+```text
+mailboxTouched: false
+mailboxOpened: false
+mailRead: false
+residentNamesRecorded: false
+```
 
 ## Important limits
 
@@ -70,7 +98,9 @@ The current geometry is synthetic demo geometry.
 
 There is no real Kane County data in the app yet.
 
-There is no persistent browser database in this batch. Records are kept in memory until exported.
+`localStorage` is acceptable for the early prototype, but it is not the final storage choice for very large record sets.
+
+Export JSON before changing machines, browsers, or project folders.
 
 ## Why no database yet
 
@@ -79,27 +109,28 @@ The immediate purpose is to prove that the map and observation workflow can run 
 Later options:
 
 - keep JSON-only workflow
-- add local IndexedDB
+- keep localStorage for small records/settings
+- add local IndexedDB for larger offline records
 - add optional sync service
-- support all three as separate modes
+- support all modes separately
 
 ## Next recommended task
 
-Improve the observation ledger.
+Improve the observation ledger fields.
 
 Suggested next batch:
 
 ```text
-Batch 005 — structured address/unit observations
+Batch 006 — structured observation form
 ```
 
 Possible additions:
 
-- status field: candidate, observed, counted, conflict, revisit-needed
-- confidence field: low, medium, high
+- confidence selector
+- visit status selector
 - entrance ID
 - mailbox bank ID
 - designator list field
-- privacy boundary flags in exported JSON
-- better export filename
-- visible fieldwork disclaimer in UI
+- record delete button
+- record edit flow
+- import merge/replace choice
