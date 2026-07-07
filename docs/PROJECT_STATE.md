@@ -4,101 +4,102 @@ Last updated: 2026-07-07
 
 ## Current phase
 
-Phase 1 — Browser-only synthetic prototype.
+Phase 2 — Offline-first modular prototype.
 
-Phase 0 documentation has been started. The next repo batch adds the first runnable prototype.
+## What changed in this batch
 
-## Current repository direction
+This batch replaces the CDN-dependent MapLibre prototype direction with a pure Canvas prototype.
 
-The repository should now contain documentation plus a single-file prototype:
+The reason is practical: a pure Canvas renderer can run directly from `index.html` with no internet, no server, no database, no build step, and no vendored third-party library.
+
+## Current working rule
+
+Kane-Map should be offline-first and server-assisted later.
+
+That means:
 
 ```text
-LICENSE
-README.md
-ROADMAP.md
-docs/
-  ARCHITECTURE.md
-  DATA_MODEL.md
-  FIELDWORK_RULES.md
-  PROJECT_STATE.md
+field runtime: local browser
+base rendering: local files
+observation records: local memory and JSON export/import
+server/proxy: optional later for data preparation and bundle publishing
+```
+
+## Current file structure
+
+```text
 index.html
-```
-
-## What `index.html` does
-
-The first prototype is intentionally synthetic.
-
-It renders:
-
-- dark gray map background
-- Kane-style grid cells
-- readable grid labels such as `N11-E05`
-- red residential building blocks
-- visible 1, 2, and 3 story height differences
-- white road lines
-- blue ponds
-- green forest polygons
-- basic map controls for zoom, pitch, and rotation
-- a legend and status panels
-
-No real Kane County data has been imported yet.
-
-## Why synthetic data comes first
-
-The visual and technical model should be proven before importing real GIS layers.
-
-Synthetic data lets the project test:
-
-- browser-side rendering
-- MapLibre setup
-- grid labeling
-- building extrusion
-- visual contrast
-- layer ordering
-- simple fieldwork-oriented UI
-
-## Current technical stack
-
-The prototype uses:
-
-```text
-MapLibre GL JS from CDN
-single HTML file
-inline JavaScript
-inline synthetic GeoJSON
-browser WebGL rendering
-```
-
-This is not the final structure. It is a proof-of-rendering milestone.
-
-## Next technical step
-
-After confirming that `index.html` renders correctly in the browser, split the code into modules:
-
-```text
-src/main.js
+styles/app.css
+src/app.js
 src/data/demoFeatures.js
-src/map/initMap.js
 src/map/grid.js
-src/map/layers.js
+src/map/renderer.js
+src/storage/offlineRecords.js
+docs/OFFLINE_FIRST.md
+docs/PROXY_LAYER.md
+docs/PROJECT_STATE.md
+ROADMAP.md
+README.md
 ```
 
-Do not split the code until the single-file prototype is confirmed working.
+## Current prototype behavior
 
-## Fieldwork boundary remains unchanged
+Open `index.html` directly in a browser.
 
-Kane-Map field observation is visible observation only.
+The map renders:
 
-Do not:
+- dark background
+- synthetic Kane-style grid
+- red residential building blocks
+- 1, 2, and 3 story heights
+- white roads
+- blue ponds
+- green forests
+- pan by drag
+- zoom by wheel or buttons
+- rotate by buttons
+- click selection for buildings/grid cells
+- simple offline observation records
+- JSON export/import
 
-- touch mailboxes
-- open mailboxes
-- insert anything into mailboxes
-- remove anything from mailboxes
-- read mail
-- record resident names
-- enter locked or restricted areas
-- bypass access control
-- treat an unlocked area as automatically lawful access
+## Important limits
 
-The useful observation is the visible unit designator and building/unit-count pattern, not resident identity and not mail content.
+The map is not geographically accurate yet.
+
+The current geometry is synthetic demo geometry.
+
+There is no real Kane County data in the app yet.
+
+There is no persistent browser database in this batch. Records are kept in memory until exported.
+
+## Why no database yet
+
+The immediate purpose is to prove that the map and observation workflow can run without any server or database dependency.
+
+Later options:
+
+- keep JSON-only workflow
+- add local IndexedDB
+- add optional sync service
+- support all three as separate modes
+
+## Next recommended task
+
+Improve the observation ledger.
+
+Suggested next batch:
+
+```text
+Batch 005 — structured address/unit observations
+```
+
+Possible additions:
+
+- status field: candidate, observed, counted, conflict, revisit-needed
+- confidence field: low, medium, high
+- entrance ID
+- mailbox bank ID
+- designator list field
+- privacy boundary flags in exported JSON
+- better export filename
+- visible fieldwork disclaimer in UI
