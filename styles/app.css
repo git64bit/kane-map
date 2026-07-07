@@ -367,3 +367,47 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+.summary-box {
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.summary-box strong {
+  color: var(--text);
+}
+
+.status-warning {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #ffd0a6;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.15rem;
+}
+
+.record-header button {
+  padding: 0.25rem 0.45rem;
+  border-color: rgba(255, 120, 120, 0.35);
+  color: #ffcbcb;
+  font-size: 0.74rem;
+}
+
+.record-selected-building {
+  padding: 0.45rem;
+  border: 1px solid rgba(116, 184, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(116, 184, 255, 0.08);
+}
