@@ -1,12 +1,13 @@
 (function attachRecordSchema(global) {
   "use strict";
 
-  const FORMAT = "kane-map-offline-observations";
-  const VERSION = 2;
-  const RECORD_PREFIX = "OBS";
+  const FORMAT = "kane-map-observation-records";
+  const VERSION = 4;
+  const RECORD_PREFIX = "KMO";
 
   function createObservationRecord(input, sequenceNumber) {
     const now = new Date().toISOString();
+
     return normalizeRecord({
       id: makeRecordId(sequenceNumber),
       schemaVersion: VERSION,
@@ -15,12 +16,19 @@
       gridCell: input.gridCell,
       buildingId: input.buildingId,
       buildingLabel: input.buildingLabel,
+      buildingName: input.buildingName,
       stories: input.stories,
+      siteLabel: input.siteLabel,
+      entranceId: input.entranceId,
+      mailboxBankId: input.mailboxBankId,
       observedUnitCount: input.observedUnitCount,
       designatorPattern: input.designatorPattern,
-      notes: input.notes,
+      designatorRaw: input.designatorRaw,
+      visibleDesignators: input.visibleDesignators,
       confidence: input.confidence || "unreviewed",
       visitStatus: input.visitStatus || "observed",
+      accessContext: input.accessContext,
+      notes: input.notes,
       observationMethod: "visible designators only",
       mailboxTouched: false,
       mailboxOpened: false,
@@ -32,22 +40,30 @@
 
   function normalizeRecord(record) {
     const now = new Date().toISOString();
-    const unitCount = normalizeUnitCount(record.observedUnitCount);
+    const normalizedDesignators = normalizeDesignators(record.visibleDesignators);
+    const unitCount = normalizeUnitCount(record.observedUnitCount, normalizedDesignators);
 
     return {
       id: String(record.id || makeRecordId(1)),
-      schemaVersion: Number(record.schemaVersion || VERSION),
+      schemaVersion: VERSION,
       createdAt: String(record.createdAt || now),
       updatedAt: String(record.updatedAt || record.createdAt || now),
       gridCell: cleanText(record.gridCell, "unknown"),
       buildingId: cleanText(record.buildingId, "unknown"),
       buildingLabel: cleanText(record.buildingLabel, "unknown"),
+      buildingName: cleanText(record.buildingName, ""),
       stories: normalizeStories(record.stories),
+      siteLabel: cleanText(record.siteLabel, ""),
+      entranceId: cleanText(record.entranceId, ""),
+      mailboxBankId: cleanText(record.mailboxBankId, ""),
       observedUnitCount: unitCount,
       designatorPattern: cleanText(record.designatorPattern, ""),
-      notes: cleanText(record.notes, ""),
+      designatorRaw: cleanText(record.designatorRaw, ""),
+      visibleDesignators: normalizedDesignators,
       confidence: cleanText(record.confidence, "unreviewed"),
       visitStatus: cleanText(record.visitStatus, "observed"),
+      accessContext: cleanText(record.accessContext, ""),
+      notes: cleanText(record.notes, ""),
       observationMethod: cleanText(record.observationMethod, "visible designators only"),
       mailboxTouched: Boolean(record.mailboxTouched),
       mailboxOpened: Boolean(record.mailboxOpened),
@@ -97,8 +113,17 @@
     return text || fallback;
   }
 
-  function normalizeUnitCount(value) {
+  function normalizeUnitCount(value, designators) {
+    const designatorCount = Array.isArray(designators) ? designators.length : 0;
+
+    if (designatorCount > 0) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number <= 0) return designatorCount;
+      return Math.floor(number);
+    }
+
     if (value === null || value === undefined || value === "") return null;
+
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? Math.floor(number) : null;
   }
@@ -106,6 +131,21 @@
   function normalizeStories(value) {
     const number = Number(value);
     return Number.isFinite(number) && number > 0 ? Math.floor(number) : null;
+  }
+
+  function normalizeDesignators(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    const output = [];
+
+    value.forEach((item) => {
+      const text = cleanText(item, "").toUpperCase();
+      if (!text || seen.has(text)) return;
+      seen.add(text);
+      output.push(text);
+    });
+
+    return output;
   }
 
   global.KaneMapRecordSchema = {

@@ -14,14 +14,23 @@
   const store = global.KaneMapLocalStore.createLocalObservationStore();
   const canvas = document.getElementById("mapCanvas");
   const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
+  const designators = global.KaneMapDesignators;
 
   const els = {
     selectedCell: document.getElementById("selectedCell"),
     selectedBuilding: document.getElementById("selectedBuilding"),
     selectedStories: document.getElementById("selectedStories"),
     observationForm: document.getElementById("observationForm"),
+    siteLabel: document.getElementById("siteLabel"),
+    entranceId: document.getElementById("entranceId"),
+    mailboxBankId: document.getElementById("mailboxBankId"),
+    visibleDesignators: document.getElementById("visibleDesignators"),
+    designatorPreview: document.getElementById("designatorPreview"),
     unitCount: document.getElementById("unitCount"),
     designatorPattern: document.getElementById("designatorPattern"),
+    confidence: document.getElementById("confidence"),
+    visitStatus: document.getElementById("visitStatus"),
+    accessContext: document.getElementById("accessContext"),
     observationNotes: document.getElementById("observationNotes"),
     recordCount: document.getElementById("recordCount"),
     recordList: document.getElementById("recordList"),
@@ -49,6 +58,7 @@
     window.addEventListener("resize", handleResize);
     handleResize();
     updateSelectedPanel();
+    updateDesignatorPreview();
     updateRecordPanel();
     updateStorageStatus();
     updateViewAndChunkStatus();
@@ -121,6 +131,8 @@
   }
 
   function bindObservationEvents() {
+    els.visibleDesignators.addEventListener("input", updateDesignatorPreview);
+
     els.observationForm.addEventListener("submit", (event) => {
       event.preventDefault();
 
@@ -129,23 +141,50 @@
         return;
       }
 
-      const observedUnitCount = Number(els.unitCount.value);
+      const parsedDesignators = designators.parseDesignators(els.visibleDesignators.value);
+      const observedUnitCount = resolveObservedUnitCount(els.unitCount.value, parsedDesignators);
+
       store.addRecord({
         gridCell: selected.cell ? selected.cell.code : selected.building.cell,
         buildingId: selected.building.id,
         buildingLabel: selected.building.label,
+        buildingName: selected.building.name,
         stories: selected.building.stories,
-        observedUnitCount: Number.isFinite(observedUnitCount) ? observedUnitCount : null,
+        siteLabel: els.siteLabel.value.trim(),
+        entranceId: els.entranceId.value.trim(),
+        mailboxBankId: els.mailboxBankId.value.trim(),
+        observedUnitCount,
         designatorPattern: els.designatorPattern.value.trim(),
+        visibleDesignators: parsedDesignators,
+        designatorRaw: els.visibleDesignators.value.trim(),
+        confidence: els.confidence.value,
+        visitStatus: els.visitStatus.value,
+        accessContext: els.accessContext.value.trim(),
         notes: els.observationNotes.value.trim()
       });
 
-      els.unitCount.value = "";
-      els.designatorPattern.value = "";
-      els.observationNotes.value = "";
+      clearObservationForm();
       updateRecordPanel();
       updateStorageStatus();
     });
+  }
+
+  function clearObservationForm() {
+    els.siteLabel.value = "";
+    els.entranceId.value = "";
+    els.mailboxBankId.value = "";
+    els.visibleDesignators.value = "";
+    els.unitCount.value = "";
+    els.designatorPattern.value = "";
+    els.confidence.value = "unreviewed";
+    els.visitStatus.value = "observed";
+    els.accessContext.value = "";
+    els.observationNotes.value = "";
+    updateDesignatorPreview();
+  }
+
+  function updateDesignatorPreview() {
+    els.designatorPreview.textContent = designators.compactPreview(els.visibleDesignators.value);
   }
 
   function changeView(action) {
@@ -185,15 +224,47 @@
       const item = document.createElement("li");
       const count = record.observedUnitCount === null ? "unknown count" : `${record.observedUnitCount} units`;
       const date = record.createdAt ? record.createdAt.slice(0, 10) : "undated";
+      const designatorText = formatDesignatorList(record);
       item.innerHTML = [
         `<strong>${escapeHtml(record.buildingLabel)}</strong>`,
         ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
-        `<br><span class="muted">${escapeHtml(record.id)} · ${escapeHtml(date)}</span>`,
-        record.designatorPattern ? `<br>${escapeHtml(record.designatorPattern)}` : "",
+        `<br><span class="muted">${escapeHtml(record.id)} · ${escapeHtml(date)} · ${escapeHtml(record.visitStatus)}</span>`,
+        record.siteLabel ? `<br>Site: ${escapeHtml(record.siteLabel)}` : "",
+        record.mailboxBankId ? `<br>Mailbank: ${escapeHtml(record.mailboxBankId)}` : "",
+        designatorText ? `<br>Designators: ${escapeHtml(designatorText)}` : "",
         record.notes ? `<br>${escapeHtml(record.notes)}` : ""
       ].join("");
       els.recordList.appendChild(item);
     });
+  }
+
+  function resolveObservedUnitCount(rawUnitCount, parsedDesignators) {
+    const typed = String(rawUnitCount || "").trim();
+    const typedNumber = Number(typed);
+
+    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber > 0) {
+      return Math.floor(typedNumber);
+    }
+
+    if (parsedDesignators.length > 0) {
+      return parsedDesignators.length;
+    }
+
+    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber === 0) {
+      return 0;
+    }
+
+    return null;
+  }
+
+  function formatDesignatorList(record) {
+    const values = Array.isArray(record.visibleDesignators) ? record.visibleDesignators : [];
+    if (!values.length) return record.designatorPattern || "";
+
+    const limit = 24;
+    const shown = values.slice(0, limit).join(", ");
+    const extra = values.length > limit ? ` +${values.length - limit} more` : "";
+    return `${values.length} designators: ${shown}${extra}`;
   }
 
   function updateStorageStatus() {

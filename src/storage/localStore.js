@@ -1,7 +1,11 @@
 (function attachLocalStore(global) {
   "use strict";
 
-  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v2";
+  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v4";
+  const LEGACY_STORAGE_KEYS = [
+    "kane-map.local-observations.v3",
+    "kane-map.local-observations.v2"
+  ];
 
   function createLocalObservationStore(options = {}) {
     const schema = global.KaneMapRecordSchema;
@@ -12,14 +16,14 @@
     loadFromBrowser();
 
     function snapshot() {
-      return records.map((record) => ({ ...record }));
+      return records.map((record) => ({ ...record, visibleDesignators: record.visibleDesignators.slice() }));
     }
 
     function addRecord(input) {
       const record = schema.createObservationRecord(input, schema.nextSequence(records));
       records.push(record);
       saveToBrowser();
-      return { ...record };
+      return { ...record, visibleDesignators: record.visibleDesignators.slice() };
     }
 
     function replaceAll(importedRecords) {
@@ -32,6 +36,7 @@
       records = [];
       if (storageAvailable) {
         localStorage.removeItem(storageKey);
+        LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
       }
     }
 
@@ -66,7 +71,7 @@
 
       return {
         available: true,
-        label: "Storage: local saved",
+        label: "Storage: field ledger saved",
         detail: `${records.length} records saved under ${storageKey}`
       };
     }
@@ -74,17 +79,33 @@
     function loadFromBrowser() {
       if (!storageAvailable) return;
 
-      const text = localStorage.getItem(storageKey);
-      if (!text) return;
+      const loaded = readEnvelope(storageKey) || readLegacyEnvelope();
+      if (!loaded) return;
+
+      records = loaded.map(schema.normalizeRecord);
+      saveToBrowser();
+    }
+
+    function readLegacyEnvelope() {
+      for (const key of LEGACY_STORAGE_KEYS) {
+        const loaded = readEnvelope(key);
+        if (loaded) return loaded;
+      }
+      return null;
+    }
+
+    function readEnvelope(key) {
+      const text = localStorage.getItem(key);
+      if (!text) return null;
 
       try {
         const parsed = JSON.parse(text);
-        const imported = parsed && Array.isArray(parsed.records) ? parsed.records : [];
-        records = imported.map(schema.normalizeRecord);
+        if (parsed && Array.isArray(parsed.records)) return parsed.records;
       } catch (error) {
-        console.warn("Kane-Map could not load local observation records.", error);
-        records = [];
+        console.warn(`Kane-Map could not load records from ${key}.`, error);
       }
+
+      return null;
     }
 
     function saveToBrowser() {
