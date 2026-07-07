@@ -3,527 +3,100 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kane-Map Prototype</title>
-
-  <link
-    href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css"
-    rel="stylesheet"
-  />
-
-  <style>
-    :root {
-      --bg: #202426;
-      --panel: rgba(10, 14, 18, 0.88);
-      --border: rgba(255, 255, 255, 0.16);
-      --text: #eef3f7;
-      --muted: #aeb8c2;
-      --road: #eeeeee;
-      --water: #2f6ed3;
-      --forest: #4d8b43;
-      --building: #d84a37;
-      --grid: #c8ced3;
-    }
-
-    html, body, #map {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--bg);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    .panel {
-      position: absolute;
-      z-index: 10;
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(8px);
-    }
-
-    .header {
-      top: 16px;
-      left: 16px;
-      right: 16px;
-      height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 18px;
-    }
-
-    .brand {
-      display: flex;
-      gap: 12px;
-      align-items: baseline;
-    }
-
-    .brand strong {
-      letter-spacing: 0.12em;
-      font-size: 20px;
-    }
-
-    .brand span {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .status-strip {
-      display: flex;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .status-pill {
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 5px 10px;
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .legend {
-      top: 86px;
-      left: 16px;
-      width: 230px;
-      padding: 14px 16px;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .legend-title {
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    .legend-row {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      margin: 6px 0;
-      color: var(--muted);
-    }
-
-    .swatch {
-      width: 20px;
-      height: 12px;
-      border-radius: 2px;
-      display: inline-block;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .swatch.building { background: var(--building); }
-    .swatch.road { background: var(--road); }
-    .swatch.water { background: var(--water); }
-    .swatch.forest { background: var(--forest); }
-    .swatch.grid { background: transparent; border: 1px solid var(--grid); }
-
-    .map-info {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .map-info div {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 3px 0;
-    }
-
-    .footer {
-      left: 16px;
-      right: 16px;
-      bottom: 16px;
-      padding: 8px 14px;
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .footer strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .maplibregl-ctrl-top-right {
-      top: 86px;
-      right: 16px;
-    }
-
-    .maplibregl-ctrl-group {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-
-    .maplibregl-ctrl-group button {
-      filter: invert(1);
-    }
-  </style>
+  <title>Kane-Map Offline Prototype</title>
+  <link rel="stylesheet" href="styles/app.css" />
 </head>
-
 <body>
-  <div id="map"></div>
+  <main class="app-shell">
+    <section class="map-stage" aria-label="Kane-Map canvas area">
+      <canvas id="mapCanvas" aria-label="Offline Kane-Map prototype"></canvas>
 
-  <section class="panel header" aria-label="Kane-Map header">
-    <div class="brand">
-      <strong>KANE-MAP</strong>
-      <span>Kane County residential navigation prototype</span>
-    </div>
-    <div class="status-strip" aria-label="Prototype status indicators">
-      <div class="status-pill">Local vector render</div>
-      <div class="status-pill">Synthetic data</div>
-      <div class="status-pill">POI sync placeholder</div>
-    </div>
-  </section>
+      <aside class="panel panel-left" aria-label="Map legend and observation tools">
+        <div class="brand-row">
+          <div class="brand-mark">KM</div>
+          <div>
+            <h1>KANE-MAP</h1>
+            <p>Offline-first civic field map</p>
+          </div>
+        </div>
 
-  <aside class="panel legend" aria-label="Map legend">
-    <div class="legend-title">LEGEND</div>
-    <div class="legend-row"><span class="swatch building"></span>1–3 story residential</div>
-    <div class="legend-row"><span class="swatch road"></span>Roads</div>
-    <div class="legend-row"><span class="swatch water"></span>Ponds / water</div>
-    <div class="legend-row"><span class="swatch forest"></span>Forests / wooded areas</div>
-    <div class="legend-row"><span class="swatch grid"></span>Kane-grid cells</div>
+        <div class="section">
+          <h2>Legend</h2>
+          <div class="legend-row"><span class="swatch swatch-red"></span>1–3 story residential</div>
+          <div class="legend-row"><span class="swatch swatch-road"></span>Roads</div>
+          <div class="legend-row"><span class="swatch swatch-water"></span>Ponds / lakes</div>
+          <div class="legend-row"><span class="swatch swatch-forest"></span>Forests / wooded areas</div>
+          <div class="legend-row"><span class="swatch swatch-grid"></span>Kane local grid</div>
+        </div>
 
-    <div class="map-info">
-      <div><span>Grid</span><strong>KANE-GRID v0</strong></div>
-      <div><span>Cells</span><strong>N/E labels</strong></div>
-      <div><span>Render</span><strong>Browser</strong></div>
-      <div><span>Data</span><strong>Fake demo</strong></div>
-    </div>
-  </aside>
+        <div class="section">
+          <h2>Selected object</h2>
+          <dl class="selected-list">
+            <dt>Grid cell</dt><dd id="selectedCell">None</dd>
+            <dt>Building</dt><dd id="selectedBuilding">None</dd>
+            <dt>Stories</dt><dd id="selectedStories">—</dd>
+          </dl>
+        </div>
 
-  <section class="panel footer" aria-label="Prototype footer">
-    <div><strong>Prototype:</strong> browser-only synthetic map</div>
-    <div><strong>Next:</strong> split into modules, then real Kane County geometry</div>
-  </section>
+        <form id="observationForm" class="section observation-form">
+          <h2>Offline observation</h2>
+          <label>
+            Observed unit count
+            <input id="unitCount" type="number" min="0" step="1" placeholder="Example: 12" />
+          </label>
+          <label>
+            Visible designator pattern
+            <input id="designatorPattern" type="text" placeholder="Example: 100A–100L" />
+          </label>
+          <label>
+            Notes
+            <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
+          </label>
+          <button type="submit">Add local observation</button>
+          <p class="fine-print">Records remain in browser memory until exported. No server. No database.</p>
+        </form>
+      </aside>
 
-  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+      <aside class="panel panel-right" aria-label="Map controls and offline records">
+        <div class="section">
+          <h2>View controls</h2>
+          <div class="button-grid">
+            <button id="zoomIn" type="button">Zoom +</button>
+            <button id="zoomOut" type="button">Zoom −</button>
+            <button id="rotateLeft" type="button">Rotate ⟲</button>
+            <button id="rotateRight" type="button">Rotate ⟳</button>
+            <button id="resetView" type="button" class="wide">Reset view</button>
+          </div>
+        </div>
 
-  <script>
-    const KANE_CENTER = [-88.32, 41.99];
+        <div class="section">
+          <h2>Offline records</h2>
+          <p><strong id="recordCount">0</strong> local observation records</p>
+          <div class="button-stack">
+            <button id="exportRecords" type="button">Export JSON</button>
+            <label class="file-button">
+              Import JSON
+              <input id="importRecords" type="file" accept="application/json,.json" />
+            </label>
+            <button id="clearRecords" type="button" class="danger">Clear memory records</button>
+          </div>
+          <ol id="recordList" class="record-list"></ol>
+        </div>
+      </aside>
 
-    const map = new maplibregl.Map({
-      container: "map",
-      style: {
-        version: 8,
-        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-        sources: {},
-        layers: [
-          {
-            id: "background",
-            type: "background",
-            paint: {
-              "background-color": "#202426"
-            }
-          }
-        ]
-      },
-      center: KANE_CENTER,
-      zoom: 14.2,
-      pitch: 58,
-      bearing: -28,
-      antialias: true
-    });
+      <footer class="status-bar" aria-label="Map status">
+        <span id="renderStatus">Render: OK</span>
+        <span id="viewStatus">Zoom 1.00 / Bearing 0°</span>
+        <span>Mode: offline canvas</span>
+        <span>No CDN · No server · No database</span>
+      </footer>
+    </section>
+  </main>
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
-
-    function rectanglePolygon(centerLng, centerLat, halfWidth, halfHeight) {
-      return [[
-        [centerLng - halfWidth, centerLat - halfHeight],
-        [centerLng + halfWidth, centerLat - halfHeight],
-        [centerLng + halfWidth, centerLat + halfHeight],
-        [centerLng - halfWidth, centerLat + halfHeight],
-        [centerLng - halfWidth, centerLat - halfHeight]
-      ]];
-    }
-
-    function polygonFeature(coordinates, properties = {}) {
-      return {
-        type: "Feature",
-        properties,
-        geometry: {
-          type: "Polygon",
-          coordinates
-        }
-      };
-    }
-
-    function lineFeature(coordinates, properties = {}) {
-      return {
-        type: "Feature",
-        properties,
-        geometry: {
-          type: "LineString",
-          coordinates
-        }
-      };
-    }
-
-    function makeBuildings() {
-      const rows = [
-        [-88.3230, 41.9910, 1],
-        [-88.3224, 41.9912, 2],
-        [-88.3218, 41.9914, 3],
-        [-88.3205, 41.9897, 3],
-        [-88.3200, 41.9892, 2],
-        [-88.3194, 41.9898, 3],
-        [-88.3252, 41.9889, 1],
-        [-88.3247, 41.9886, 1],
-        [-88.3241, 41.9885, 1],
-        [-88.3235, 41.9887, 2],
-        [-88.3212, 41.9922, 2],
-        [-88.3207, 41.9924, 3]
-      ];
-
-      return {
-        type: "FeatureCollection",
-        features: rows.map(([lng, lat, stories], index) => {
-          const isTall = stories === 3;
-          const isMedium = stories === 2;
-          const halfWidth = isTall ? 0.00025 : isMedium ? 0.00021 : 0.00016;
-          const halfHeight = isTall ? 0.00013 : isMedium ? 0.00011 : 0.00009;
-          return polygonFeature(
-            rectanglePolygon(lng, lat, halfWidth, halfHeight),
-            {
-              code: `B${String(index + 1).padStart(2, "0")}`,
-              stories,
-              heightMeters: stories * 4,
-              status: "synthetic"
-            }
-          );
-        })
-      };
-    }
-
-    const roads = {
-      type: "FeatureCollection",
-      features: [
-        lineFeature([[-88.3270, 41.9905], [-88.3240, 41.9903], [-88.3210, 41.9902], [-88.3180, 41.9900]], { name: "Demo arterial" }),
-        lineFeature([[-88.3222, 41.9930], [-88.3221, 41.9910], [-88.3220, 41.9890], [-88.3218, 41.9870]], { name: "Demo north-south road" }),
-        lineFeature([[-88.3260, 41.9882], [-88.3240, 41.9888], [-88.3220, 41.9892], [-88.3200, 41.9891]], { name: "Demo subdivision road" }),
-        lineFeature([[-88.3250, 41.9926], [-88.3243, 41.9922], [-88.3236, 41.9923], [-88.3230, 41.9920]], { name: "Demo local loop" }),
-        lineFeature([[-88.3199, 41.9917], [-88.3193, 41.9913], [-88.3188, 41.9916], [-88.3184, 41.9911]], { name: "Demo local loop" })
-      ]
-    };
-
-    const ponds = {
-      type: "FeatureCollection",
-      features: [
-        polygonFeature([
-          [
-            [-88.3260, 41.9919],
-            [-88.3254, 41.9921],
-            [-88.3249, 41.9918],
-            [-88.3252, 41.9914],
-            [-88.3258, 41.9914],
-            [-88.3260, 41.9919]
-          ]
-        ], { name: "Demo pond west" }),
-        polygonFeature([
-          [
-            [-88.3194, 41.9885],
-            [-88.3186, 41.9888],
-            [-88.3181, 41.9884],
-            [-88.3184, 41.9879],
-            [-88.3192, 41.9880],
-            [-88.3194, 41.9885]
-          ]
-        ], { name: "Demo pond east" }),
-        polygonFeature([
-          [
-            [-88.3210, 41.9909],
-            [-88.3203, 41.9911],
-            [-88.3197, 41.9908],
-            [-88.3200, 41.9904],
-            [-88.3207, 41.9904],
-            [-88.3210, 41.9909]
-          ]
-        ], { name: "Demo retention pond" })
-      ]
-    };
-
-    const forests = {
-      type: "FeatureCollection",
-      features: [
-        polygonFeature(rectanglePolygon(-88.3262, 41.9888, 0.00055, 0.00045), { name: "Demo woods southwest" }),
-        polygonFeature(rectanglePolygon(-88.3190, 41.9920, 0.00070, 0.00040), { name: "Demo woods northeast" }),
-        polygonFeature(rectanglePolygon(-88.3185, 41.9876, 0.00060, 0.00035), { name: "Demo woods southeast" })
-      ]
-    };
-
-    function makeGrid() {
-      const features = [];
-      const minLng = -88.3280;
-      const maxLng = -88.3170;
-      const minLat = 41.9870;
-      const maxLat = 41.9930;
-      const stepLng = 0.0022;
-      const stepLat = 0.0015;
-
-      let row = 11;
-      for (let lat = maxLat; lat > minLat; lat -= stepLat) {
-        let col = 5;
-        for (let lng = minLng; lng < maxLng; lng += stepLng) {
-          const code = `N${row}-E${String(col).padStart(2, "0")}`;
-          features.push(
-            polygonFeature(
-              rectanglePolygon(lng + stepLng / 2, lat - stepLat / 2, stepLng / 2, stepLat / 2),
-              { code }
-            )
-          );
-          col++;
-        }
-        row++;
-      }
-
-      return {
-        type: "FeatureCollection",
-        features
-      };
-    }
-
-    function makeGridLabelPoints(grid) {
-      return {
-        type: "FeatureCollection",
-        features: grid.features.map((feature) => {
-          const ring = feature.geometry.coordinates[0];
-          const lng = (ring[0][0] + ring[2][0]) / 2;
-          const lat = (ring[0][1] + ring[2][1]) / 2;
-          return {
-            type: "Feature",
-            properties: { code: feature.properties.code },
-            geometry: {
-              type: "Point",
-              coordinates: [lng, lat]
-            }
-          };
-        })
-      };
-    }
-
-    const grid = makeGrid();
-    const buildings = makeBuildings();
-
-    map.on("load", () => {
-      map.addSource("forests", { type: "geojson", data: forests });
-      map.addSource("ponds", { type: "geojson", data: ponds });
-      map.addSource("roads", { type: "geojson", data: roads });
-      map.addSource("grid", { type: "geojson", data: grid });
-      map.addSource("grid-labels", { type: "geojson", data: makeGridLabelPoints(grid) });
-      map.addSource("buildings", { type: "geojson", data: buildings });
-
-      map.addLayer({
-        id: "forests-fill",
-        type: "fill",
-        source: "forests",
-        paint: {
-          "fill-color": "#4d8b43",
-          "fill-opacity": 0.72
-        }
-      });
-
-      map.addLayer({
-        id: "ponds-fill",
-        type: "fill",
-        source: "ponds",
-        paint: {
-          "fill-color": "#2f6ed3",
-          "fill-opacity": 0.90
-        }
-      });
-
-      map.addLayer({
-        id: "roads-casing",
-        type: "line",
-        source: "roads",
-        paint: {
-          "line-color": "#202426",
-          "line-width": 9,
-          "line-opacity": 0.75
-        }
-      });
-
-      map.addLayer({
-        id: "roads-line",
-        type: "line",
-        source: "roads",
-        paint: {
-          "line-color": "#eeeeee",
-          "line-width": 5,
-          "line-opacity": 0.92
-        }
-      });
-
-      map.addLayer({
-        id: "grid-outline",
-        type: "line",
-        source: "grid",
-        paint: {
-          "line-color": "#c8ced3",
-          "line-width": 1,
-          "line-opacity": 0.42
-        }
-      });
-
-      map.addLayer({
-        id: "buildings-extruded",
-        type: "fill-extrusion",
-        source: "buildings",
-        paint: {
-          "fill-extrusion-color": "#d84a37",
-          "fill-extrusion-height": ["get", "heightMeters"],
-          "fill-extrusion-base": 0,
-          "fill-extrusion-opacity": 0.94
-        }
-      });
-
-      map.addLayer({
-        id: "building-labels",
-        type: "symbol",
-        source: "buildings",
-        minzoom: 14,
-        layout: {
-          "text-field": ["concat", ["get", "code"], " / ", ["to-string", ["get", "stories"]], " st"],
-          "text-size": 11,
-          "text-font": ["Noto Sans Regular"],
-          "text-allow-overlap": true,
-          "text-ignore-placement": true
-        },
-        paint: {
-          "text-color": "#ffffff",
-          "text-halo-color": "#82291f",
-          "text-halo-width": 1.4
-        }
-      });
-
-      map.addLayer({
-        id: "grid-text",
-        type: "symbol",
-        source: "grid-labels",
-        layout: {
-          "text-field": ["get", "code"],
-          "text-size": 16,
-          "text-font": ["Noto Sans Regular"],
-          "text-allow-overlap": true,
-          "text-ignore-placement": true
-        },
-        paint: {
-          "text-color": "#e8edf2",
-          "text-halo-color": "#202426",
-          "text-halo-width": 2
-        }
-      });
-    });
-  </script>
+  <script src="src/data/demoFeatures.js"></script>
+  <script src="src/map/grid.js"></script>
+  <script src="src/storage/offlineRecords.js"></script>
+  <script src="src/map/renderer.js"></script>
+  <script src="src/app.js"></script>
 </body>
 </html>

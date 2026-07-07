@@ -4,88 +4,93 @@ This roadmap is organized so the project can pause and resume without losing dir
 
 ## Phase 0 — Project memory
 
+Status: complete enough to proceed.
+
 Goal: make the repository self-explaining before adding application code.
 
-Status: started.
+Core files:
 
-Tasks:
-
-- [x] Add `README.md`
-- [x] Add `ROADMAP.md`
-- [x] Add `docs/PROJECT_STATE.md`
-- [x] Add `docs/ARCHITECTURE.md`
-- [x] Add `docs/DATA_MODEL.md`
-- [x] Add `docs/FIELDWORK_RULES.md`
-
-Exit condition:
-
-A future reader can understand what Kane-Map is, why it exists, what the first prototype should do, and what boundaries govern field observation.
+- `README.md`
+- `ROADMAP.md`
+- `docs/PROJECT_STATE.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DATA_MODEL.md`
+- `docs/FIELDWORK_RULES.md`
 
 ## Phase 1 — Browser-only synthetic prototype
 
+Status: complete.
+
 Goal: prove the visual model without real GIS data.
 
-Status: in progress.
+Completed features:
 
-Tasks:
+- dark map canvas
+- synthetic Kane-style grid cells
+- readable grid labels such as `N12-E07`
+- red residential building blocks
+- 1, 2, and 3 story height differences
+- white roads
+- blue ponds
+- green forest polygons
+- pan, zoom, rotate, and reset controls
+- basic legend and status panel
 
-- [x] Add `index.html`
-- [x] Add a dark map canvas
-- [x] Add synthetic Kane-style grid cells
-- [x] Add readable grid labels such as `N12-E07`
-- [x] Add red residential building blocks
-- [x] Add 1, 2, and 3 story height differences
-- [x] Add white roads
-- [x] Add blue ponds
-- [x] Add green forest polygons
-- [x] Add basic pan, zoom, pitch, and rotate controls
-- [x] Add a small legend
-- [x] Add a simple status panel
+## Phase 2 — Offline-first modular prototype
 
-Exit condition:
+Status: current.
 
-Opening `index.html` in a browser shows a convincing Kane-Map mockup using fake data.
+Goal: keep the prototype runnable offline while splitting files into maintainable units.
 
-## Phase 2 — Code organization
-
-Goal: split the prototype into maintainable files.
-
-Target structure:
+Current structure:
 
 ```text
 index.html
-src/
-  main.js
-  data/
-    demoFeatures.js
-  map/
-    initMap.js
-    grid.js
-    layers.js
-  storage/
-    indexedDb.js
-  sync/
-    poiSync.js
-docs/
-  ARCHITECTURE.md
-  DATA_MODEL.md
-  FIELDWORK_RULES.md
-  PROJECT_STATE.md
+styles/app.css
+src/app.js
+src/data/demoFeatures.js
+src/map/grid.js
+src/map/renderer.js
+src/storage/offlineRecords.js
+docs/OFFLINE_FIRST.md
+docs/PROXY_LAYER.md
+docs/PROJECT_STATE.md
 ```
 
-Tasks:
+Rules:
 
-- [ ] Move synthetic geometry out of `index.html`
-- [ ] Move map initialization into `src/map/initMap.js`
-- [ ] Move layer definitions into `src/map/layers.js`
-- [ ] Move grid generation into `src/map/grid.js`
-- [ ] Keep the prototype runnable with minimal setup
+- keep files generally under 500–700 lines
+- avoid build tools for now
+- avoid remote libraries for now
+- avoid CDN dependencies
+- avoid a database dependency
+- support JSON export/import for observations
 
 Exit condition:
 
-The project is still simple, but no longer trapped inside one large HTML file.
+Opening `index.html` directly shows the working offline prototype.
 
-## Phase 3 — Kane-grid design
+## Phase 3 — Address/unit observation ledger
+
+Goal: make field observations more structured.
+
+Tasks:
+
+- [ ] Define observation status values
+- [ ] Define confidence levels
+- [ ] Add visit status
+- [ ] Add mailbox-bank ID
+- [ ] Add entrance ID
+- [ ] Add fieldwork boundary fields to every exported record
+- [ ] Add import validation
+- [ ] Add visible-designator examples
+- [ ] Add conflict status between public record and field observation
+
+Exit condition:
+
+A building can carry structured unit-count evidence without encoding unit details into the grid code.
+
+## Phase 4 — Kane-grid design
 
 Goal: define the local grid scheme.
 
@@ -99,70 +104,11 @@ Tasks:
 - [ ] Define how grid cells relate to H3 indexes
 - [ ] Define how grid cells relate to building records
 
-Draft rule:
-
-```text
-Kane-Map names places.
-The address ledger records observations.
-The unit list never becomes part of the public grid code.
-```
-
 Exit condition:
 
 A grid cell code can be generated consistently from coordinates and shown on the map.
 
-## Phase 4 — Field observation data model
-
-Goal: define the address/unit reconstruction ledger.
-
-Core entities:
-
-```text
-grid_cell
-site
-building
-entrance
-mailbox_bank
-visible_designator
-observation_event
-source_record
-conflict_record
-```
-
-Tasks:
-
-- [ ] Define site record
-- [ ] Define building record
-- [ ] Define mailbox-bank record
-- [ ] Define visible-designator record
-- [ ] Define unit-count observation
-- [ ] Define confidence levels
-- [ ] Define revisit statuses
-- [ ] Define conflict statuses
-- [ ] Define privacy and fieldwork limits
-
-Exit condition:
-
-A building rectangle can carry observed unit-count evidence without putting unit detail into the grid code itself.
-
-## Phase 5 — Local persistence
-
-Goal: store working data locally in the browser.
-
-Tasks:
-
-- [ ] Add IndexedDB wrapper
-- [ ] Save field observations locally
-- [ ] Save visit status locally
-- [ ] Save map settings locally
-- [ ] Save last viewed grid cell locally
-- [ ] Add export/import for local records
-
-Exit condition:
-
-A user can close the browser, reopen Kane-Map, and retain fieldwork state.
-
-## Phase 6 — Real geometry import
+## Phase 5 — Real geometry import
 
 Goal: replace synthetic geometry with real or derived local data.
 
@@ -190,66 +136,23 @@ Exit condition:
 
 The map displays real Kane County orientation layers.
 
-## Phase 7 — Offline-first static bundles
+## Phase 6 — Server-assisted preparation layer
 
-Goal: make base map data downloadable and locally reusable.
-
-Possible formats:
-
-- GeoJSON for early development
-- PMTiles or vector tiles for larger datasets
-- compressed static bundles for generated arrays
+Goal: add online infrastructure only where it improves maintenance.
 
 Tasks:
 
-- [ ] Decide bundle format
-- [ ] Build cache strategy
-- [ ] Add download/cache UI
-- [ ] Add cache status UI
-- [ ] Add refresh/rebuild process
-- [ ] Document data versioning
+- [ ] Define ingestion pipeline
+- [ ] Define geometry cleanup workflow
+- [ ] Define static bundle release format
+- [ ] Define version manifest
+- [ ] Define optional sync API shape
+- [ ] Keep runtime independent from server availability
 
 Exit condition:
 
-The base map can load from local browser storage after initial download.
-
-## Phase 8 — POI and observation sync
-
-Goal: separate static geometry from dynamic records.
-
-Tasks:
-
-- [ ] Define POI API shape
-- [ ] Define observation sync shape
-- [ ] Add network status indicator
-- [ ] Add conflict handling
-- [ ] Add export format
-- [ ] Add import format
-- [ ] Add server-side placeholder API later
-
-Exit condition:
-
-Static geometry remains local, while dynamic records can sync online.
-
-## Phase 9 — CivicIPFS / archival integration
-
-Goal: preserve selected civic records and evidence references.
-
-Tasks:
-
-- [ ] Define what should be archived
-- [ ] Define what should remain private/local
-- [ ] Define public record references
-- [ ] Define immutable source links
-- [ ] Define record hashes
-- [ ] Define attestation format
-
-Exit condition:
-
-Kane-Map can support durable civic recordkeeping without turning field observations into uncontrolled public exposure.
+A server/proxy can publish better data bundles, but the field map still runs offline.
 
 ## Current next step
 
-Confirm that the single-file prototype renders in the browser.
-
-After that, split the code into modules.
+Improve the address/unit observation ledger while keeping the app offline and simple.
