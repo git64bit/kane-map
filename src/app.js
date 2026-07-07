@@ -9,7 +9,7 @@
     startEast: 5
   });
 
-  const store = global.KaneMapOfflineRecords.createOfflineRecordStore();
+  const store = global.KaneMapLocalStore.createLocalObservationStore();
   const canvas = document.getElementById("mapCanvas");
   const renderer = global.KaneMapRenderer.createRenderer(canvas, data, grid);
 
@@ -23,6 +23,7 @@
     observationNotes: document.getElementById("observationNotes"),
     recordCount: document.getElementById("recordCount"),
     recordList: document.getElementById("recordList"),
+    storageStatus: document.getElementById("storageStatus"),
     viewStatus: document.getElementById("viewStatus"),
     zoomIn: document.getElementById("zoomIn"),
     zoomOut: document.getElementById("zoomOut"),
@@ -47,6 +48,7 @@
     handleResize();
     updateSelectedPanel();
     updateRecordPanel();
+    updateStorageStatus();
     updateViewStatus();
   }
 
@@ -122,10 +124,11 @@
 
     els.clearRecords.addEventListener("click", () => {
       if (!store.snapshot().length) return;
-      const ok = confirm("Clear offline memory records for this browser session?");
+      const ok = confirm("Clear locally saved Kane-Map observation records from this browser?");
       if (!ok) return;
       store.clear();
       updateRecordPanel();
+      updateStorageStatus();
     });
   }
 
@@ -153,6 +156,7 @@
       els.designatorPattern.value = "";
       els.observationNotes.value = "";
       updateRecordPanel();
+      updateStorageStatus();
     });
   }
 
@@ -184,14 +188,22 @@
     records.slice(-8).reverse().forEach((record) => {
       const item = document.createElement("li");
       const count = record.observedUnitCount === null ? "unknown count" : `${record.observedUnitCount} units`;
+      const date = record.createdAt ? record.createdAt.slice(0, 10) : "undated";
       item.innerHTML = [
         `<strong>${escapeHtml(record.buildingLabel)}</strong>`,
         ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
+        `<br><span class="muted">${escapeHtml(record.id)} · ${escapeHtml(date)}</span>`,
         record.designatorPattern ? `<br>${escapeHtml(record.designatorPattern)}` : "",
         record.notes ? `<br>${escapeHtml(record.notes)}` : ""
       ].join("");
       els.recordList.appendChild(item);
     });
+  }
+
+  function updateStorageStatus() {
+    const status = store.storageStatus();
+    els.storageStatus.textContent = status.label;
+    els.storageStatus.title = status.detail;
   }
 
   function updateViewStatus() {
@@ -210,6 +222,7 @@
       try {
         store.importJson(String(reader.result || ""));
         updateRecordPanel();
+        updateStorageStatus();
       } catch (error) {
         alert(`Import failed: ${error.message}`);
       } finally {
