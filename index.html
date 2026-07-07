@@ -41,18 +41,64 @@
         <form id="observationForm" class="section observation-form">
           <h2>Offline observation</h2>
           <label>
+            Site label / address note
+            <input id="siteLabel" type="text" placeholder="Example: Building 2 / 1420 Example Dr" />
+          </label>
+          <div class="form-grid-two">
+            <label>
+              Entrance
+              <input id="entranceId" type="text" placeholder="Example: E01" />
+            </label>
+            <label>
+              Mailbox bank
+              <input id="mailboxBankId" type="text" placeholder="Example: M01" />
+            </label>
+          </div>
+          <label>
+            Visible designators
+            <textarea id="visibleDesignators" rows="4" placeholder="Example: 100A, 100B, 100C, 100D"></textarea>
+          </label>
+          <p id="designatorPreview" class="inline-status">No visible designators entered</p>
+          <label>
             Observed unit count
-            <input id="unitCount" type="number" min="0" step="1" placeholder="Example: 12" />
+            <input id="unitCount" type="number" min="0" step="1" placeholder="Auto-filled from designators if blank" />
           </label>
           <label>
             Visible designator pattern
-            <input id="designatorPattern" type="text" placeholder="Example: 100A–100L" />
+            <input id="designatorPattern" type="text" placeholder="Example: number+letter / 100A–100D" />
+          </label>
+          <div class="form-grid-two">
+            <label>
+              Confidence
+              <select id="confidence">
+                <option value="unreviewed">Unreviewed</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label>
+              Visit status
+              <select id="visitStatus">
+                <option value="observed">Observed</option>
+                <option value="counted">Counted</option>
+                <option value="pattern-inferred">Pattern inferred</option>
+                <option value="verified">Verified</option>
+                <option value="conflict">Conflict</option>
+                <option value="revisit-needed">Revisit needed</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Access context
+            <input id="accessContext" type="text" placeholder="Example: visible from open common area" />
           </label>
           <label>
             Notes
             <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
           </label>
-          <button type="submit">Add local observation</button>
+          <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
+          <button type="submit">Add field observation</button>
           <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
         </form>
       </aside>
@@ -106,6 +152,7 @@
   <script src="src/map/grid.js"></script>
   <script src="src/storage/recordSchema.js"></script>
   <script src="src/storage/localStore.js"></script>
+  <script src="src/field/designators.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>

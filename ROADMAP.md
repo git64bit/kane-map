@@ -92,15 +92,24 @@ Completed features:
 - storage status indicator
 - explicit fieldwork boundary flags in each exported record
 
+Completed in Batch 007:
+
+- [x] Add confidence selector
+- [x] Add visit-status selector
+- [x] Add entrance ID
+- [x] Add mailbox-bank ID
+- [x] Add visible designator list field
+- [x] Parse visible designators into a normalized list
+- [x] Derive unit count from designators when count is blank
+- [x] Add access-context field
+- [x] Add schema version 4
+- [x] Migrate local schema version 2 records when possible
+
 Remaining tasks:
 
-- [ ] Add confidence selector
-- [ ] Add visit-status selector
-- [ ] Add entrance ID
-- [ ] Add mailbox-bank ID
-- [ ] Add visible designator list field
 - [ ] Add conflict status between public record and field observation
 - [ ] Add record edit/delete controls
+- [ ] Add per-building summary panel
 - [ ] Add better import merge behavior
 
 Exit condition:
@@ -210,13 +219,31 @@ A server/proxy can publish better data bundles, but the field map still runs off
 
 ## Current next step
 
-Improve the observation form and ledger fields:
+Batch 007 completed the first structured field-ledger pass. Batch 008 fixed designator count/display handling.
+
+Next likely batch:
 
 ```text
-confidence
-visit status
-entrance ID
-mailbox bank ID
-designator list
 record edit/delete
+selected-building summary
+latest observed unit count
+latest confidence and visit status
+revisit-needed highlighting
+```
+
+
+## Batch 008 — Designator count fix
+
+Completed:
+
+- [x] Visible designators now override accidental `0` counts
+- [x] Record list shows designator count and up to 24 designators
+- [x] Schema version advanced to 4
+- [x] Version 3 and version 2 local records migrate forward
+- [x] Inconsistent older records with visible designators and `0` unit count normalize to the designator count
+
+Next recommended batch:
+
+```text
+Batch 009 — record edit/delete and selected-building summary
 ```

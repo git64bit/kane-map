@@ -38,11 +38,11 @@ The current geometry is synthetic. No real Kane County GIS data has been importe
 
 ## Local records
 
-Batch 005 saves observation records in the browser using `localStorage`.
+Batch 008 saves structured field-ledger records in the browser using `localStorage`.
 
 That is local workstation storage, not a server database.
 
-Records remain available after closing and reopening the page in the same browser context.
+Records remain available after closing and reopening the page in the same browser context. Batch 008 writes schema version 4 records and attempts to migrate version 3 and version 2 local records.
 
 Use JSON export/import for backup, portability, review, or archival work.
 
@@ -99,3 +99,20 @@ Read:
 3. `docs/LOCAL_RECORDS.md`
 4. `docs/OFFLINE_FIRST.md`
 5. `docs/PROXY_LAYER.md`
+
+
+## Batch 008 field ledger status
+
+Batch 008 fixes designator counting and display behavior:
+
+- comma-separated, space-separated, and line-separated designators remain deduplicated and counted
+- visible designators override accidental `0` unit counts
+- record lists show the designator count and up to 24 visible designators, not only the first 6
+- older version 3 records with `0` units and visible designators are corrected during migration
+
+
+The prototype now includes a structured offline field ledger. A selected building can receive an observation with site label, entrance, mailbox bank, visible designators, observed unit count, confidence, visit status, access context, and notes.
+
+Visible designators are parsed locally in the browser. If the unit count field is blank, the parsed designator count becomes the observed unit count.
+
+Records remain local to the browser and can be exported or imported as JSON.
