@@ -6,7 +6,7 @@ The purpose is to create a browser-rendered navigational map that helps fieldwor
 
 ## Current build
 
-This batch introduces a pure offline Canvas prototype.
+This build is an offline-first Canvas prototype with locally saved observation records.
 
 It requires:
 
@@ -31,10 +31,22 @@ The prototype renders synthetic map data:
 - green forest polygons
 - pan, zoom, rotate, and reset controls
 - click selection for grid cells and buildings
-- in-memory observation records
+- browser-local observation records
 - JSON export/import for field observations
 
 The current geometry is synthetic. No real Kane County GIS data has been imported yet.
+
+## Local records
+
+Batch 005 saves observation records in the browser using `localStorage`.
+
+That is local workstation storage, not a server database.
+
+Records remain available after closing and reopening the page in the same browser context.
+
+Use JSON export/import for backup, portability, review, or archival work.
+
+Read `docs/LOCAL_RECORDS.md` for the record format and current limitations.
 
 ## Core rule
 
@@ -84,5 +96,6 @@ Read:
 
 1. `docs/PROJECT_STATE.md`
 2. `ROADMAP.md`
-3. `docs/OFFLINE_FIRST.md`
-4. `docs/PROXY_LAYER.md`
+3. `docs/LOCAL_RECORDS.md`
+4. `docs/OFFLINE_FIRST.md`
+5. `docs/PROXY_LAYER.md`

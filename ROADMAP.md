@@ -38,7 +38,7 @@ Completed features:
 
 ## Phase 2 — Offline-first modular prototype
 
-Status: current.
+Status: complete.
 
 Goal: keep the prototype runnable offline while splitting files into maintainable units.
 
@@ -51,9 +51,11 @@ src/app.js
 src/data/demoFeatures.js
 src/map/grid.js
 src/map/renderer.js
-src/storage/offlineRecords.js
+src/storage/recordSchema.js
+src/storage/localStore.js
 docs/OFFLINE_FIRST.md
 docs/PROXY_LAYER.md
+docs/LOCAL_RECORDS.md
 docs/PROJECT_STATE.md
 ```
 
@@ -63,32 +65,43 @@ Rules:
 - avoid build tools for now
 - avoid remote libraries for now
 - avoid CDN dependencies
-- avoid a database dependency
+- avoid a remote database dependency
 - support JSON export/import for observations
 
 Exit condition:
 
 Opening `index.html` directly shows the working offline prototype.
 
-## Phase 3 — Address/unit observation ledger
+## Phase 3 — Local saved observations
 
-Goal: make field observations more structured.
+Status: current.
 
-Tasks:
+Goal: make field observation records durable without introducing a server or database.
 
-- [ ] Define observation status values
-- [ ] Define confidence levels
-- [ ] Add visit status
-- [ ] Add mailbox-bank ID
+Completed features:
+
+- browser-local saved records through `localStorage`
+- record schema version field
+- export envelope with format and version
+- import validation and normalization
+- clear saved records control
+- storage status indicator
+- explicit fieldwork boundary flags in each exported record
+
+Remaining tasks:
+
+- [ ] Add confidence selector
+- [ ] Add visit-status selector
 - [ ] Add entrance ID
-- [ ] Add fieldwork boundary fields to every exported record
-- [ ] Add import validation
-- [ ] Add visible-designator examples
+- [ ] Add mailbox-bank ID
+- [ ] Add visible designator list field
 - [ ] Add conflict status between public record and field observation
+- [ ] Add record edit/delete controls
+- [ ] Add better import merge behavior
 
 Exit condition:
 
-A building can carry structured unit-count evidence without encoding unit details into the grid code.
+A building can carry durable local unit-count evidence without encoding unit details into the grid code.
 
 ## Phase 4 — Kane-grid design
 
@@ -108,7 +121,25 @@ Exit condition:
 
 A grid cell code can be generated consistently from coordinates and shown on the map.
 
-## Phase 5 — Real geometry import
+## Phase 5 — Static bundle strategy
+
+Goal: support large local datasets without loading everything at once.
+
+Tasks:
+
+- [ ] Define chunk naming convention
+- [ ] Define grid-cell bundle format
+- [ ] Define building bundle format
+- [ ] Define road/water/forest bundle format
+- [ ] Define manifest file
+- [ ] Define lazy loading by visible grid cells
+- [ ] Decide when to move from JSON to compressed/tiled bundles
+
+Exit condition:
+
+The app can load only the local files needed for the current view.
+
+## Phase 6 — Real geometry import
 
 Goal: replace synthetic geometry with real or derived local data.
 
@@ -136,7 +167,7 @@ Exit condition:
 
 The map displays real Kane County orientation layers.
 
-## Phase 6 — Server-assisted preparation layer
+## Phase 7 — Server-assisted preparation layer
 
 Goal: add online infrastructure only where it improves maintenance.
 
@@ -155,4 +186,13 @@ A server/proxy can publish better data bundles, but the field map still runs off
 
 ## Current next step
 
-Improve the address/unit observation ledger while keeping the app offline and simple.
+Improve the observation form and ledger fields:
+
+```text
+confidence
+visit status
+entrance ID
+mailbox bank ID
+designator list
+record edit/delete
+```

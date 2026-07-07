@@ -53,7 +53,7 @@
             <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
           </label>
           <button type="submit">Add local observation</button>
-          <p class="fine-print">Records remain in browser memory until exported. No server. No database.</p>
+          <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
         </form>
       </aside>
 
@@ -78,7 +78,7 @@
               Import JSON
               <input id="importRecords" type="file" accept="application/json,.json" />
             </label>
-            <button id="clearRecords" type="button" class="danger">Clear memory records</button>
+            <button id="clearRecords" type="button" class="danger">Clear saved records</button>
           </div>
           <ol id="recordList" class="record-list"></ol>
         </div>
@@ -88,6 +88,7 @@
         <span id="renderStatus">Render: OK</span>
         <span id="viewStatus">Zoom 1.00 / Bearing 0°</span>
         <span>Mode: offline canvas</span>
+        <span id="storageStatus">Storage: checking</span>
         <span>No CDN · No server · No database</span>
       </footer>
     </section>
@@ -95,7 +96,8 @@
 
   <script src="src/data/demoFeatures.js"></script>
   <script src="src/map/grid.js"></script>
-  <script src="src/storage/offlineRecords.js"></script>
+  <script src="src/storage/recordSchema.js"></script>
+  <script src="src/storage/localStore.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>
