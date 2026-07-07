@@ -1,11 +1,11 @@
 (function attachGrid(global) {
   "use strict";
 
-  function makeKaneGrid(bounds, options = {}) {
-    const cols = options.cols || 6;
-    const rows = options.rows || 4;
-    const startNorth = options.startNorth || 11;
-    const startEast = options.startEast || 5;
+  function makeKaneGrid(bounds, options) {
+    const rows = options.rows;
+    const cols = options.cols;
+    const startNorth = options.startNorth;
+    const startEast = options.startEast;
     const width = bounds.maxX - bounds.minX;
     const height = bounds.maxY - bounds.minY;
     const cellWidth = width / cols;
@@ -49,6 +49,23 @@
     )) || null;
   }
 
+  function findCellsIntersectingBounds(grid, bounds) {
+    return grid.cells.filter((cell) => boundsIntersect(cell, bounds));
+  }
+
+  function expandBounds(bounds, padding) {
+    return {
+      minX: bounds.minX - padding,
+      minY: bounds.minY - padding,
+      maxX: bounds.maxX + padding,
+      maxY: bounds.maxY + padding
+    };
+  }
+
+  function boundsIntersect(a, b) {
+    return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+  }
+
   function polygonContainsPoint(polygon, point) {
     const [x, y] = point;
     let inside = false;
@@ -70,6 +87,8 @@
   global.KaneMapGrid = {
     makeKaneGrid,
     findCell,
+    findCellsIntersectingBounds,
+    expandBounds,
     polygonContainsPoint
   };
 })(window);

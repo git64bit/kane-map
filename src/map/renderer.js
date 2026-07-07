@@ -4,7 +4,6 @@
   const COLORS = {
     background: "#202426",
     grid: "rgba(210, 220, 228, 0.42)",
-    gridStrong: "rgba(230, 238, 244, 0.65)",
     gridText: "rgba(241, 246, 250, 0.82)",
     road: "#f2f2ee",
     roadEdge: "rgba(20, 25, 28, 0.28)",
@@ -19,9 +18,11 @@
     labelHalo: "rgba(20, 24, 26, 0.9)"
   };
 
-  function createRenderer(canvas, data, grid) {
+  function createRenderer(canvas, initialData, grid) {
     const ctx = canvas.getContext("2d");
-    const bounds = data.meta.bounds;
+    const bounds = initialData.meta.bounds;
+    let data = initialData;
+
     const state = {
       width: 0,
       height: 0,
@@ -82,6 +83,29 @@
       return [wx + centerX, wy + centerY];
     }
 
+    function visibleWorldBounds() {
+      const points = [
+        screenToWorld([0, 0]),
+        screenToWorld([state.width, 0]),
+        screenToWorld([state.width, state.height]),
+        screenToWorld([0, state.height])
+      ];
+      const xs = points.map((point) => point[0]);
+      const ys = points.map((point) => point[1]);
+
+      return {
+        minX: Math.min(...xs),
+        minY: Math.min(...ys),
+        maxX: Math.max(...xs),
+        maxY: Math.max(...ys)
+      };
+    }
+
+    function setData(nextData) {
+      data = nextData;
+      render();
+    }
+
     function pathPolygon(polygon, heightPx = 0) {
       ctx.beginPath();
       polygon.forEach((point, index) => {
@@ -113,6 +137,16 @@
       }
     }
 
+    function render() {
+      if (!ctx) return;
+      drawBackground();
+      drawGrid();
+      drawForests();
+      drawWater();
+      drawRoads();
+      drawBuildings();
+    }
+
     function drawBackground() {
       ctx.fillStyle = COLORS.background;
       ctx.fillRect(0, 0, state.width, state.height);
@@ -120,8 +154,6 @@
 
     function drawGrid() {
       ctx.save();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = COLORS.grid;
       ctx.font = "600 15px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -161,9 +193,7 @@
     }
 
     function drawWater() {
-      data.water.forEach((feature) => {
-        fillPolygon(feature.polygon, COLORS.water, COLORS.waterEdge, 1.2);
-      });
+      data.water.forEach((feature) => fillPolygon(feature.polygon, COLORS.water, COLORS.waterEdge, 1.2));
     }
 
     function drawForests() {
@@ -171,17 +201,6 @@
         fillPolygon(feature.polygon, COLORS.forest, COLORS.forestEdge, 1);
         drawTreeDots(feature.polygon);
       });
-    }
-
-    function polygonBounds(polygon) {
-      const xs = polygon.map((point) => point[0]);
-      const ys = polygon.map((point) => point[1]);
-      return {
-        minX: Math.min(...xs),
-        maxX: Math.max(...xs),
-        minY: Math.min(...ys),
-        maxY: Math.max(...ys)
-      };
     }
 
     function drawTreeDots(polygon) {
@@ -208,19 +227,15 @@
 
     function drawBuilding(building) {
       const heightPx = building.stories * 16 * Math.max(0.75, state.zoom);
-      const polygon = building.polygon;
       const selected = building.id === state.selectedBuildingId;
-      const topFill = selected ? COLORS.selected : COLORS.buildingTop;
+      drawBuildingSides(building.polygon, heightPx, selected);
 
-      drawBuildingSides(polygon, heightPx, selected);
-
-      pathPolygon(polygon, heightPx);
-      ctx.fillStyle = topFill;
+      pathPolygon(building.polygon, heightPx);
+      ctx.fillStyle = selected ? COLORS.selected : COLORS.buildingTop;
       ctx.fill();
       ctx.strokeStyle = selected ? "#fff4bf" : "rgba(255, 226, 220, 0.8)";
       ctx.lineWidth = selected ? 2.5 : 1.2;
       ctx.stroke();
-
       drawBuildingLabel(building, heightPx);
     }
 
@@ -261,19 +276,20 @@
       ctx.restore();
     }
 
+    function polygonBounds(polygon) {
+      const xs = polygon.map((point) => point[0]);
+      const ys = polygon.map((point) => point[1]);
+      return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys)
+      };
+    }
+
     function centroid(polygon) {
       const total = polygon.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
       return [total[0] / polygon.length, total[1] / polygon.length];
-    }
-
-    function render() {
-      if (!ctx) return;
-      drawBackground();
-      drawGrid();
-      drawForests();
-      drawWater();
-      drawRoads();
-      drawBuildings();
     }
 
     function zoomBy(factor) {
@@ -318,10 +334,8 @@
 
     function dragTo(point) {
       if (!state.dragging || !state.lastPointer) return;
-      const dx = point[0] - state.lastPointer[0];
-      const dy = point[1] - state.lastPointer[1];
-      state.offsetX += dx;
-      state.offsetY += dy;
+      state.offsetX += point[0] - state.lastPointer[0];
+      state.offsetY += point[1] - state.lastPointer[1];
       state.lastPointer = point;
       render();
     }
@@ -332,21 +346,12 @@
       canvas.classList.remove("dragging");
     }
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function normalizeBearing(value) {
-      let next = value % 360;
-      if (next > 180) next -= 360;
-      if (next < -180) next += 360;
-      return next;
-    }
-
     return {
       state,
       resize,
       render,
+      setData,
+      visibleWorldBounds,
       zoomBy,
       rotateBy,
       resetView,
@@ -356,6 +361,17 @@
       dragTo,
       endDrag
     };
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function normalizeBearing(value) {
+    let next = value % 360;
+    if (next > 180) next -= 360;
+    if (next < -180) next += 360;
+    return next;
   }
 
   global.KaneMapRenderer = {
