@@ -1,59 +1,88 @@
 #!/usr/bin/env python3
-"""Download all Kane County address points from the ArcGIS FeatureServer using paging."""
+"""Download Kane County address points from ArcGIS in pages.
+
+This script is retained for reproducibility. The current recommended workflow may use
+curl page files plus scripts/merge_address_pages.py when memory is limited.
+"""
 
 from __future__ import annotations
 
 import argparse
-import sys
-from pathlib import Path
+import json
+from datetime import datetime, timezone
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from kane_map_processing.arcgis_paged_download import (
+    ADDRESS_POINTS_ENDPOINT,
+    get_feature_count,
+    download_feature_pages,
+)
+from kane_map_processing.config import DOWNLOAD_DIR, REPORTS_DIR
 
-from kane_map_processing.arcgis_paged_download import PagedDownloadConfig, download_paged_geojson
-from kane_map_processing.config import DOWNLOADS_DIR, REPORTS_DIR
-
-ENDPOINT = "https://services1.arcgis.com/oRKmdBXD6EbdmVgJ/ArcGIS/rest/services/KaneCo_IL_AddressPoints/FeatureServer/0"
+OUTPUT_PATH = DOWNLOAD_DIR / "kane-address-points.geojson"
+REPORT_PATH = REPORTS_DIR / "address_points_paged_download_report.json"
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Download Kane address points using ArcGIS paging.")
-    parser.add_argument("--execute", action="store_true", help="Actually download and write the GeoJSON file.")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing downloaded address-points GeoJSON.")
-    parser.add_argument("--page-size", type=int, default=2000, help="ArcGIS page size. Default: 2000.")
-    return parser.parse_args()
+def write_report(report: dict) -> None:
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with REPORT_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(report, handle, indent=2, sort_keys=True)
+        handle.write("\n")
 
 
 def main() -> int:
-    args = parse_args()
-    config = PagedDownloadConfig(
-        endpoint=ENDPOINT,
-        output_path=DOWNLOADS_DIR / "kane-address-points.geojson",
-        report_path=REPORTS_DIR / "address_points_paged_download_report.json",
-        page_size=args.page_size,
-    )
+    parser = argparse.ArgumentParser(description="Download all Kane County address points from ArcGIS.")
+    parser.add_argument("--execute", action="store_true", help="Actually download the combined file.")
+    parser.add_argument("--force", action="store_true", help="Replace existing output file.")
+    parser.add_argument("--page-size", type=int, default=2000, help="ArcGIS resultRecordCount value.")
+    args = parser.parse_args()
+
+    count = get_feature_count(ADDRESS_POINTS_ENDPOINT)
+    pages = (count + args.page_size - 1) // args.page_size
+
+    report = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "execute" if args.execute else "dry_run",
+        "endpoint": ADDRESS_POINTS_ENDPOINT,
+        "output_path": str(OUTPUT_PATH),
+        "expected_features": count,
+        "page_size": args.page_size,
+        "pages_expected": pages,
+        "result": None,
+    }
 
     print("Kane-Map address points paged downloader")
     print(f"Mode: {'EXECUTE' if args.execute else 'DRY RUN'}")
-    print(f"Endpoint: {ENDPOINT}")
-    print(f"Output: {config.output_path}")
+    print(f"Endpoint: {ADDRESS_POINTS_ENDPOINT}")
+    print(f"Output: {OUTPUT_PATH}")
+    print(f"Expected features: {count}")
+    print(f"Pages expected: {pages}")
 
-    try:
-        report = download_paged_geojson(config, execute=args.execute, force=args.force)
-    except Exception as exc:
-        print(f"ERROR: {exc}")
+    if not args.execute:
+        print("Dry run only. Use --execute --force to replace the current limited download.")
+        write_report(report)
+        print(f"Wrote {REPORT_PATH}")
+        return 0
+
+    if OUTPUT_PATH.exists() and not args.force:
+        report["result"] = {"status": "blocked", "reason": "output exists; use --force"}
+        write_report(report)
+        print("Blocked: output exists. Use --force to replace it.")
+        print(f"Wrote {REPORT_PATH}")
         return 1
 
-    print(f"Expected features: {report['expected_count']}")
-    print(f"Pages expected: {report['pages_expected']}")
+    result = download_feature_pages(
+        endpoint=ADDRESS_POINTS_ENDPOINT,
+        output_path=OUTPUT_PATH,
+        page_size=args.page_size,
+        expected_count=count,
+    )
+    report["result"] = result
+    write_report(report)
 
-    if args.execute:
-        print(f"Features written: {report.get('features_written')}")
-        print(f"Bytes written: {report.get('bytes_written')}")
-        print(f"Count matches: {report.get('count_matches')}")
-    else:
-        print("Dry run only. Use --execute --force to replace the current limited download.")
-
-    print(f"Wrote {config.report_path}")
+    print("OK: downloaded address points")
+    print(f"Features: {result.get('features')}")
+    print(f"Bytes: {OUTPUT_PATH.stat().st_size}")
+    print(f"Wrote {REPORT_PATH}")
     return 0
 
 
