@@ -15,6 +15,10 @@
     buildingSide: "#a93128",
     buildingSideDark: "#7c241f",
     selected: "#ffe9a8",
+    statusObserved: "#74b8ff",
+    statusVerified: "#9fe28d",
+    statusWarning: "#ffd17a",
+    statusConflict: "#ff8a73",
     labelHalo: "rgba(20, 24, 26, 0.9)"
   };
 
@@ -33,6 +37,7 @@
       offsetY: 18,
       selectedBuildingId: null,
       selectedCellCode: null,
+      recordSummaryByBuilding: {},
       dragging: false,
       lastPointer: null
     };
@@ -237,6 +242,7 @@
       ctx.lineWidth = selected ? 2.5 : 1.2;
       ctx.stroke();
       drawBuildingLabel(building, heightPx);
+      drawBuildingStatusMarker(building, heightPx);
     }
 
     function drawBuildingSides(polygon, heightPx, selected) {
@@ -276,6 +282,38 @@
       ctx.restore();
     }
 
+    function drawBuildingStatusMarker(building, heightPx) {
+      const summary = state.recordSummaryByBuilding[building.id];
+      if (!summary) return;
+
+      const [x, y] = worldToScreen(centroid(building.polygon));
+      const statusColor = colorForStatus(summary.status);
+      const label = summary.observedUnitCount === null ? "?" : String(summary.observedUnitCount);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + 18, y - heightPx - 23, 11, 0, Math.PI * 2);
+      ctx.fillStyle = statusColor;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = COLORS.labelHalo;
+      ctx.stroke();
+
+      ctx.font = "800 9px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#11171b";
+      ctx.fillText(label.slice(0, 3), x + 18, y - heightPx - 23);
+      ctx.restore();
+    }
+
+    function colorForStatus(status) {
+      if (status === "verified") return COLORS.statusVerified;
+      if (status === "conflict") return COLORS.statusConflict;
+      if (status === "revisit-needed" || status === "pattern-inferred") return COLORS.statusWarning;
+      return COLORS.statusObserved;
+    }
+
     function polygonBounds(polygon) {
       const xs = polygon.map((point) => point[0]);
       const ys = polygon.map((point) => point[1]);
@@ -313,6 +351,11 @@
     function setSelected(building, cell) {
       state.selectedBuildingId = building ? building.id : null;
       state.selectedCellCode = cell ? cell.code : null;
+      render();
+    }
+
+    function setBuildingRecordSummary(summaryByBuilding) {
+      state.recordSummaryByBuilding = summaryByBuilding || {};
       render();
     }
 
@@ -356,6 +399,7 @@
       rotateBy,
       resetView,
       setSelected,
+      setBuildingRecordSummary,
       hitTest,
       beginDrag,
       dragTo,

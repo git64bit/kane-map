@@ -10,7 +10,8 @@
   });
 
   const featureStore = global.KaneMapChunkRegistry.createFeatureStore(catalog);
-  const initialData = featureStore.buildDataForCells(grid.cells.map((cell) => cell.code));
+  const allCellCodes = grid.cells.map((cell) => cell.code);
+  const initialData = featureStore.buildDataForCells(allCellCodes);
   const store = global.KaneMapLocalStore.createLocalObservationStore();
   const canvas = document.getElementById("mapCanvas");
   const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
@@ -22,6 +23,10 @@
     selectedStories: document.getElementById("selectedStories"),
     buildingSummary: document.getElementById("buildingSummary"),
     observationForm: document.getElementById("observationForm"),
+    observationFormTitle: document.getElementById("observationFormTitle"),
+    editModeNotice: document.getElementById("editModeNotice"),
+    saveObservation: document.getElementById("saveObservation"),
+    cancelEdit: document.getElementById("cancelEdit"),
     siteLabel: document.getElementById("siteLabel"),
     entranceId: document.getElementById("entranceId"),
     mailboxBankId: document.getElementById("mailboxBankId"),
@@ -33,6 +38,7 @@
     visitStatus: document.getElementById("visitStatus"),
     accessContext: document.getElementById("accessContext"),
     observationNotes: document.getElementById("observationNotes"),
+    showSelectedOnly: document.getElementById("showSelectedOnly"),
     recordCount: document.getElementById("recordCount"),
     recordList: document.getElementById("recordList"),
     storageStatus: document.getElementById("storageStatus"),
@@ -51,6 +57,7 @@
 
   let selected = { cell: null, building: null };
   let visibleCellCodes = [];
+  let editingRecordId = null;
 
   function init() {
     bindCanvasEvents();
@@ -62,6 +69,7 @@
     updateDesignatorPreview();
     updateRecordPanel();
     updateBuildingSummary();
+    updateBuildingStatusOverlay();
     updateStorageStatus();
     updateViewAndChunkStatus();
   }
@@ -96,9 +104,7 @@
       updateViewAndChunkStatus();
     });
 
-    canvas.addEventListener("pointercancel", () => {
-      renderer.endDrag();
-    });
+    canvas.addEventListener("pointercancel", () => renderer.endDrag());
 
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
@@ -114,6 +120,11 @@
     els.rotateLeft.addEventListener("click", () => changeView(() => renderer.rotateBy(-12)));
     els.rotateRight.addEventListener("click", () => changeView(() => renderer.rotateBy(12)));
     els.resetView.addEventListener("click", () => changeView(() => renderer.resetView()));
+    els.showSelectedOnly.addEventListener("change", updateRecordPanel);
+    els.cancelEdit.addEventListener("click", () => {
+      stopEditing();
+      clearObservationForm();
+    });
 
     els.exportRecords.addEventListener("click", () => {
       const filename = `kane-map-observations-${dateStamp()}.json`;
@@ -126,23 +137,12 @@
       if (!store.snapshot().length) return;
       const ok = confirm("Clear locally saved Kane-Map observation records from this browser?");
       if (!ok) return;
+      stopEditing();
       store.clear();
-      updateRecordPanel();
-      updateBuildingSummary();
-      updateStorageStatus();
+      refreshRecordUi();
     });
 
-    els.recordList.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-record-delete]");
-      if (!button) return;
-      const recordId = button.getAttribute("data-record-delete");
-      const ok = confirm(`Delete local observation record ${recordId}?`);
-      if (!ok) return;
-      store.deleteRecord(recordId);
-      updateRecordPanel();
-      updateBuildingSummary();
-      updateStorageStatus();
-    });
+    els.recordList.addEventListener("click", handleRecordListClick);
   }
 
   function bindObservationEvents() {
@@ -152,37 +152,103 @@
       event.preventDefault();
 
       if (!selected.building) {
-        alert("Select a building before adding an observation.");
+        alert("Select a building before adding or updating an observation.");
         return;
       }
 
-      const parsedDesignators = designators.parseDesignators(els.visibleDesignators.value);
-      const observedUnitCount = resolveObservedUnitCount(els.unitCount.value, parsedDesignators);
+      const input = buildRecordInput();
+      if (editingRecordId) {
+        const updated = store.updateRecord(editingRecordId, input);
+        if (!updated) alert(`Could not update ${editingRecordId}.`);
+      } else {
+        store.addRecord(input);
+      }
 
-      store.addRecord({
-        gridCell: selected.cell ? selected.cell.code : selected.building.cell,
-        buildingId: selected.building.id,
-        buildingLabel: selected.building.label,
-        buildingName: selected.building.name,
-        stories: selected.building.stories,
-        siteLabel: els.siteLabel.value.trim(),
-        entranceId: els.entranceId.value.trim(),
-        mailboxBankId: els.mailboxBankId.value.trim(),
-        observedUnitCount,
-        designatorPattern: els.designatorPattern.value.trim(),
-        visibleDesignators: parsedDesignators,
-        designatorRaw: els.visibleDesignators.value.trim(),
-        confidence: els.confidence.value,
-        visitStatus: els.visitStatus.value,
-        accessContext: els.accessContext.value.trim(),
-        notes: els.observationNotes.value.trim()
-      });
-
+      stopEditing();
       clearObservationForm();
-      updateRecordPanel();
-      updateBuildingSummary();
-      updateStorageStatus();
+      refreshRecordUi();
     });
+  }
+
+  function handleRecordListClick(event) {
+    const editButton = event.target.closest("button[data-record-edit]");
+    const deleteButton = event.target.closest("button[data-record-delete]");
+
+    if (editButton) {
+      startEditing(editButton.getAttribute("data-record-edit"));
+      return;
+    }
+
+    if (!deleteButton) return;
+    const recordId = deleteButton.getAttribute("data-record-delete");
+    const ok = confirm(`Delete local observation record ${recordId}?`);
+    if (!ok) return;
+    if (editingRecordId === recordId) stopEditing();
+    store.deleteRecord(recordId);
+    refreshRecordUi();
+  }
+
+  function buildRecordInput() {
+    const parsedDesignators = designators.parseDesignators(els.visibleDesignators.value);
+    const observedUnitCount = resolveObservedUnitCount(els.unitCount.value, parsedDesignators);
+
+    return {
+      gridCell: selected.cell ? selected.cell.code : selected.building.cell,
+      buildingId: selected.building.id,
+      buildingLabel: selected.building.label,
+      buildingName: selected.building.name,
+      stories: selected.building.stories,
+      siteLabel: els.siteLabel.value.trim(),
+      entranceId: els.entranceId.value.trim(),
+      mailboxBankId: els.mailboxBankId.value.trim(),
+      observedUnitCount,
+      designatorPattern: els.designatorPattern.value.trim(),
+      visibleDesignators: parsedDesignators,
+      designatorRaw: els.visibleDesignators.value.trim(),
+      confidence: els.confidence.value,
+      visitStatus: els.visitStatus.value,
+      accessContext: els.accessContext.value.trim(),
+      notes: els.observationNotes.value.trim()
+    };
+  }
+
+  function startEditing(recordId) {
+    const record = store.getRecord(recordId);
+    if (!record) return;
+
+    const building = findBuildingById(record.buildingId);
+    if (building) {
+      selected = { cell: cellForCode(record.gridCell || building.cell), building };
+      renderer.setSelected(selected.building, selected.cell);
+      updateSelectedPanel();
+    }
+
+    editingRecordId = record.id;
+    els.observationFormTitle.textContent = "Edit observation";
+    els.editModeNotice.hidden = false;
+    els.saveObservation.textContent = "Update field observation";
+    els.cancelEdit.hidden = false;
+
+    els.siteLabel.value = record.siteLabel || "";
+    els.entranceId.value = record.entranceId || "";
+    els.mailboxBankId.value = record.mailboxBankId || "";
+    els.visibleDesignators.value = record.designatorRaw || record.visibleDesignators.join(", ");
+    els.unitCount.value = record.observedUnitCount === null ? "" : String(record.observedUnitCount);
+    els.designatorPattern.value = record.designatorPattern || "";
+    els.confidence.value = record.confidence || "unreviewed";
+    els.visitStatus.value = record.visitStatus || "observed";
+    els.accessContext.value = record.accessContext || "";
+    els.observationNotes.value = record.notes || "";
+    updateDesignatorPreview();
+    updateRecordPanel();
+  }
+
+  function stopEditing() {
+    editingRecordId = null;
+    els.observationFormTitle.textContent = "Offline observation";
+    els.editModeNotice.hidden = true;
+    els.saveObservation.textContent = "Add field observation";
+    els.cancelEdit.hidden = true;
   }
 
   function clearObservationForm() {
@@ -241,73 +307,107 @@
 
     const records = store.recordsForBuilding(selected.building.id);
     if (!records.length) {
-      els.buildingSummary.innerHTML = [
-        `<strong>${escapeHtml(selected.building.label)}</strong>`,
-        `<br>No saved observations for this building.`
-      ].join("");
+      els.buildingSummary.innerHTML = `<strong>${escapeHtml(selected.building.label)}</strong><br>No saved observations for this building.`;
       return;
     }
 
-    const latest = records.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
-    const count = latest.observedUnitCount === null ? "unknown" : String(latest.observedUnitCount);
-    const warning = latest.visitStatus === "revisit-needed" || latest.visitStatus === "conflict"
-      ? `<br><span class="status-warning">${escapeHtml(latest.visitStatus)}</span>`
+    const summary = summarizeRecords(records);
+    const count = summary.observedUnitCount === null ? "unknown" : String(summary.observedUnitCount);
+    const conflict = summary.countVariants.length > 1
+      ? `<br><span class="status-warning">Count conflict: ${escapeHtml(summary.countVariants.join(" / "))}</span>`
       : "";
 
     els.buildingSummary.innerHTML = [
       `<strong>${escapeHtml(selected.building.label)}</strong>`,
       `<br>${records.length} saved observation${records.length === 1 ? "" : "s"}`,
       `<br>Latest count: ${escapeHtml(count)}`,
-      `<br>Latest status: ${escapeHtml(latest.visitStatus)}`,
-      `<br>Confidence: ${escapeHtml(latest.confidence)}`,
-      warning
+      `<br>Latest status: ${escapeHtml(summary.status)}`,
+      `<br>Confidence: ${escapeHtml(summary.confidence)}`,
+      conflict
     ].join("");
   }
 
   function updateRecordPanel() {
-    const records = store.snapshot();
+    let records = store.snapshot();
     els.recordCount.textContent = String(records.length);
     els.recordList.innerHTML = "";
 
-    records.slice(-8).reverse().forEach((record) => {
-      const item = document.createElement("li");
-      const count = record.observedUnitCount === null ? "unknown count" : `${record.observedUnitCount} units`;
-      const date = record.createdAt ? record.createdAt.slice(0, 10) : "undated";
-      const designatorText = formatDesignatorList(record);
-      if (selected.building && record.buildingId === selected.building.id) {
-        item.classList.add("record-selected-building");
-      }
+    if (els.showSelectedOnly.checked && selected.building) {
+      records = records.filter((record) => record.buildingId === selected.building.id);
+    }
 
-      item.innerHTML = [
-        `<div class="record-header"><strong>${escapeHtml(record.buildingLabel)}</strong>`,
-        `<button type="button" data-record-delete="${escapeHtml(record.id)}">Delete</button></div>`,
-        ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
-        `<br><span class="muted">${escapeHtml(record.id)} · ${escapeHtml(date)} · ${escapeHtml(record.visitStatus)}</span>`,
-        record.siteLabel ? `<br>Site: ${escapeHtml(record.siteLabel)}` : "",
-        record.mailboxBankId ? `<br>Mailbank: ${escapeHtml(record.mailboxBankId)}` : "",
-        designatorText ? `<br>Designators: ${escapeHtml(designatorText)}` : "",
-        record.notes ? `<br>${escapeHtml(record.notes)}` : ""
-      ].join("");
-      els.recordList.appendChild(item);
+    records.slice(-12).reverse().forEach((record) => renderRecordItem(record));
+  }
+
+  function renderRecordItem(record) {
+    const item = document.createElement("li");
+    const count = record.observedUnitCount === null ? "unknown count" : `${record.observedUnitCount} units`;
+    const date = record.updatedAt ? record.updatedAt.slice(0, 10) : "undated";
+    const designatorText = formatDesignatorList(record);
+    if (selected.building && record.buildingId === selected.building.id) item.classList.add("record-selected-building");
+    if (editingRecordId === record.id) item.classList.add("record-selected-building");
+
+    item.innerHTML = [
+      `<div class="record-header"><strong>${escapeHtml(record.buildingLabel)}</strong>`,
+      `<span class="record-actions">`,
+      `<button type="button" data-record-edit="${escapeHtml(record.id)}">Edit</button>`,
+      `<button type="button" data-record-delete="${escapeHtml(record.id)}">Delete</button>`,
+      `</span></div>`,
+      ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
+      `<br><span class="muted">${escapeHtml(record.id)} · updated ${escapeHtml(date)}</span>`,
+      `<br><span class="status-pill">${escapeHtml(record.visitStatus)} · ${escapeHtml(record.confidence)}</span>`,
+      record.siteLabel ? `<br>Site: ${escapeHtml(record.siteLabel)}` : "",
+      record.mailboxBankId ? `<br>Mailbank: ${escapeHtml(record.mailboxBankId)}` : "",
+      designatorText ? `<br>Designators: ${escapeHtml(designatorText)}` : "",
+      record.notes ? `<br>${escapeHtml(record.notes)}` : ""
+    ].join("");
+    els.recordList.appendChild(item);
+  }
+
+  function refreshRecordUi() {
+    updateRecordPanel();
+    updateBuildingSummary();
+    updateBuildingStatusOverlay();
+    updateStorageStatus();
+  }
+
+  function updateBuildingStatusOverlay() {
+    renderer.setBuildingRecordSummary(summarizeByBuilding(store.snapshot()));
+  }
+
+  function summarizeByBuilding(records) {
+    const groups = {};
+    records.forEach((record) => {
+      if (!groups[record.buildingId]) groups[record.buildingId] = [];
+      groups[record.buildingId].push(record);
     });
+
+    return Object.fromEntries(Object.entries(groups).map(([buildingId, group]) => [buildingId, summarizeRecords(group)]));
+  }
+
+  function summarizeRecords(records) {
+    const sorted = records.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    const latest = sorted[0];
+    const countVariants = [...new Set(records.map((record) => record.observedUnitCount).filter((value) => value !== null))].sort((a, b) => a - b);
+    const status = records.some((record) => record.visitStatus === "conflict") ? "conflict"
+      : records.some((record) => record.visitStatus === "revisit-needed") ? "revisit-needed"
+      : latest.visitStatus;
+
+    return {
+      observedUnitCount: latest.observedUnitCount,
+      confidence: latest.confidence,
+      status,
+      countVariants
+    };
   }
 
   function resolveObservedUnitCount(rawUnitCount, parsedDesignators) {
     const typed = String(rawUnitCount || "").trim();
     const typedNumber = Number(typed);
 
-    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber > 0) {
-      return Math.floor(typedNumber);
-    }
-
-    if (parsedDesignators.length > 0) {
-      return parsedDesignators.length;
-    }
-
-    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber === 0) {
-      return 0;
-    }
-
+    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber > 0) return Math.floor(typedNumber);
+    if (parsedDesignators.length > 0) return parsedDesignators.length;
+    if (typed !== "" && Number.isFinite(typedNumber) && typedNumber === 0) return 0;
     return null;
   }
 
@@ -345,10 +445,9 @@
     const reader = new FileReader();
     reader.onload = () => {
       try {
+        stopEditing();
         store.importJson(String(reader.result || ""));
-        updateRecordPanel();
-        updateBuildingSummary();
-        updateStorageStatus();
+        refreshRecordUi();
       } catch (error) {
         alert(`Import failed: ${error.message}`);
       } finally {
@@ -356,6 +455,14 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  function findBuildingById(buildingId) {
+    return featureStore.buildDataForCells(allCellCodes).buildings.find((building) => building.id === buildingId) || null;
+  }
+
+  function cellForCode(code) {
+    return grid.cells.find((cell) => cell.code === code) || null;
   }
 
   function pointerPosition(event) {

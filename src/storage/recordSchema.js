@@ -2,7 +2,7 @@
   "use strict";
 
   const FORMAT = "kane-map-observation-records";
-  const VERSION = 4;
+  const VERSION = 5;
   const RECORD_PREFIX = "KMO";
 
   function createObservationRecord(input, sequenceNumber) {
@@ -35,6 +35,32 @@
       mailRead: false,
       residentNamesRecorded: false,
       source: "local browser storage"
+    });
+  }
+
+  function updateObservationRecord(existing, input) {
+    const base = normalizeRecord(existing);
+    const now = new Date().toISOString();
+
+    return normalizeRecord({
+      ...base,
+      updatedAt: now,
+      gridCell: input.gridCell,
+      buildingId: input.buildingId,
+      buildingLabel: input.buildingLabel,
+      buildingName: input.buildingName,
+      stories: input.stories,
+      siteLabel: input.siteLabel,
+      entranceId: input.entranceId,
+      mailboxBankId: input.mailboxBankId,
+      observedUnitCount: input.observedUnitCount,
+      designatorPattern: input.designatorPattern,
+      designatorRaw: input.designatorRaw,
+      visibleDesignators: input.visibleDesignators,
+      confidence: input.confidence || base.confidence,
+      visitStatus: input.visitStatus || base.visitStatus,
+      accessContext: input.accessContext,
+      notes: input.notes
     });
   }
 
@@ -152,6 +178,7 @@
     FORMAT,
     VERSION,
     createObservationRecord,
+    updateObservationRecord,
     normalizeRecord,
     createEnvelope,
     parseEnvelope,

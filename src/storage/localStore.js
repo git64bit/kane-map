@@ -1,8 +1,9 @@
 (function attachLocalStore(global) {
   "use strict";
 
-  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v4";
+  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v5";
   const LEGACY_STORAGE_KEYS = [
+    "kane-map.local-observations.v4",
     "kane-map.local-observations.v3",
     "kane-map.local-observations.v2"
   ];
@@ -16,14 +17,30 @@
     loadFromBrowser();
 
     function snapshot() {
-      return records.map((record) => ({ ...record, visibleDesignators: record.visibleDesignators.slice() }));
+      return records.map(copyRecord);
     }
 
     function addRecord(input) {
       const record = schema.createObservationRecord(input, schema.nextSequence(records));
       records.push(record);
       saveToBrowser();
-      return { ...record, visibleDesignators: record.visibleDesignators.slice() };
+      return copyRecord(record);
+    }
+
+    function getRecord(recordId) {
+      const found = records.find((record) => record.id === recordId);
+      return found ? copyRecord(found) : null;
+    }
+
+    function updateRecord(recordId, input) {
+      let updated = null;
+      records = records.map((record) => {
+        if (record.id !== recordId) return record;
+        updated = schema.updateObservationRecord(record, input);
+        return updated;
+      });
+      if (updated) saveToBrowser();
+      return updated ? copyRecord(updated) : null;
     }
 
     function replaceAll(importedRecords) {
@@ -41,6 +58,10 @@
 
     function recordsForBuilding(buildingId) {
       return snapshot().filter((record) => record.buildingId === buildingId);
+    }
+
+    function copyRecord(record) {
+      return { ...record, visibleDesignators: record.visibleDesignators.slice() };
     }
 
     function clear() {
@@ -137,11 +158,13 @@
       deleteRecord,
       download,
       exportJson,
+      getRecord,
       importJson,
       recordsForBuilding,
       replaceAll,
       snapshot,
-      storageStatus
+      storageStatus,
+      updateRecord
     };
   }
 
