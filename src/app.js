@@ -11,11 +11,17 @@
 
   const featureStore = global.KaneMapChunkRegistry.createFeatureStore(catalog);
   const allCellCodes = grid.cells.map((cell) => cell.code);
+  const allBuildings = featureStore.buildDataForCells(allCellCodes).buildings;
   const initialData = featureStore.buildDataForCells(allCellCodes);
   const store = global.KaneMapLocalStore.createLocalObservationStore();
   const canvas = document.getElementById("mapCanvas");
   const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
   const designators = global.KaneMapDesignators;
+  const searchIndex = global.KaneMapSearchIndex.createSearchIndex({
+    grid,
+    buildings: allBuildings,
+    getRecords: () => store.snapshot()
+  });
 
   const els = {
     selectedCell: document.getElementById("selectedCell"),
@@ -50,6 +56,10 @@
     rotateLeft: document.getElementById("rotateLeft"),
     rotateRight: document.getElementById("rotateRight"),
     resetView: document.getElementById("resetView"),
+    navSearch: document.getElementById("navSearch"),
+    clearSearch: document.getElementById("clearSearch"),
+    searchResults: document.getElementById("searchResults"),
+    coverageSummary: document.getElementById("coverageSummary"),
     exportRecords: document.getElementById("exportRecords"),
     importRecords: document.getElementById("importRecords"),
     clearRecords: document.getElementById("clearRecords")
@@ -70,6 +80,7 @@
     updateRecordPanel();
     updateBuildingSummary();
     updateBuildingStatusOverlay();
+    updateCoverageSummary();
     updateStorageStatus();
     updateViewAndChunkStatus();
   }
@@ -120,6 +131,13 @@
     els.rotateLeft.addEventListener("click", () => changeView(() => renderer.rotateBy(-12)));
     els.rotateRight.addEventListener("click", () => changeView(() => renderer.rotateBy(12)));
     els.resetView.addEventListener("click", () => changeView(() => renderer.resetView()));
+    els.navSearch.addEventListener("input", handleNavigationSearch);
+    els.clearSearch.addEventListener("click", () => {
+      els.navSearch.value = "";
+      renderSearchResults([]);
+      els.navSearch.focus();
+    });
+    els.searchResults.addEventListener("click", handleSearchResultClick);
     els.showSelectedOnly.addEventListener("change", updateRecordPanel);
     els.cancelEdit.addEventListener("click", () => {
       stopEditing();
@@ -290,6 +308,73 @@
     updateRecordPanel();
   }
 
+  function handleNavigationSearch() {
+    renderSearchResults(searchIndex.search(els.navSearch.value));
+  }
+
+  function renderSearchResults(results) {
+    els.searchResults.innerHTML = "";
+    if (!els.navSearch.value.trim()) {
+      els.searchResults.innerHTML = `<li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>`;
+      return;
+    }
+    if (!results.length) {
+      els.searchResults.innerHTML = `<li class="muted">No local matches.</li>`;
+      return;
+    }
+
+    results.forEach((result) => {
+      const item = document.createElement("li");
+      item.innerHTML = [
+        `<button type="button" data-result-type="${escapeHtml(result.type)}"`,
+        ` data-building-id="${escapeHtml(result.buildingId || "")}"`,
+        ` data-cell-code="${escapeHtml(result.cellCode || "")}">`,
+        `<strong>${escapeHtml(result.label)}</strong>`,
+        `<span>${escapeHtml(result.type)} · ${escapeHtml(result.detail)}</span>`,
+        `</button>`
+      ].join("");
+      els.searchResults.appendChild(item);
+    });
+  }
+
+  function handleSearchResultClick(event) {
+    const button = event.target.closest("button[data-result-type]");
+    if (!button) return;
+
+    const buildingId = button.getAttribute("data-building-id");
+    const cellCode = button.getAttribute("data-cell-code");
+
+    if (buildingId) jumpToBuilding(buildingId);
+    else if (cellCode) jumpToCell(cellCode);
+  }
+
+  function jumpToBuilding(buildingId) {
+    const building = findBuildingById(buildingId);
+    if (!building) return;
+    const cell = cellForCode(building.cell);
+
+    selected = { cell, building };
+    renderer.centerOnPolygon(building.polygon);
+    updateActiveChunks();
+    renderer.setSelected(building, cell);
+    updateSelectedPanel();
+    updateRecordPanel();
+    updateViewAndChunkStatus();
+  }
+
+  function jumpToCell(cellCode) {
+    const cell = cellForCode(cellCode);
+    if (!cell) return;
+
+    selected = { cell, building: null };
+    renderer.centerOnWorldPoint(cell.center);
+    updateActiveChunks();
+    renderer.setSelected(null, cell);
+    updateSelectedPanel();
+    updateRecordPanel();
+    updateViewAndChunkStatus();
+  }
+
   function updateSelectedPanel() {
     els.selectedCell.textContent = selected.cell ? selected.cell.code : "None";
     els.selectedBuilding.textContent = selected.building
@@ -368,11 +453,23 @@
     updateRecordPanel();
     updateBuildingSummary();
     updateBuildingStatusOverlay();
+    updateCoverageSummary();
+    handleNavigationSearch();
     updateStorageStatus();
   }
 
   function updateBuildingStatusOverlay() {
     renderer.setBuildingRecordSummary(summarizeByBuilding(store.snapshot()));
+  }
+
+  function updateCoverageSummary() {
+    const summary = searchIndex.coverage();
+    els.coverageSummary.innerHTML = [
+      `<strong>${summary.recordedBuildings}/${summary.totalBuildings}</strong> buildings have records`,
+      `<br>${summary.latestUnitTotal} latest observed units`,
+      `<br>${summary.verifiedBuildings} verified · ${summary.revisitBuildings} revisit · ${summary.conflictBuildings} conflict`,
+      `<br>${summary.recordCount} saved observation records`
+    ].join("");
   }
 
   function summarizeByBuilding(records) {
@@ -458,7 +555,7 @@
   }
 
   function findBuildingById(buildingId) {
-    return featureStore.buildDataForCells(allCellCodes).buildings.find((building) => building.id === buildingId) || null;
+    return allBuildings.find((building) => building.id === buildingId) || null;
   }
 
   function cellForCode(code) {

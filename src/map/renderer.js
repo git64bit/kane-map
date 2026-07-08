@@ -330,6 +330,17 @@
       return [total[0] / polygon.length, total[1] / polygon.length];
     }
 
+    function centerOnWorldPoint(point) {
+      const [x, y] = worldToScreen(point);
+      state.offsetX += state.width / 2 - x;
+      state.offsetY += state.height / 2 - y;
+      render();
+    }
+
+    function centerOnPolygon(polygon) {
+      centerOnWorldPoint(centroid(polygon));
+    }
+
     function zoomBy(factor) {
       state.zoom = clamp(state.zoom * factor, 0.35, 2.4);
       render();
@@ -400,6 +411,8 @@
       resetView,
       setSelected,
       setBuildingRecordSummary,
+      centerOnWorldPoint,
+      centerOnPolygon,
       hitTest,
       beginDrag,
       dragTo,
