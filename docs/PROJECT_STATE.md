@@ -203,3 +203,18 @@ Possible additions:
 - export CSV for observations
 - export CSV for building coverage
 - preserve JSON as the full-fidelity backup format
+
+## Batch 013 — exports
+
+Added spreadsheet-friendly and report-friendly exports while keeping JSON as the complete backup format.
+
+New exports:
+
+```text
+Export JSON              full-fidelity backup / restore
+Export observation CSV   one row per saved observation record
+Export building CSV      one row per building summary
+Export field report      compact TXT coverage report
+```
+
+JSON remains the authoritative portable format. CSV and TXT are review outputs.
