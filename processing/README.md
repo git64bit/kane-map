@@ -1,67 +1,62 @@
-# Kane-Map processing scaffold
+# Kane-Map Processing
 
-This folder is the offline production-data preparation area for Kane-Map.
+This directory contains the Debian/Python processing toolchain for preparing static Kane-Map data.
 
-The browser application remains a static offline fieldwork tool. The processing folder is for heavier work that should happen outside the browser, preferably on a Debian 12 or Debian 13 node using a Python virtual environment.
-
-## Current node workflow
-
-From an interactive login as `kaneproc`, the shell should already be in the venv and in:
-
-```text
-/home/kaneproc/kane-map/processing
-```
-
-## Common checks
+## Current local workflow
 
 ```bash
 python scripts/check_environment.py
 python scripts/list_sources.py
-python scripts/validate_sources.py
+python scripts/list_downloads.py
+python scripts/stage_downloads.py
 python scripts/intake_sources.py
 python scripts/build_manifest.py
 python scripts/validate_prepared_data.py
 ```
 
-## Downloads and staging
+## Conversion commands
 
-Downloaded original files go here:
+Address points are direct GeoJSON and can be staged with:
 
-```text
-processing/input/downloads/
+```bash
+python scripts/stage_downloads.py --execute --source kane-address-points
 ```
 
-Working raw GeoJSON files go here:
-
-```text
-processing/input/raw/
-```
-
-Browser-ready prepared files will later go here:
-
-```text
-processing/output/prepared/
-```
-
-## Current conversion scripts
+Roads:
 
 ```bash
 python scripts/convert_roads_zip.py
 python scripts/convert_roads_zip.py --execute
+```
 
+Water:
+
+```bash
 python scripts/convert_water_zip.py
 python scripts/convert_water_zip.py --execute
+```
 
+County boundary:
+
+```bash
 python scripts/convert_county_boundary_zip.py
 python scripts/convert_county_boundary_zip.py --execute
 ```
 
-All conversion scripts are dry-run by default.
+Building footprints:
 
-## Design rule
+```bash
+python scripts/convert_building_footprints_zip.py
+python scripts/convert_building_footprints_zip.py --execute
+```
 
-Heavy processing happens outside the browser.
+## Folder meaning
 
-Field use happens inside the browser.
+```text
+input/downloads/   original acquired files
+input/raw/         staged or converted raw working files
+output/prepared/   future browser-ready Kane-Map output
+output/reports/    processing reports
+```
 
-The browser consumes prepared static data.
+Do not commit downloaded source files, raw converted files, or prepared production data unless explicitly decided later.

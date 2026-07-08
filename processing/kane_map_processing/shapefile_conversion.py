@@ -17,10 +17,12 @@ from .source_registry import load_source_registry, resolve_local_source_path
 ROADS_SOURCE_ID = "kane-road-centerlines"
 WATER_SOURCE_ID = "kane-water-polygons"
 COUNTY_BOUNDARY_SOURCE_ID = "kane-county-boundary"
+BUILDING_FOOTPRINTS_SOURCE_ID = "kane-building-footprints"
 
 ROADS_CONVERSION_REPORT_PATH = REPORTS_DIR / "roads_conversion_report.json"
 WATER_CONVERSION_REPORT_PATH = REPORTS_DIR / "water_conversion_report.json"
 COUNTY_BOUNDARY_CONVERSION_REPORT_PATH = REPORTS_DIR / "county_boundary_conversion_report.json"
+BUILDING_FOOTPRINTS_CONVERSION_REPORT_PATH = REPORTS_DIR / "building_footprints_conversion_report.json"
 
 
 @dataclass(frozen=True)
@@ -85,6 +87,16 @@ COUNTY_BOUNDARY_SPEC = SourceConversionSpec(
     temp_prefix="kane-map-county-boundary-",
     batch_reason="ready to convert county boundary ZIP into raw GeoJSON",
     property_filter={"STATEFP": "17", "COUNTYFP": "089"},
+)
+
+BUILDING_FOOTPRINTS_SPEC = SourceConversionSpec(
+    source_id=BUILDING_FOOTPRINTS_SOURCE_ID,
+    report_path=BUILDING_FOOTPRINTS_CONVERSION_REPORT_PATH,
+    collection_name="kane-building-footprints",
+    allowed_geometry_types=frozenset({"Polygon", "MultiPolygon"}),
+    preferred_name_tokens=("building", "footprint", "kane"),
+    temp_prefix="kane-map-building-footprints-",
+    batch_reason="ready to convert building footprints ZIP into raw GeoJSON",
 )
 
 
@@ -157,6 +169,12 @@ def build_county_boundary_conversion_plan(source_id: str = COUNTY_BOUNDARY_SOURC
     if source_id != COUNTY_BOUNDARY_SOURCE_ID:
         raise ValueError("this helper only builds the county boundary conversion plan")
     return build_conversion_plan(COUNTY_BOUNDARY_SPEC)
+
+
+def build_building_footprints_conversion_plan(source_id: str = BUILDING_FOOTPRINTS_SOURCE_ID) -> ConversionPlan:
+    if source_id != BUILDING_FOOTPRINTS_SOURCE_ID:
+        raise ValueError("this helper only builds the building footprints conversion plan")
+    return build_conversion_plan(BUILDING_FOOTPRINTS_SPEC)
 
 
 def write_json_report(path: Path, payload: dict[str, Any]) -> None:
@@ -319,3 +337,7 @@ def convert_water_zip(*, execute: bool, force: bool) -> ConversionResult:
 
 def convert_county_boundary_zip(*, execute: bool, force: bool) -> ConversionResult:
     return convert_zip_source(COUNTY_BOUNDARY_SPEC, execute=execute, force=force)
+
+
+def convert_building_footprints_zip(*, execute: bool, force: bool) -> ConversionResult:
+    return convert_zip_source(BUILDING_FOOTPRINTS_SPEC, execute=execute, force=force)
