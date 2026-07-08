@@ -177,3 +177,16 @@ The Visit Sessions panel summarizes visit dates, field sessions, records, buildi
 The offline prototype now includes a field-planning layer. Observation records can carry `planPriority` and `planAction` values, and the right-side panel can show an active worklist for priority buildings, conflict/revisit records, and unrecorded buildings.
 
 The field plan remains local and offline. It can be exported as CSV for spreadsheet review or field use.
+
+
+## Batch 018 tabbed workspace
+
+The interface now uses task-focused workspace tabs under the KANE-MAP header:
+
+```text
+Map · Observe · Records · Review · Plan · Export · Project
+```
+
+The map remains visible. The left workspace switches task mode. A compact selected-building header remains visible across tabs so the user does not lose context while entering observations, reviewing records, planning fieldwork, or exporting data.
+
+This batch does not change storage, schema, exports, or offline behavior.

@@ -11,7 +11,7 @@
     <section class="map-stage" aria-label="Kane-Map canvas area">
       <canvas id="mapCanvas" aria-label="Offline Kane-Map prototype"></canvas>
 
-      <aside class="panel panel-left" aria-label="Map legend and observation tools">
+      <aside class="panel panel-left workspace-panel" aria-label="Kane-Map workspace">
         <div class="brand-row">
           <div class="brand-mark">KM</div>
           <div>
@@ -20,223 +20,269 @@
           </div>
         </div>
 
-        <div class="section">
-          <h2>Legend</h2>
-          <div class="legend-row"><span class="swatch swatch-red"></span>1–3 story residential</div>
-          <div class="legend-row"><span class="swatch swatch-road"></span>Roads</div>
-          <div class="legend-row"><span class="swatch swatch-water"></span>Ponds / lakes</div>
-          <div class="legend-row"><span class="swatch swatch-forest"></span>Forests / wooded areas</div>
-          <div class="legend-row"><span class="swatch swatch-grid"></span>Kane local grid</div>
-        </div>
+        <nav class="workspace-tabs" aria-label="Kane-Map workspace tabs">
+          <button class="workspace-tab" type="button" data-tab="map" aria-selected="true">Map</button>
+          <button class="workspace-tab" type="button" data-tab="observe" aria-selected="false">Observe</button>
+          <button class="workspace-tab" type="button" data-tab="records" aria-selected="false">Records</button>
+          <button class="workspace-tab" type="button" data-tab="review" aria-selected="false">Review</button>
+          <button class="workspace-tab" type="button" data-tab="plan" aria-selected="false">Plan</button>
+          <button class="workspace-tab" type="button" data-tab="export" aria-selected="false">Export</button>
+          <button class="workspace-tab" type="button" data-tab="project" aria-selected="false">Project</button>
+        </nav>
 
-        <div class="section">
-          <h2>Selected object</h2>
-          <dl class="selected-list">
-            <dt>Grid cell</dt><dd id="selectedCell">None</dd>
-            <dt>Building</dt><dd id="selectedBuilding">None</dd>
-            <dt>Stories</dt><dd id="selectedStories">—</dd>
-          </dl>
-        </div>
+        <div id="selectedWorkspaceHeader" class="selected-workspace-header">Selected: none</div>
 
-        <div class="section">
-          <h2>Building summary</h2>
-          <div id="buildingSummary" class="summary-box">Select a building to view saved observations.</div>
-          <div id="identitySummary" class="identity-box">Identity checks pending.</div>
-        </div>
+        <section class="workspace-screen" data-tab-panel="map">
+          <div class="section first-section">
+            <h2>Legend</h2>
+            <div class="legend-row"><span class="swatch swatch-red"></span>1–3 story residential</div>
+            <div class="legend-row"><span class="swatch swatch-road"></span>Roads</div>
+            <div class="legend-row"><span class="swatch swatch-water"></span>Ponds / lakes</div>
+            <div class="legend-row"><span class="swatch swatch-forest"></span>Forests / wooded areas</div>
+            <div class="legend-row"><span class="swatch swatch-grid"></span>Kane local grid</div>
+          </div>
 
-        <form id="observationForm" class="section observation-form">
-          <h2 id="observationFormTitle">Offline observation</h2>
-          <p id="editModeNotice" class="edit-mode-notice" hidden>Editing saved local record.</p>
-          <div class="form-grid-two">
-            <label>
-              Visit date
-              <input id="visitDate" type="date" />
-            </label>
-            <label>
-              Field session
-              <input id="fieldSessionId" type="text" placeholder="Example: 2026-07-07-AM" />
-            </label>
+          <div class="section">
+            <h2>Selected object</h2>
+            <dl class="selected-list">
+              <dt>Grid cell</dt><dd id="selectedCell">None</dd>
+              <dt>Building</dt><dd id="selectedBuilding">None</dd>
+              <dt>Stories</dt><dd id="selectedStories">—</dd>
+            </dl>
           </div>
-          <div class="form-grid-two">
-            <label>
-              Plan priority
-              <select id="planPriority">
-                <option value="none">No plan priority</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </label>
-            <label>
-              Planned action
-              <input id="planAction" type="text" placeholder="Example: revisit lobby / verify south bank" />
-            </label>
-          </div>
-          <label>
-            Site label / address note
-            <input id="siteLabel" type="text" placeholder="Example: King's Row Condos / 1420 Example Dr" />
-          </label>
-          <label>
-            Building alias
-            <input id="buildingAlias" type="text" placeholder="Example: North building / Building 2" />
-          </label>
-          <div class="form-grid-two">
-            <label>
-              Entrance
-              <input id="entranceId" type="text" placeholder="Example: E01" />
-            </label>
-            <label>
-              Mailbox bank
-              <input id="mailboxBankId" type="text" placeholder="Example: M01" />
-            </label>
-          </div>
-          <label>
-            Visible designators
-            <textarea id="visibleDesignators" rows="4" placeholder="Example: 100A, 100B, 100C, 100D"></textarea>
-          </label>
-          <p id="designatorPreview" class="inline-status">No visible designators entered</p>
-          <label>
-            Observed unit count
-            <input id="unitCount" type="number" min="0" step="1" placeholder="Auto-filled from designators if blank" />
-          </label>
-          <label>
-            Visible designator pattern
-            <input id="designatorPattern" type="text" placeholder="Example: number+letter / 100A–100D" />
-          </label>
-          <div class="form-grid-two">
-            <label>
-              Confidence
-              <select id="confidence">
-                <option value="unreviewed">Unreviewed</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </label>
-            <label>
-              Visit status
-              <select id="visitStatus">
-                <option value="observed">Observed</option>
-                <option value="counted">Counted</option>
-                <option value="pattern-inferred">Pattern inferred</option>
-                <option value="verified">Verified</option>
-                <option value="conflict">Conflict</option>
-                <option value="revisit-needed">Revisit needed</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            Access context
-            <input id="accessContext" type="text" placeholder="Example: visible from open common area" />
-          </label>
-          <label>
-            Notes
-            <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
-          </label>
-          <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
-          <div class="form-actions">
-            <button id="saveObservation" type="submit">Add field observation</button>
-            <button id="cancelEdit" type="button" class="secondary" hidden>Cancel edit</button>
-          </div>
-          <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
-        </form>
-      </aside>
 
-      <aside class="panel panel-right" aria-label="Map controls and offline records">
-        <div class="section">
-          <h2>View controls</h2>
-          <div class="button-grid">
-            <button id="zoomIn" type="button">Zoom +</button>
-            <button id="zoomOut" type="button">Zoom −</button>
-            <button id="rotateLeft" type="button">Rotate ⟲</button>
-            <button id="rotateRight" type="button">Rotate ⟳</button>
-            <button id="resetView" type="button" class="wide">Reset view</button>
+          <div class="section">
+            <h2>Building summary</h2>
+            <div id="buildingSummary" class="summary-box">Select a building to view saved observations.</div>
+            <div id="identitySummary" class="identity-box">Identity checks pending.</div>
           </div>
-        </div>
 
-        <div class="section">
-          <h2>Navigation search</h2>
-          <div class="search-row">
-            <input id="navSearch" type="search" placeholder="Search B20, N14-E08, King's Row, verified" />
-            <button id="clearSearch" type="button" class="secondary">Clear</button>
-          </div>
-          <ol id="searchResults" class="search-results">
-            <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
-          </ol>
-          <div id="coverageSummary" class="summary-box">Coverage summary pending.</div>
-          <div class="review-tools">
-            <label>
-              Review filter
-              <select id="statusFilter">
-                <option value="all">All buildings</option>
-                <option value="recorded">Recorded buildings</option>
-                <option value="unrecorded">Unrecorded buildings</option>
-                <option value="verified">Verified</option>
-                <option value="conflict">Conflict</option>
-                <option value="revisit-needed">Revisit needed</option>
-                <option value="counted">Counted</option>
-                <option value="observed">Observed</option>
-              </select>
-            </label>
-          </div>
-          <div id="coverageByCell" class="coverage-table">Coverage by grid cell pending.</div>
-        </div>
-
-        <div class="section">
-          <h2>Visit sessions</h2>
-          <div id="visitSessionSummary" class="summary-box">Visit session summary pending.</div>
-          <div id="visitSessionRows" class="coverage-table">No visit sessions yet.</div>
-        </div>
-
-        <div class="section">
-          <h2>Field plan</h2>
-          <div id="fieldPlanSummary" class="summary-box">Field plan pending.</div>
-          <div class="review-tools">
-            <label>
-              Plan filter
-              <select id="planFilter">
-                <option value="active">Active worklist</option>
-                <option value="priority">Priority only</option>
-                <option value="follow-up">Conflict / revisit</option>
-                <option value="unrecorded">Unrecorded</option>
-                <option value="all">All buildings</option>
-              </select>
-            </label>
-          </div>
-          <div id="fieldPlanRows" class="coverage-table">No field plan rows yet.</div>
-        </div>
-
-        <div class="section">
-          <h2>Offline records</h2>
-          <p><strong id="recordCount">0</strong> local observation records</p>
-          <div class="button-stack">
-            <button id="exportRecords" type="button">Export JSON</button>
-            <button id="exportObservationCsv" type="button">Export observation CSV</button>
-            <button id="exportBuildingCsv" type="button">Export building CSV</button>
-            <button id="exportFieldReport" type="button">Export field report</button>
-            <button id="exportVisitCsv" type="button">Export visit CSV</button>
-            <button id="exportPlanCsv" type="button">Export plan CSV</button>
-            <label class="file-button">
-              Preview JSON import
-              <input id="importRecords" type="file" accept="application/json,.json" />
-            </label>
-            <div id="importPreview" class="import-preview" hidden></div>
-            <div id="importActions" class="button-grid" hidden>
-              <button id="downloadBackupBeforeImport" type="button" class="secondary">Download backup</button>
-              <button id="confirmImport" type="button">Replace local records</button>
-              <button id="cancelImport" type="button" class="secondary wide">Cancel import</button>
+          <div class="section">
+            <h2>View controls</h2>
+            <div class="button-grid">
+              <button id="zoomIn" type="button">Zoom +</button>
+              <button id="zoomOut" type="button">Zoom −</button>
+              <button id="rotateLeft" type="button">Rotate ⟲</button>
+              <button id="rotateRight" type="button">Rotate ⟳</button>
+              <button id="resetView" type="button" class="wide">Reset view</button>
             </div>
-            <button id="clearRecords" type="button" class="danger">Clear saved records</button>
           </div>
-          <div class="record-toolbar">
+
+          <div class="section">
+            <h2>Navigation search</h2>
+            <div class="search-row">
+              <input id="navSearch" type="search" placeholder="Search B20, N14-E08, King's Row, verified" />
+              <button id="clearSearch" type="button" class="secondary">Clear</button>
+            </div>
+            <ol id="searchResults" class="search-results">
+              <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
+            </ol>
+          </div>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="observe" hidden>
+          <form id="observationForm" class="section first-section observation-form">
+            <h2 id="observationFormTitle">Offline observation</h2>
+            <p id="editModeNotice" class="edit-mode-notice" hidden>Editing saved local record.</p>
+            <div class="form-grid-two">
+              <label>
+                Visit date
+                <input id="visitDate" type="date" />
+              </label>
+              <label>
+                Field session
+                <input id="fieldSessionId" type="text" placeholder="Example: 2026-07-07-AM" />
+              </label>
+            </div>
+            <div class="form-grid-two">
+              <label>
+                Plan priority
+                <select id="planPriority">
+                  <option value="none">No plan priority</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </label>
+              <label>
+                Planned action
+                <input id="planAction" type="text" placeholder="Example: revisit lobby / verify south bank" />
+              </label>
+            </div>
             <label>
-              <input id="showSelectedOnly" type="checkbox" />
-              selected building only
+              Site label / address note
+              <input id="siteLabel" type="text" placeholder="Example: King's Row Condos / 1420 Example Dr" />
             </label>
+            <label>
+              Building alias
+              <input id="buildingAlias" type="text" placeholder="Example: North building / Building 2" />
+            </label>
+            <div class="form-grid-two">
+              <label>
+                Entrance
+                <input id="entranceId" type="text" placeholder="Example: E01" />
+              </label>
+              <label>
+                Mailbox bank
+                <input id="mailboxBankId" type="text" placeholder="Example: M01" />
+              </label>
+            </div>
+            <label>
+              Visible designators
+              <textarea id="visibleDesignators" rows="4" placeholder="Example: 100A, 100B, 100C, 100D"></textarea>
+            </label>
+            <p id="designatorPreview" class="inline-status">No visible designators entered</p>
+            <label>
+              Observed unit count
+              <input id="unitCount" type="number" min="0" step="1" placeholder="Auto-filled from designators if blank" />
+            </label>
+            <label>
+              Visible designator pattern
+              <input id="designatorPattern" type="text" placeholder="Example: number+letter / 100A–100D" />
+            </label>
+            <div class="form-grid-two">
+              <label>
+                Confidence
+                <select id="confidence">
+                  <option value="unreviewed">Unreviewed</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label>
+                Visit status
+                <select id="visitStatus">
+                  <option value="observed">Observed</option>
+                  <option value="counted">Counted</option>
+                  <option value="pattern-inferred">Pattern inferred</option>
+                  <option value="verified">Verified</option>
+                  <option value="conflict">Conflict</option>
+                  <option value="revisit-needed">Revisit needed</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Access context
+              <input id="accessContext" type="text" placeholder="Example: visible from open common area" />
+            </label>
+            <label>
+              Notes
+              <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
+            </label>
+            <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
+            <div class="form-actions">
+              <button id="saveObservation" type="submit">Add field observation</button>
+              <button id="cancelEdit" type="button" class="secondary" hidden>Cancel edit</button>
+            </div>
+            <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
+          </form>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="records" hidden>
+          <div class="section first-section">
+            <h2>Offline records</h2>
+            <p><strong id="recordCount">0</strong> local observation records</p>
+            <div class="record-toolbar">
+              <label>
+                <input id="showSelectedOnly" type="checkbox" />
+                selected building only
+              </label>
+            </div>
+            <ol id="recordList" class="record-list"></ol>
           </div>
-          <ol id="recordList" class="record-list"></ol>
-        </div>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="review" hidden>
+          <div class="section first-section">
+            <h2>Coverage summary</h2>
+            <div id="coverageSummary" class="summary-box">Coverage summary pending.</div>
+            <div class="review-tools">
+              <label>
+                Review filter
+                <select id="statusFilter">
+                  <option value="all">All buildings</option>
+                  <option value="recorded">Recorded buildings</option>
+                  <option value="unrecorded">Unrecorded buildings</option>
+                  <option value="verified">Verified</option>
+                  <option value="conflict">Conflict</option>
+                  <option value="revisit-needed">Revisit needed</option>
+                  <option value="counted">Counted</option>
+                  <option value="observed">Observed</option>
+                </select>
+              </label>
+            </div>
+            <div id="coverageByCell" class="coverage-table">Coverage by grid cell pending.</div>
+          </div>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="plan" hidden>
+          <div class="section first-section">
+            <h2>Visit sessions</h2>
+            <div id="visitSessionSummary" class="summary-box">Visit session summary pending.</div>
+            <div id="visitSessionRows" class="coverage-table">No visit sessions yet.</div>
+          </div>
+          <div class="section">
+            <h2>Field plan</h2>
+            <div id="fieldPlanSummary" class="summary-box">Field plan pending.</div>
+            <div class="review-tools">
+              <label>
+                Plan filter
+                <select id="planFilter">
+                  <option value="active">Active worklist</option>
+                  <option value="priority">Priority only</option>
+                  <option value="follow-up">Conflict / revisit</option>
+                  <option value="unrecorded">Unrecorded</option>
+                  <option value="all">All buildings</option>
+                </select>
+              </label>
+            </div>
+            <div id="fieldPlanRows" class="coverage-table">No field plan rows yet.</div>
+          </div>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="export" hidden>
+          <div class="section first-section">
+            <h2>Export / import</h2>
+            <div class="button-stack">
+              <button id="exportRecords" type="button">Export JSON</button>
+              <button id="exportObservationCsv" type="button">Export observation CSV</button>
+              <button id="exportBuildingCsv" type="button">Export building CSV</button>
+              <button id="exportFieldReport" type="button">Export field report</button>
+              <button id="exportVisitCsv" type="button">Export visit CSV</button>
+              <button id="exportPlanCsv" type="button">Export plan CSV</button>
+              <label class="file-button">
+                Preview JSON import
+                <input id="importRecords" type="file" accept="application/json,.json" />
+              </label>
+              <div id="importPreview" class="import-preview" hidden></div>
+              <div id="importActions" class="button-grid" hidden>
+                <button id="downloadBackupBeforeImport" type="button" class="secondary">Download backup</button>
+                <button id="confirmImport" type="button">Replace local records</button>
+                <button id="cancelImport" type="button" class="secondary wide">Cancel import</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace-screen" data-tab-panel="project" hidden>
+          <div class="section first-section">
+            <h2>Project status</h2>
+            <div class="summary-box">
+              <strong>Offline-first mode</strong><br />
+              No CDN · No server · No database · Browser-local records · JSON backup/restore
+            </div>
+            <p class="fine-print">Current record schema is managed in <code>src/storage/recordSchema.js</code>. Read <code>docs/PROJECT_STATE.md</code> first when resuming after a pause.</p>
+          </div>
+          <div class="section">
+            <h2>Danger zone</h2>
+            <div class="button-stack">
+              <button id="clearRecords" type="button" class="danger">Clear saved records</button>
+            </div>
+            <p class="fine-print">Export a JSON backup before clearing local browser records.</p>
+          </div>
+        </section>
       </aside>
 
       <footer class="status-bar" aria-label="Map status">

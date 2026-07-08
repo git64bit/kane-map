@@ -291,3 +291,23 @@ Next recommended batch:
 ## Batch 018 — Controller refactor
 
 Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The prototype is working, but the main controller is now too large for comfortable long-term maintenance.
+
+
+## Batch 018 — Tabbed workspace
+
+Status: complete.
+
+Added:
+
+- task tabs under the KANE-MAP header
+- persistent selected-object workspace header
+- Map / Observe / Records / Review / Plan / Export / Project screens
+- `docs/TABBED_WORKSPACE.md`
+
+No storage or schema change was made.
+
+Next recommended batch:
+
+## Batch 019 — Controller refactor
+
+Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The tabbed workspace solves interface clutter; the next maintenance issue is controller size.
