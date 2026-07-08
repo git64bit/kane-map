@@ -368,6 +368,7 @@ dd {
   }
 }
 
+.identity-box,
 .summary-box {
   padding: 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -378,6 +379,11 @@ dd {
   line-height: 1.45;
 }
 
+.identity-box {
+  margin-top: 0.5rem;
+}
+
+.identity-box strong,
 .summary-box strong {
   color: var(--text);
 }
@@ -585,4 +591,21 @@ button.secondary {
   display: grid;
   gap: 0.25rem;
   margin: 0.55rem 0;
+}
+
+.plan-row {
+  display: grid;
+  width: 100%;
+  gap: 0.12rem;
+  text-align: left;
+}
+
+.plan-row strong,
+.plan-row span {
+  display: block;
+}
+
+.plan-row span {
+  color: var(--muted);
+  font-size: 0.76rem;
 }
