@@ -1,6 +1,6 @@
 # Kane-Map Project State
 
-Last updated: 2026-07-07
+Last updated: 2026-07-08
 
 ## Current phase
 
@@ -146,3 +146,21 @@ Possible additions:
 - add building summary totals by visible grid cell
 
 Do not import real Kane County data yet.
+
+
+## Batch 011 status
+
+Navigation search was added.
+
+The right panel can now search local grid cells, buildings, saved records, site labels, statuses, and visible designators. Selecting a search result recenters the map and selects the related cell or building.
+
+A coverage summary was added for:
+
+```text
+recorded buildings / total buildings
+latest observed unit total
+verified / revisit / conflict counts
+saved observation record count
+```
+
+This remains fully offline and database-free.
