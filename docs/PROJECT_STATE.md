@@ -4,78 +4,75 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Offline fieldwork prototype with local records, import/export safety, coverage review, visit sessions, field planning, and tabbed workspace organization.
+Batch 020 — app controller refactor.
 
-## Current confirmed features
+The application remains offline-first and static. It still opens from `index.html` without a build step, package manager, server, CDN, or remote database.
 
-- Pure Canvas renderer
-- No CDN
-- No server
-- No database
-- No package manager
-- No build step
-- Chunked local demo geometry
-- Pan, zoom, rotate, reset
-- Building and grid selection
-- Tabbed left workspace
-- Persistent selected-object header
-- Local observation records
-- Schema migration through version 8
-- JSON export/import
-- Import preview and blocking validation
-- Observation CSV export
-- Building summary CSV export
-- Visit-session CSV export
-- Field report export
-- Field-plan CSV export
-- Search for buildings, grid cells, statuses, sites, aliases, sessions, designators, and plan terms
-- Coverage filters
-- Site identity layer
-- Visit-session summary
-- Field-planning worklist
+## Current status
 
-## Latest batch
+The project now has:
 
-Batch 018 — Tabbed Workspace.
+- offline Canvas map rendering
+- chunked local demo geometry
+- persistent local observation records through browser-local storage
+- JSON export/import with import preview and safety checks
+- CSV and TXT exports
+- structured field ledger
+- record edit/delete
+- review filters
+- coverage summaries
+- site/building identity layer
+- visit-session tracking
+- field-planning layer
+- tabbed workspace UI
+- keyboard shortcuts
+- refactored app controller files
 
-Added:
+## Important architecture decision
 
-```text
-docs/TABBED_WORKSPACE.md
-```
+Kane-Map is offline-first, server-assisted later.
 
-UI tabs:
+The app should work locally. A server/proxy layer may later help with data preparation, synchronization, public distribution, or CivicIPFS integration, but the fieldwork runtime should not depend on network availability.
+
+## Refactor note
+
+`src/app.js` was split because it had exceeded 1,000 lines.
+
+New controller files:
 
 ```text
-Map
-Observe
-Records
-Review
-Plan
-Export
-Project
+src/app/context.js
+src/controllers/workspaceController.js
+src/controllers/mapController.js
+src/controllers/observationController.js
+src/controllers/reviewController.js
+src/controllers/importExportController.js
+src/controllers/shortcutsController.js
+src/utils/domUtils.js
 ```
 
-The tabbed workspace reorganizes existing controls without changing the storage schema or offline behavior.
+See `docs/APP_REFACTOR.md` for details.
 
-## Current architecture decision
+## Current testing checklist
 
-The project remains offline-first and server-assisted later.
+After each batch, test:
 
-The browser app should remain capable of working from local files. A future proxy/server layer may prepare, clean, version, and distribute Kane County geometry, but field use should not depend on network availability.
+1. Open `index.html` directly.
+2. Pan, zoom, and rotate the map.
+3. Select a building.
+4. Switch tabs.
+5. Add an observation.
+6. Edit the observation.
+7. Delete a test observation.
+8. Export JSON.
+9. Import JSON and preview before replacing.
+10. Export CSV/TXT reports.
+11. Use search and keyboard shortcuts.
+12. Reopen the page and confirm local records persist.
 
-## Immediate next step
+## Next likely step
 
-The next maintenance step should be controller refactoring:
+After the refactor is verified, the next useful direction is either:
 
-```text
-src/app.js
-  -> src/ui/domRefs.js
-  -> src/ui/workspaceTabs.js
-  -> src/ui/recordPanel.js
-  -> src/ui/importPanel.js
-  -> src/ui/planningPanel.js
-  -> src/ui/formController.js
-```
-
-This should preserve behavior while reducing file size and keeping future changes safer.
+- polish UI layout and field grouping, or
+- start preparing a real-data ingestion plan while keeping the demo map intact.
