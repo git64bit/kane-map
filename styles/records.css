@@ -1,0 +1,72 @@
+.record-list {
+  display: grid;
+  gap: 0.55rem;
+  padding-left: 1.25rem;
+  margin-bottom: 0;
+}
+
+.record-list li {
+  color: var(--muted);
+}
+
+.record-list strong {
+  color: var(--text);
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.15rem;
+}
+
+.record-header button {
+  padding: 0.25rem 0.45rem;
+  border-color: rgba(255, 120, 120, 0.35);
+  color: #ffcbcb;
+  font-size: 0.74rem;
+}
+
+.record-selected-building {
+  padding: 0.45rem;
+  border: 1px solid rgba(116, 184, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(116, 184, 255, 0.08);
+}
+
+.record-toolbar {
+  margin: 0.75rem 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.record-toolbar input {
+  margin-right: 0.25rem;
+}
+
+.record-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.record-actions button {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.74rem;
+}
+
+.record-actions button[data-record-edit] {
+  border-color: rgba(116, 184, 255, 0.32);
+  color: #cfe8ff;
+}
+
+.status-pill {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 0.72rem;
+}

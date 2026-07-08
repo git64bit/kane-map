@@ -1,0 +1,35 @@
+.import-preview {
+  margin: 0.65rem 0;
+  padding: 0.7rem;
+  border: 1px solid rgba(116, 184, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(116, 184, 255, 0.07);
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.import-preview strong {
+  color: var(--text);
+}
+
+.import-preview details {
+  margin-top: 0.45rem;
+}
+
+.import-preview summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.import-preview ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.import-compare {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.55rem 0;
+}

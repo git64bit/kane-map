@@ -1,0 +1,48 @@
+button,
+.file-button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+}
+
+button:hover,
+.file-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+button.danger {
+  border-color: rgba(255, 120, 120, 0.35);
+  color: #ffcbcb;
+}
+
+button.secondary {
+  border-color: rgba(116, 184, 255, 0.28);
+  color: #cfe8ff;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.button-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.button-stack {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.file-button {
+  display: block;
+  text-align: center;
+}
+
+.file-button input {
+  display: none;
+}

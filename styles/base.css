@@ -1,0 +1,95 @@
+:root {
+  color-scheme: dark;
+  --bg: #15191c;
+  --panel: rgba(11, 15, 19, 0.88);
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --text: #f1f5f8;
+  --muted: #9eaab3;
+  --accent: #74b8ff;
+  --red: #d94c3a;
+  --road: #f4f4f0;
+  --water: #2d72d9;
+  --forest: #4f8b45;
+  --grid: #cbd4dc;
+  --danger: #b84a4a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0.1rem;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}
+
+h2 {
+  margin-bottom: 0.75rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+p,
+label,
+li,
+dd,
+dt {
+  font-size: 0.88rem;
+}
+
+p,
+dd {
+  color: var(--muted);
+}
+
+code {
+  color: #cfe8ff;
+}
+
+kbd {
+  display: inline-flex;
+  min-width: 1.45rem;
+  justify-content: center;
+  padding: 0.12rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: 700 0.72rem/1.2 system-ui, sans-serif;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.fine-print {
+  margin: 0.65rem 0 0;
+  font-size: 0.78rem;
+}

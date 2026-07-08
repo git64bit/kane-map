@@ -1,0 +1,47 @@
+.search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+}
+
+.search-row input {
+  min-width: 0;
+}
+
+.search-results {
+  display: grid;
+  gap: 0.45rem;
+  padding-left: 0;
+  margin: 0.75rem 0;
+  list-style: none;
+}
+
+.search-results button {
+  width: 100%;
+  text-align: left;
+}
+
+.search-results strong,
+.search-results span {
+  display: block;
+}
+
+.search-results span {
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.shortcut-grid span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

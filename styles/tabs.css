@@ -1,0 +1,39 @@
+.workspace-panel {
+  width: min(390px, calc(100vw - 32px));
+}
+
+.workspace-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  margin: 0.9rem 0 0.75rem;
+}
+
+.workspace-tab {
+  padding: 0.45rem 0.3rem;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.workspace-tab[aria-selected="true"] {
+  border-color: rgba(116, 184, 255, 0.55);
+  background: rgba(116, 184, 255, 0.16);
+  color: var(--text);
+}
+
+.selected-workspace-header {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(116, 184, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(116, 184, 255, 0.08);
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.workspace-screen[hidden] {
+  display: none;
+}

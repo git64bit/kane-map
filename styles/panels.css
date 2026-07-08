@@ -1,0 +1,129 @@
+.panel {
+  position: absolute;
+  z-index: 5;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 88px);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.panel-left {
+  top: 16px;
+  left: 16px;
+}
+
+.panel-right {
+  top: 16px;
+  right: 16px;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(116, 184, 255, 0.55);
+  border-radius: 12px;
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: rgba(116, 184, 255, 0.1);
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.45rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.swatch {
+  width: 22px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.swatch-red { background: var(--red); }
+.swatch-road { background: var(--road); }
+.swatch-water { background: var(--water); }
+.swatch-forest { background: var(--forest); }
+.swatch-grid {
+  border: 1px solid var(--grid);
+  background: transparent;
+}
+
+.selected-list {
+  display: grid;
+  grid-template-columns: 5.75rem 1fr;
+  gap: 0.3rem 0.65rem;
+  margin: 0;
+}
+
+.selected-list dt {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.selected-list dd {
+  margin: 0;
+}
+
+.identity-box,
+.summary-box {
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.identity-box {
+  margin-top: 0.5rem;
+}
+
+.identity-box strong,
+.summary-box strong {
+  color: var(--text);
+}
+
+.status-warning {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #ffd0a6;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1050px) {
+  .panel-right {
+    top: auto;
+    bottom: 76px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .panel {
+    position: static;
+    width: auto;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
