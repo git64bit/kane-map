@@ -96,7 +96,10 @@
     confirmImport: document.getElementById("confirmImport"),
     cancelImport: document.getElementById("cancelImport"),
     downloadBackupBeforeImport: document.getElementById("downloadBackupBeforeImport"),
-    clearRecords: document.getElementById("clearRecords")
+    clearRecords: document.getElementById("clearRecords"),
+    workspaceTabs: Array.from(document.querySelectorAll(".workspace-tab")),
+    workspacePanels: Array.from(document.querySelectorAll("[data-tab-panel]")),
+    selectedWorkspaceHeader: document.getElementById("selectedWorkspaceHeader")
   };
 
   let selected = { cell: null, building: null };
@@ -107,6 +110,7 @@
   function init() {
     setDefaultVisitDate();
     bindCanvasEvents();
+    bindWorkspaceTabs();
     bindControlEvents();
     bindObservationEvents();
     window.addEventListener("resize", handleResize);
@@ -121,6 +125,23 @@
     updateFieldPlanUi();
     updateStorageStatus();
     updateViewAndChunkStatus();
+  }
+
+  function bindWorkspaceTabs() {
+    els.workspaceTabs.forEach((tab) => {
+      tab.addEventListener("click", () => switchWorkspaceTab(tab.getAttribute("data-tab")));
+    });
+  }
+
+  function switchWorkspaceTab(tabName) {
+    if (!tabName) return;
+    els.workspaceTabs.forEach((tab) => {
+      const isActive = tab.getAttribute("data-tab") === tabName;
+      tab.setAttribute("aria-selected", String(isActive));
+    });
+    els.workspacePanels.forEach((panel) => {
+      panel.hidden = panel.getAttribute("data-tab-panel") !== tabName;
+    });
   }
 
   function handleResize() {
@@ -348,6 +369,7 @@
     els.observationNotes.value = record.notes || "";
     updateDesignatorPreview();
     updateRecordPanel();
+    switchWorkspaceTab("observe");
   }
 
   function stopEditing() {
@@ -481,6 +503,7 @@
     els.selectedStories.textContent = selected.building ? `${selected.building.stories}` : "—";
     updateBuildingSummary();
     updateIdentitySummary();
+    updateWorkspaceHeader();
   }
 
   function updateBuildingSummary() {
@@ -510,6 +533,38 @@
       `<br>Latest visit: ${escapeHtml(summary.latestVisitDate || "undated")}`,
       conflict
     ].join("");
+  }
+
+  function updateWorkspaceHeader() {
+    if (!els.selectedWorkspaceHeader) return;
+
+    if (!selected.building) {
+      els.selectedWorkspaceHeader.textContent = selected.cell
+        ? `Selected: ${selected.cell.code}`
+        : "Selected: none";
+      return;
+    }
+
+    const summary = coverageModel.build().summaryByBuilding[selected.building.id];
+    const count = summary && summary.observedUnitCount !== null
+      ? `${summary.observedUnitCount} units`
+      : "no count";
+    const status = summary ? summary.status : "unrecorded";
+    const identity = siteIdentityModel.analyzeBuilding(selected.building.id);
+    const site = identity.labels[0] || identity.aliases[0] || selected.building.name || selected.building.label;
+
+    els.selectedWorkspaceHeader.textContent = [
+      "Selected:",
+      selected.building.label,
+      "·",
+      selected.building.cell,
+      "·",
+      site,
+      "·",
+      count,
+      "·",
+      status
+    ].join(" ");
   }
 
   function updateIdentitySummary() {
@@ -574,6 +629,7 @@
     updateFieldPlanUi();
     handleNavigationSearch();
     updateStorageStatus();
+    updateWorkspaceHeader();
   }
 
   function updateVisitSessionUi() {
