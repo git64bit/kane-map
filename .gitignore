@@ -1,0 +1,32 @@
+# Kane-Map local processing data
+# Keep source code and documentation in Git; keep acquired/derived data local.
+
+# Python local environment
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local downloaded source files
+processing/input/downloads/*
+!processing/input/downloads/README.md
+
+# Local raw/staged source files
+processing/input/raw/*
+!processing/input/raw/README.md
+
+# Local prepared browser-ready output
+processing/output/prepared/*
+!processing/output/prepared/README.md
+
+# Local processing reports
+processing/output/reports/*
+!processing/output/reports/README.md
+
+# Temporary partial downloads/conversions
+*.part
+*.tmp
+*.bak
