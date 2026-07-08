@@ -4,7 +4,7 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Offline fieldwork prototype with local records, import/export safety, coverage review, visit sessions, and field planning.
+Offline fieldwork prototype with local records, import/export safety, coverage review, visit sessions, field planning, and tabbed workspace organization.
 
 ## Current confirmed features
 
@@ -17,6 +17,8 @@ Offline fieldwork prototype with local records, import/export safety, coverage r
 - Chunked local demo geometry
 - Pan, zoom, rotate, reset
 - Building and grid selection
+- Tabbed left workspace
+- Persistent selected-object header
 - Local observation records
 - Schema migration through version 8
 - JSON export/import
@@ -34,28 +36,27 @@ Offline fieldwork prototype with local records, import/export safety, coverage r
 
 ## Latest batch
 
-Batch 017 — Field Plan.
+Batch 018 — Tabbed Workspace.
 
 Added:
 
 ```text
-src/field/fieldPlan.js
-docs/FIELD_PLAN.md
+docs/TABBED_WORKSPACE.md
 ```
 
-New record fields:
+UI tabs:
 
 ```text
-planPriority
-planAction
+Map
+Observe
+Records
+Review
+Plan
+Export
+Project
 ```
 
-The field plan derives a local worklist from:
-
-- priority-marked buildings
-- conflict records
-- revisit-needed records
-- unrecorded buildings
+The tabbed workspace reorganizes existing controls without changing the storage schema or offline behavior.
 
 ## Current architecture decision
 
@@ -65,11 +66,12 @@ The browser app should remain capable of working from local files. A future prox
 
 ## Immediate next step
 
-The main application controller has grown large. The next maintenance step should be controller refactoring:
+The next maintenance step should be controller refactoring:
 
 ```text
 src/app.js
   -> src/ui/domRefs.js
+  -> src/ui/workspaceTabs.js
   -> src/ui/recordPanel.js
   -> src/ui/importPanel.js
   -> src/ui/planningPanel.js
