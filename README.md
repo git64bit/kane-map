@@ -1,97 +1,72 @@
 # Kane-Map
 
-Kane-Map is an offline-first residential mapping and field-observation project for Kane County, Illinois.
+Kane-Map is a county-local residential mapping project for Kane County, Illinois.
 
-The project creates a browser-rendered civic navigation map with a Kane-style local grid, simple orientation geometry, and a field ledger for residential building observations.
+The application is currently an offline-first browser prototype for field observation, residential-unit counting, planning, review, and export.
 
 ## Current status
 
-Kane-Map is currently a working offline prototype.
+The app is structurally stable enough to begin real-data planning.
 
-It can be opened directly from `index.html` without a remote server, CDN, package manager, build step, or database server.
+It currently supports:
 
-Current capabilities include:
+- direct `index.html` opening
+- offline Canvas rendering
+- local synthetic chunks
+- building selection
+- visible designator entry
+- automatic unit counts
+- local saved records
+- edit/delete
+- JSON backup/import
+- CSV/TXT exports
+- search/navigation
+- coverage filters
+- visit sessions
+- field planning
+- tabbed workspace
+- keyboard shortcuts
 
-```text
-Canvas-rendered map
-Kane-style grid
-chunked local synthetic geometry
-red residential building blocks
-roads, ponds, and forests
-building selection
-field observations
-visible designator parsing
-unit counts
-record edit/delete
-local persistence
-JSON backup/restore
-CSV/TXT exports
-search
-coverage filters
-field planning
-visit sessions
-keyboard shortcuts
-tabbed workspace
-```
+## Real-data direction
 
-## Quick start
-
-Download or clone the repository, then open:
+The preferred real-data workflow is:
 
 ```text
-index.html
+Debian 12 or Debian 13 processing node
+  -> Python virtual environment
+  -> source-data intake
+  -> geometry cleanup
+  -> Kane-grid assignment
+  -> static output files
+  -> copy into local Kane-Map data folders
+  -> offline browser rendering
 ```
 
-No build step is required.
+This is preferred, not mandatory.
+
+The core principle is:
+
+```text
+Heavy processing happens outside the browser.
+Field use happens inside the browser.
+The browser consumes prepared static data.
+```
 
 ## Documentation
 
-Start here:
+Start with:
 
 ```text
 docs/README.md
-```
-
-Then read:
-
-```text
 docs/PROJECT_STATE.md
-docs/NEXT_STEPS.md
 docs/CURRENT_ARCHITECTURE.md
-docs/FILE_MAP.md
+docs/NEXT_STEPS.md
+docs/REAL_DATA_PLAN.md
 ```
 
-## Design rule
+## Current next step
 
-```text
-The grid names places.
-The field ledger records observations.
-The unit list does not become part of the public grid code.
-```
+Prepare a data-adapter skeleton for future demo/production catalog support.
 
-## Fieldwork boundary
+No real Kane County geometry should be imported until source and processing rules are approved.
 
-Kane-Map is based on visible observation only.
-
-The project does not require and does not authorize:
-
-```text
-touching mailboxes
-opening mailboxes
-inserting anything into mailboxes
-removing anything from mailboxes
-reading mail
-recording resident names
-bypassing locked or restricted access
-```
-
-## Architecture direction
-
-The long-term architecture is:
-
-```text
-server-assisted for data preparation
-offline-first for field operation
-```
-
-A future proxy/server layer may help prepare and version geometry data, but field use should remain able to operate from local files and local records.

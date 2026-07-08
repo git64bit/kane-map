@@ -1,242 +1,99 @@
 # Kane-Map Roadmap
 
-Last updated: 2026-07-08
+This roadmap is organized so the project can pause and resume without losing direction.
 
-## Current checkpoint
+## Completed / stable foundation
 
-Kane-Map has a working offline prototype with modular code, split CSS, split renderer, tabbed workspace, local records, imports/exports, and fieldwork planning tools.
+- Phase 0: project memory and documentation foundation
+- Phase 1: browser-only synthetic prototype
+- Offline-first Canvas renderer
+- Local records with JSON export/import
+- Chunked local demo data
+- Structured field ledger
+- Designator count fix and schema migrations
+- Record management
+- Edit/status markers
+- Search/navigation
+- Coverage filters
+- Export formats
+- Import safety
+- Site identity
+- Visit sessions
+- Field planning
+- Tabbed workspace
+- Keyboard shortcuts
+- App controller refactor
+- Renderer refactor
+- CSS refactor
+- Documentation index
 
-The next major transition is from synthetic geometry to real-data planning.
+## Current phase — Real-data planning
 
-## Phase 0 — Project memory
+Goal: define source, geometry, processing, and grid rules before importing real Kane County data.
 
-Status: complete and ongoing.
-
-Completed:
-
-```text
-README.md
-ROADMAP.md
-docs/PROJECT_STATE.md
-docs/README.md
-docs/FILE_MAP.md
-docs/CURRENT_ARCHITECTURE.md
-docs/NEXT_STEPS.md
-```
-
-Rule:
-
-Update `docs/PROJECT_STATE.md` after major batches.
-
-## Phase 1 — Browser-only synthetic prototype
-
-Status: complete.
-
-Completed:
-
-```text
-dark canvas map
-synthetic grid
-red residential buildings
-roads
-ponds
-forests
-pan / zoom / rotate / reset
-selection
-legend/status panels
-```
-
-## Phase 2 — Offline-first local records
-
-Status: complete.
-
-Completed:
+Batch 024 adds:
 
 ```text
-localStorage persistence
-record schema and migrations
-JSON export/import
-import preview and safety checks
-CSV/TXT exports
-edit/delete records
-```
-
-## Phase 3 — Field ledger workflow
-
-Status: complete for prototype use.
-
-Completed:
-
-```text
-visible designator parser
-unit count derivation
-site/address note
-building alias
-entrance ID
-mailbox bank ID
-confidence
-visit status
-visit date
-field session
-plan priority
-planned action
-```
-
-## Phase 4 — Usability and review tools
-
-Status: complete for prototype use.
-
-Completed:
-
-```text
-tabbed workspace
-persistent selected-object header
-search
-coverage filters
-building status markers
-field plan
-visit sessions
-keyboard shortcuts
-```
-
-## Phase 5 — Code structure and maintainability
-
-Status: complete for current scale.
-
-Completed:
-
-```text
-app controller refactor
-renderer refactor
-CSS refactor
-documentation index
-file map
-architecture summary
-next-step plan
-```
-
-## Phase 6 — Real-data planning
-
-Status: next.
-
-Goal:
-
-Plan the real Kane County data source and processing strategy before importing data.
-
-Recommended next files:
-
-```text
+docs/DATA_SOURCES.md
+docs/GEOMETRY_INTAKE.md
+docs/KANE_GRID_SPEC.md
 docs/REAL_DATA_PLAN.md
-docs/SOURCE_LAYERS.md
-docs/DATA_LICENSE_CHECKLIST.md
-docs/GEOMETRY_PIPELINE.md
+docs/DATA_PROCESSING_NODE.md
 ```
 
-Questions to resolve:
+## Processing architecture preference
+
+Preferred but not mandatory:
 
 ```text
-county boundary source
-roads source
-water/pond source
-forest/land-cover source
-building footprint source
-parcel/reference source
-licensing/terms
-geometry simplification
-chunk generation
-source/version metadata
+Debian 12 or Debian 13
+Python virtual environment
+processing scripts outside the browser
+static CSV/JSON/JS chunk outputs copied into the app
 ```
 
-Exit condition:
+## Phase — Data adapter skeleton
 
-A small real-data import can proceed without guessing the source strategy.
+Next planned batch:
 
-## Phase 7 — Grid design lock
-
-Status: pending.
+```text
+Batch 025 — data adapter skeleton
+```
 
 Goal:
 
-Stabilize the Kane-grid naming system before records depend on real geography.
+- preserve current demo behavior
+- prepare for demo vs production data catalogs
+- avoid importing real data too early
+- document data mode switching
 
-Tasks:
+## Phase — Processing folder skeleton
 
-```text
-define origin
-define cell size
-define naming convention
-define county-edge clipping
-define building-to-cell assignment
-define subcell rules
-define future Plus Code/H3 cross-reference fields
-```
+Goal: establish repeatable local processing workflow.
 
-## Phase 8 — Small real-data pilot
-
-Status: pending.
-
-Goal:
-
-Import a limited real-data patch, not the whole county.
-
-Recommended scope:
+Possible files:
 
 ```text
-one known area
-one or two grid cells
-roads/water/forest/buildings if available
-synthetic data retained for comparison
+processing/README.md
+processing/requirements.txt
+processing/scripts/
+processing/output/
 ```
 
-## Phase 9 — Performance guardrails
+## Phase — First real layer
 
-Status: pending.
+Goal: import one low-risk source layer into a production-style chunk.
 
-Goal:
+Candidate first layers:
 
-Prepare for larger geometry.
+- county boundary
+- roads
+- water
+- forest/green orientation polygons
 
-Possible features:
+Building footprints should come after stable source review and ID strategy.
 
-```text
-visible feature counts
-render-time status
-chunk-size warnings
-largest chunk warning
-record count warnings
-optional debug overlay
-```
+## Hard rule
 
-## Phase 10 — Offline release package
+Real data should not be imported into Kane-Map without source provenance and repeatable processing notes.
 
-Status: pending.
-
-Goal:
-
-Make Kane-Map easy to download, unzip, and run.
-
-Possible additions:
-
-```text
-VERSION.txt
-CHANGELOG.md
-README_OFFLINE_RELEASE.md
-kane-map-offline-v0.1.zip process
-```
-
-## Work to avoid until Phase 6 is done
-
-Avoid:
-
-```text
-server sync
-authentication
-large framework migration
-remote-only basemaps
-new database backend
-large UI feature expansion
-```
-
-Reason:
-
-The main open question is now the real-data pipeline.
