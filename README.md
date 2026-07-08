@@ -146,3 +146,34 @@ The offline prototype currently supports:
 - navigation search
 - coverage filters
 - visible-cell coverage summary
+
+
+## Current implemented features
+
+The offline prototype currently supports:
+
+- chunked local demo geometry
+- local canvas rendering
+- pan, zoom, rotate, and reset
+- building and grid-cell selection
+- local observation records
+- edit and delete of records
+- JSON backup/import with preview safety checks
+- CSV and TXT exports
+- search and coverage filters
+- selected-building identity checks
+- building alias and site label tracking
+
+
+## Visit/session layer
+
+Kane-Map now records `visitDate` and `fieldSessionId` on each local field observation. This allows repeated observations from the same field outing to be grouped without requiring a server or database.
+
+The Visit Sessions panel summarizes visit dates, field sessions, records, buildings covered, unit totals, and follow-up records. JSON remains the restore format; CSV exports are review/report formats.
+
+
+## Batch 017 field planning
+
+The offline prototype now includes a field-planning layer. Observation records can carry `planPriority` and `planAction` values, and the right-side panel can show an active worklist for priority buildings, conflict/revisit records, and unrecorded buildings.
+
+The field plan remains local and offline. It can be exported as CSV for spreadsheet review or field use.

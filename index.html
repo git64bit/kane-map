@@ -41,14 +41,45 @@
         <div class="section">
           <h2>Building summary</h2>
           <div id="buildingSummary" class="summary-box">Select a building to view saved observations.</div>
+          <div id="identitySummary" class="identity-box">Identity checks pending.</div>
         </div>
 
         <form id="observationForm" class="section observation-form">
           <h2 id="observationFormTitle">Offline observation</h2>
           <p id="editModeNotice" class="edit-mode-notice" hidden>Editing saved local record.</p>
+          <div class="form-grid-two">
+            <label>
+              Visit date
+              <input id="visitDate" type="date" />
+            </label>
+            <label>
+              Field session
+              <input id="fieldSessionId" type="text" placeholder="Example: 2026-07-07-AM" />
+            </label>
+          </div>
+          <div class="form-grid-two">
+            <label>
+              Plan priority
+              <select id="planPriority">
+                <option value="none">No plan priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </label>
+            <label>
+              Planned action
+              <input id="planAction" type="text" placeholder="Example: revisit lobby / verify south bank" />
+            </label>
+          </div>
           <label>
             Site label / address note
-            <input id="siteLabel" type="text" placeholder="Example: Building 2 / 1420 Example Dr" />
+            <input id="siteLabel" type="text" placeholder="Example: King's Row Condos / 1420 Example Dr" />
+          </label>
+          <label>
+            Building alias
+            <input id="buildingAlias" type="text" placeholder="Example: North building / Building 2" />
           </label>
           <div class="form-grid-two">
             <label>
@@ -153,6 +184,30 @@
         </div>
 
         <div class="section">
+          <h2>Visit sessions</h2>
+          <div id="visitSessionSummary" class="summary-box">Visit session summary pending.</div>
+          <div id="visitSessionRows" class="coverage-table">No visit sessions yet.</div>
+        </div>
+
+        <div class="section">
+          <h2>Field plan</h2>
+          <div id="fieldPlanSummary" class="summary-box">Field plan pending.</div>
+          <div class="review-tools">
+            <label>
+              Plan filter
+              <select id="planFilter">
+                <option value="active">Active worklist</option>
+                <option value="priority">Priority only</option>
+                <option value="follow-up">Conflict / revisit</option>
+                <option value="unrecorded">Unrecorded</option>
+                <option value="all">All buildings</option>
+              </select>
+            </label>
+          </div>
+          <div id="fieldPlanRows" class="coverage-table">No field plan rows yet.</div>
+        </div>
+
+        <div class="section">
           <h2>Offline records</h2>
           <p><strong id="recordCount">0</strong> local observation records</p>
           <div class="button-stack">
@@ -160,6 +215,8 @@
             <button id="exportObservationCsv" type="button">Export observation CSV</button>
             <button id="exportBuildingCsv" type="button">Export building CSV</button>
             <button id="exportFieldReport" type="button">Export field report</button>
+            <button id="exportVisitCsv" type="button">Export visit CSV</button>
+            <button id="exportPlanCsv" type="button">Export plan CSV</button>
             <label class="file-button">
               Preview JSON import
               <input id="importRecords" type="file" accept="application/json,.json" />
@@ -190,6 +247,8 @@
         <span>Mode: offline chunked canvas</span>
         <span id="storageStatus">Storage: checking</span>
         <span id="reviewFilterStatus">Review: all buildings</span>
+        <span id="visitStatusSummary">Visits: 0 days / 0 sessions</span>
+        <span id="planStatusSummary">Plan: 0 active</span>
         <span>No CDN · No server · No database</span>
       </footer>
     </section>
@@ -206,8 +265,11 @@
   <script src="src/storage/recordSchema.js"></script>
   <script src="src/storage/localStore.js"></script>
   <script src="src/field/designators.js"></script>
+  <script src="src/field/visitSessions.js"></script>
+  <script src="src/field/fieldPlan.js"></script>
   <script src="src/navigation/searchIndex.js"></script>
   <script src="src/records/coverage.js"></script>
+  <script src="src/records/siteIdentity.js"></script>
   <script src="src/export/exporters.js"></script>
   <script src="src/import/importValidator.js"></script>
   <script src="src/map/renderer.js"></script>

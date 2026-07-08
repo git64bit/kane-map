@@ -251,3 +251,43 @@ Refactor app and style files into smaller modules before adding more features.
 Rationale:
 
 `src/app.js` and `styles/app.css` are now large enough that further feature work should be preceded by cleanup.
+
+
+## Phase 5.5 — Visit/session workflow
+
+Status: implemented in Batch 016.
+
+Tasks:
+
+- [x] Add visit date to observation records
+- [x] Add field session ID to observation records
+- [x] Preserve visit/session values across repeated saves
+- [x] Show visit-session summary in the UI
+- [x] Add footer visit/session status
+- [x] Add visit-session CSV export
+- [x] Migrate records to schema version 7
+
+Exit condition:
+
+A fieldwork outing can be represented as a group of offline records without a server or database.
+
+
+## Batch 017 — Field plan
+
+Status: complete.
+
+Added:
+
+- plan priority field
+- planned action field
+- field-plan panel
+- active worklist filter
+- priority / follow-up / unrecorded filters
+- field-plan CSV export
+- schema v8 migration
+
+Next recommended batch:
+
+## Batch 018 — Controller refactor
+
+Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The prototype is working, but the main controller is now too large for comfortable long-term maintenance.
