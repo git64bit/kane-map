@@ -1,4 +1,9 @@
-"""Inspect staged raw source files for Kane-Map processing."""
+"""Inspect staged raw source files for Kane-Map processing.
+
+This module intentionally uses streaming GeoJSON inspection instead of
+``json.load`` for full files. The address-points source can be hundreds of MB;
+loading the whole FeatureCollection into memory can fail on small Debian nodes.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .config import REPORTS_DIR
 from .source_registry import resolve_local_source_path
@@ -32,25 +37,82 @@ class RawSourceInspection:
     error: str | None = None
 
 
+def _read_more(handle: Any, buffer: str, chunk_size: int) -> tuple[str, bool]:
+    chunk = handle.read(chunk_size)
+    if chunk == "":
+        return buffer, True
+    return buffer + chunk, False
+
+
+def iter_geojson_features(path: Path, chunk_size: int = 1024 * 1024) -> Iterator[dict[str, Any]]:
+    """Yield GeoJSON features one at a time from a FeatureCollection.
+
+    This is a small purpose-built parser for the project pipeline. It scans to
+    the top-level ``features`` array, then decodes one feature object at a time
+    with ``json.JSONDecoder.raw_decode``.
+    """
+
+    decoder = json.JSONDecoder()
+    buffer = ""
+    eof = False
+    found_features = False
+
+    with path.open("r", encoding="utf-8") as handle:
+        while not found_features:
+            buffer, eof = _read_more(handle, buffer, chunk_size)
+            feature_key_index = buffer.find('"features"')
+            if feature_key_index >= 0:
+                array_index = buffer.find("[", feature_key_index)
+                if array_index >= 0:
+                    buffer = buffer[array_index + 1 :]
+                    found_features = True
+                    break
+            if eof:
+                raise ValueError("GeoJSON features array was not found")
+            if len(buffer) > 256:
+                buffer = buffer[-256:]
+
+        while True:
+            buffer = buffer.lstrip()
+            if buffer.startswith(","):
+                buffer = buffer[1:].lstrip()
+            if buffer.startswith("]"):
+                return
+
+            while buffer == "" or (not buffer.startswith("{") and not buffer.startswith("]")):
+                if eof:
+                    raise ValueError("Unexpected end of file before next feature")
+                buffer, eof = _read_more(handle, buffer, chunk_size)
+                buffer = buffer.lstrip()
+                if buffer.startswith(","):
+                    buffer = buffer[1:].lstrip()
+                if buffer.startswith("]"):
+                    return
+
+            while True:
+                try:
+                    feature, end_index = decoder.raw_decode(buffer)
+                    break
+                except json.JSONDecodeError:
+                    if eof:
+                        raise
+                    buffer, eof = _read_more(handle, buffer, chunk_size)
+
+            if not isinstance(feature, dict):
+                yield {"type": "invalid_feature", "properties": {}, "geometry": None}
+            else:
+                yield feature
+            buffer = buffer[end_index:]
+
+
 def inspect_geojson_file(path: Path, sample_limit: int) -> tuple[int, dict[str, int], dict[str, int], list[dict[str, Any]]]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("GeoJSON root is not an object")
-    if data.get("type") != "FeatureCollection":
-        raise ValueError("GeoJSON root is not a FeatureCollection")
-
-    features = data.get("features")
-    if not isinstance(features, list):
-        raise ValueError("GeoJSON features is not a list")
-
     geometry_types: Counter[str] = Counter()
     property_fields: Counter[str] = Counter()
     sample_properties: list[dict[str, Any]] = []
+    feature_count = 0
 
-    for feature in features:
-        if not isinstance(feature, dict):
-            geometry_types["invalid_feature"] += 1
-            continue
+    for feature in iter_geojson_features(path):
+        feature_count += 1
 
         geometry = feature.get("geometry")
         if isinstance(geometry, dict):
@@ -70,7 +132,7 @@ def inspect_geojson_file(path: Path, sample_limit: int) -> tuple[int, dict[str, 
             property_fields["invalid_properties"] += 1
 
     return (
-        len(features),
+        feature_count,
         dict(sorted(geometry_types.items())),
         dict(sorted(property_fields.items())),
         sample_properties,
@@ -198,6 +260,7 @@ def write_raw_source_inspection_report(
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "report_type": "raw_source_inspection",
+        "inspection_mode": "streaming_geojson",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "counts": {
             "sources": len(inspections),
