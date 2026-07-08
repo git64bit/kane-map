@@ -1,0 +1,7 @@
+# Batch 026 intentionally requires no third-party packages.
+# Future real-geometry processing may add packages such as:
+# geopandas
+# shapely
+# pyproj
+# fiona
+# pyogrio

@@ -1,0 +1,10 @@
+[project]
+name = "kane-map-processing"
+version = "0.0.1"
+description = "Offline processing scaffold for prepared Kane-Map data"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.kane-map]
+preferred_os = "Debian 12 or Debian 13"
+processing_model = "offline static data preparation"
