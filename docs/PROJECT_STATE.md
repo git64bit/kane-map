@@ -164,3 +164,42 @@ saved observation record count
 ```
 
 This remains fully offline and database-free.
+
+## Batch 012 status
+
+Coverage review was added.
+
+The right panel now includes a review filter for:
+
+```text
+all buildings
+recorded
+unrecorded
+verified
+conflict
+revisit-needed
+counted
+observed
+```
+
+Matching buildings remain prominent and non-matching buildings are dimmed on the map.
+
+The right panel also shows coverage by visible grid cell, including recorded building count, total building count, latest observed units, conflict count, and revisit-needed count.
+
+This remains a fully offline, database-free review layer based on local observation records.
+
+## Immediate next step
+
+Recommended Batch 013:
+
+```text
+Add print/export review output.
+```
+
+Possible additions:
+
+- printable selected-building summary
+- printable grid-cell coverage report
+- export CSV for observations
+- export CSV for building coverage
+- preserve JSON as the full-fidelity backup format
