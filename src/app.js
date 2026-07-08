@@ -69,6 +69,9 @@
     statusFilter: document.getElementById("statusFilter"),
     coverageByCell: document.getElementById("coverageByCell"),
     exportRecords: document.getElementById("exportRecords"),
+    exportObservationCsv: document.getElementById("exportObservationCsv"),
+    exportBuildingCsv: document.getElementById("exportBuildingCsv"),
+    exportFieldReport: document.getElementById("exportFieldReport"),
     importRecords: document.getElementById("importRecords"),
     clearRecords: document.getElementById("clearRecords")
   };
@@ -155,6 +158,24 @@
     els.exportRecords.addEventListener("click", () => {
       const filename = `kane-map-observations-${dateStamp()}.json`;
       store.download(filename, store.exportJson());
+    });
+
+    els.exportObservationCsv.addEventListener("click", () => {
+      const filename = `kane-map-observations-${dateStamp()}.csv`;
+      const csv = global.KaneMapExporters.observationCsv(store.snapshot());
+      store.download(filename, csv, "text/csv");
+    });
+
+    els.exportBuildingCsv.addEventListener("click", () => {
+      const filename = `kane-map-building-summary-${dateStamp()}.csv`;
+      const csv = global.KaneMapExporters.buildingSummaryCsv(allBuildings, coverageModel.build());
+      store.download(filename, csv, "text/csv");
+    });
+
+    els.exportFieldReport.addEventListener("click", () => {
+      const filename = `kane-map-field-report-${dateStamp()}.txt`;
+      const report = global.KaneMapExporters.fieldReport(coverageModel.build());
+      store.download(filename, report, "text/plain");
     });
 
     els.importRecords.addEventListener("change", handleImportRecords);

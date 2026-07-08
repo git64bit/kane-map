@@ -80,8 +80,8 @@
       return replaceAll(schema.parseEnvelope(text));
     }
 
-    function download(filename, text) {
-      const blob = new Blob([text], { type: "application/json" });
+    function download(filename, text, mimeType = "application/json") {
+      const blob = new Blob([text], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
