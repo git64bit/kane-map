@@ -4,75 +4,180 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Batch 020 — app controller refactor.
+The project is at a stable offline prototype checkpoint.
 
-The application remains offline-first and static. It still opens from `index.html` without a build step, package manager, server, CDN, or remote database.
+The current priority is to prepare for real Kane County geometry by documenting source layers, licensing, and the geometry pipeline before importing data.
 
-## Current status
+## Current repository state
 
-The project now has:
-
-- offline Canvas map rendering
-- chunked local demo geometry
-- persistent local observation records through browser-local storage
-- JSON export/import with import preview and safety checks
-- CSV and TXT exports
-- structured field ledger
-- record edit/delete
-- review filters
-- coverage summaries
-- site/building identity layer
-- visit-session tracking
-- field-planning layer
-- tabbed workspace UI
-- keyboard shortcuts
-- refactored app controller files
-
-## Important architecture decision
-
-Kane-Map is offline-first, server-assisted later.
-
-The app should work locally. A server/proxy layer may later help with data preparation, synchronization, public distribution, or CivicIPFS integration, but the fieldwork runtime should not depend on network availability.
-
-## Refactor note
-
-`src/app.js` was split because it had exceeded 1,000 lines.
-
-New controller files:
+The app currently includes:
 
 ```text
-src/app/context.js
-src/controllers/workspaceController.js
-src/controllers/mapController.js
-src/controllers/observationController.js
-src/controllers/reviewController.js
-src/controllers/importExportController.js
-src/controllers/shortcutsController.js
-src/utils/domUtils.js
+static offline index.html
+split CSS files
+modular JavaScript controllers
+split Canvas renderer
+synthetic local data chunks
+field observation ledger
+localStorage persistence
+JSON import/export
+CSV/TXT exports
+search
+coverage filters
+field planning
+visit sessions
+keyboard shortcuts
+tabbed workspace
+documentation index
 ```
 
-See `docs/APP_REFACTOR.md` for details.
+## Recent completed batches
 
-## Current testing checklist
+```text
+Batch 018 — tabbed workspace
+Batch 019 — keyboard and fieldwork speed
+Batch 020 — app controller refactor
+Batch 021 — renderer refactor
+Batch 022 — CSS/UI refactor
+Batch 023 — documentation index and file map
+```
 
-After each batch, test:
+## Current stable behavior
 
-1. Open `index.html` directly.
-2. Pan, zoom, and rotate the map.
-3. Select a building.
-4. Switch tabs.
-5. Add an observation.
-6. Edit the observation.
-7. Delete a test observation.
-8. Export JSON.
-9. Import JSON and preview before replacing.
-10. Export CSV/TXT reports.
-11. Use search and keyboard shortcuts.
-12. Reopen the page and confirm local records persist.
+Confirmed working by user testing:
 
-## Next likely step
+```text
+open index.html directly
+pan / zoom / rotate / reset
+building selection
+record save/edit/delete
+record persistence
+JSON export/import
+CSV/TXT exports
+search
+review filters
+coverage counts
+field plan
+visit sessions
+tabbed workspace
+keyboard shortcuts
+```
 
-After the refactor is verified, the next useful direction is either:
+## Architecture decision
 
-- polish UI layout and field grouping, or
-- start preparing a real-data ingestion plan while keeping the demo map intact.
+Kane-Map is currently:
+
+```text
+offline-first
+browser-only
+server-free at runtime
+CDN-free
+package-manager-free
+build-step-free
+Canvas-rendered
+localStorage-backed
+JSON-portable
+```
+
+Future server/proxy infrastructure may be useful for data preparation, versioning, and optional sync, but field use should remain offline-capable.
+
+## Current visual model
+
+The map renders:
+
+```text
+dark gray background
+Kane-style grid
+cell labels
+red residential buildings
+building status markers
+white roads
+blue ponds/water
+green forests/wooded areas
+simple polygon/line geometry
+```
+
+## Current fieldwork model
+
+The active use case is residential address/unit-count reconstruction.
+
+The app supports:
+
+```text
+site/address note
+building alias
+entrance ID
+mailbox bank ID
+visible designators
+parsed unit count
+confidence
+visit status
+access context
+visit date
+field session
+plan priority
+planned action
+```
+
+The project boundary remains:
+
+```text
+visible observation only
+no mailbox contact
+no mailbox opening
+no inserted items
+no reading mail
+no resident-name capture
+no access bypassing
+```
+
+## Current code health
+
+Recent refactors reduced large files:
+
+```text
+src/app.js is now a small bootstrap file
+controllers are split by task
+renderer is split by drawing/viewport/hit-test/status modules
+CSS is split by UI responsibility
+```
+
+General rule:
+
+```text
+Application JS, HTML, and CSS should stay small and readable.
+Generated geometry/data files may grow more freely.
+```
+
+## Current documentation entry points
+
+Read these first:
+
+```text
+docs/README.md
+docs/PROJECT_STATE.md
+docs/NEXT_STEPS.md
+docs/CURRENT_ARCHITECTURE.md
+docs/FILE_MAP.md
+```
+
+## Immediate next step
+
+Create the real-data planning documentation.
+
+Recommended next batch:
+
+```text
+Batch 024 — real-data source plan
+```
+
+Suggested files:
+
+```text
+docs/REAL_DATA_PLAN.md
+docs/SOURCE_LAYERS.md
+docs/DATA_LICENSE_CHECKLIST.md
+docs/GEOMETRY_PIPELINE.md
+```
+
+Do not import real Kane County data until the source/layer plan is written.
