@@ -4,118 +4,56 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Phase 5.6 — Local field-ledger record management.
+Offline-first synthetic prototype with local records, search, coverage review, exports, and import safety.
 
-The app is an offline-first Canvas prototype with local saved observations, chunked local geometry, and basic per-record management.
+Current batch: Batch 014 — import safety.
 
-## Current repository state
+## Repository direction
 
-The project contains:
+Kane-Map is being built as an offline-first, browser-rendered civic field map for Kane County, Illinois.
 
-```text
-index.html
-styles/app.css
-src/app.js
-src/data/geometry.js
-src/data/chunkRegistry.js
-src/data/demoCatalog.js
-src/data/chunks/*.js
-src/field/designators.js
-src/map/grid.js
-src/map/renderer.js
-src/storage/localStore.js
-src/storage/recordSchema.js
-docs/*.md
-README.md
-ROADMAP.md
-```
+The project currently uses:
 
-## What works
+- direct `index.html` opening
+- no CDN
+- no server
+- no database
+- no package manager
+- no build step
+- pure Canvas rendering
+- local JavaScript data chunks
+- browser-local observation records
+- JSON backup/restore
+- CSV/TXT review exports
 
-The prototype can be opened directly from `index.html`.
+## Current operational purpose
 
-Working features:
+The first operational purpose is residential address and unit-count reconstruction.
 
-- dark Canvas map
-- Kane-style grid labels
-- red residential building blocks
-- 1, 2, and 3 story building height
-- white roads
-- blue ponds
-- green forests
-- pan, zoom, rotate, reset
-- building and grid selection
-- chunked local demo geometry
-- visible-cell and selected-chunk footer status
-- structured field observations
-- visible-designator parsing and unit-count derivation
-- `localStorage` persistence
-- JSON export/import
-- single-record delete
-- selected-building summary panel
-- selected-building record highlighting
-
-## Current data mode
-
-The current demo data is synthetic.
-
-It is split into local JavaScript chunks:
+Some HOAs and residential buildings do not expose unit numbers in ordinary public-facing sources. Kane-Map records visible field observations such as:
 
 ```text
-regional-orientation
-west-neighborhood
-central-townhomes
-east-apartments
+site/address note
+building ID
+entrance ID
+mailbox bank ID
+visible designators
+observed unit count
+confidence
+visit status
+access context
+notes
 ```
 
-The app computes visible grid cells and materializes the matching chunks for rendering.
+The grid names places.
 
-This prepares the project for larger local data without requiring a remote database.
+The observation ledger records what was observed there.
 
-## Current record mode
+The unit list does not become part of the public grid code.
 
-The field ledger writes schema version 4 records to browser-local storage.
+## Hard fieldwork boundary
 
-The app supports:
-
-```text
-add record
-list recent records
-delete one record
-clear all local records
-export JSON
-import JSON
-```
-
-Correction workflow for now:
-
-```text
-delete incorrect local record
-enter corrected local record
-export JSON backup if needed
-```
-
-Full edit-in-place is deferred until audit/version behavior is defined.
-
-## Important architecture decision
-
-Kane-Map remains:
-
-```text
-offline-first
-server-assisted later
-browser-rendered
-local-record capable
-export/import capable
-```
-
-The project should not become fully online-dependent.
-
-A future proxy layer may prepare data, clean GIS files, clip geometry, and publish releases. The field map itself should continue to work without network access after the needed files are available locally.
-
-## Fieldwork boundary
-
-The fieldwork model remains visible observation only.
+The fieldwork model is visible observation only.
 
 Do not:
 
@@ -125,96 +63,138 @@ Do not:
 - remove anything from mailboxes
 - read mail
 - record resident names
-- bypass access control
 - enter locked or restricted areas
+- bypass access control
+- treat an unlocked area as automatically lawful access
 
-The useful observation is the visible unit designator and the countable building-level pattern.
+Each exported observation record includes boundary flags for mailbox touching, mailbox opening, mail reading, and resident-name recording. Kane-Map import now blocks records where those flags violate the fieldwork boundary.
+
+## Current visual model
+
+The prototype renders synthetic data with:
+
+```text
+dark gray background
+thin wireframe grid
+human-readable grid labels
+red residential buildings
+1, 2, and 3 story block heights
+white roads
+blue ponds
+green forests
+simple geometry
+browser-side rendering
+```
+
+## Current app capabilities
+
+The app currently supports:
+
+- Canvas map rendering
+- pan, zoom, rotate, reset
+- chunked local demo geometry
+- visible-cell chunk status
+- selected grid cell and selected building panel
+- structured field observation form
+- visible designator parser
+- automatic unit count from designators
+- localStorage persistence
+- record edit
+- record delete
+- selected-building-only record filter
+- building summary panel
+- map status markers for buildings with records
+- navigation search
+- jump to grid cell or building
+- status-based review filter
+- visible-cell coverage table
+- JSON export
+- JSON import preview and replace
+- observation CSV export
+- building-summary CSV export
+- compact TXT field report export
+
+## Current import behavior
+
+JSON import uses preview mode.
+
+The preview shows:
+
+- current local record count
+- incoming record count
+- current versus incoming building count
+- current versus incoming observed unit total
+- current versus incoming verified record count
+- current versus incoming conflict record count
+- warnings
+- blocking errors
+
+Import is currently replace mode.
+
+Use **Download backup** before replacing local records that matter.
+
+Merge import is deferred until conflict rules are defined.
+
+## Current storage model
+
+```text
+localStorage  saved observation records
+JSON          full-fidelity backup and restore
+CSV           spreadsheet review
+TXT           compact fieldwork report
+JS chunks     synthetic demo geometry
+```
+
+A future large dataset should not be stored as one giant array. It should use local chunks or generated bundles keyed by visible grid cells.
+
+## Current source organization
+
+```text
+index.html
+styles/app.css
+src/app.js
+src/data/geometry.js
+src/data/chunkRegistry.js
+src/data/demoCatalog.js
+src/data/chunks/*.js
+src/map/grid.js
+src/map/renderer.js
+src/storage/recordSchema.js
+src/storage/localStore.js
+src/field/designators.js
+src/navigation/searchIndex.js
+src/records/coverage.js
+src/export/exporters.js
+src/import/importValidator.js
+docs/*.md
+```
+
+## Known technical debt
+
+`src/app.js` and `styles/app.css` are now large enough that the next batch should probably refactor UI and styling into smaller files before adding substantial new features.
+
+Recommended split:
+
+```text
+src/ui/dom.js
+src/ui/recordsPanel.js
+src/ui/importPanel.js
+src/ui/searchPanel.js
+src/ui/coveragePanel.js
+src/ui/observationForm.js
+styles/base.css
+styles/panels.css
+styles/forms.css
+styles/records.css
+styles/map.css
+```
 
 ## Immediate next step
 
-Recommended Batch 010:
+Recommended Batch 015:
 
 ```text
-Add a building-status layer from saved records.
+Refactor app and styles into smaller modules.
 ```
 
-Possible additions:
-
-- tint or outline selected buildings based on saved observation status
-- show `revisit-needed` and `conflict` buildings more clearly
-- add a map legend entry for observation status
-- add building summary totals by visible grid cell
-
-Do not import real Kane County data yet.
-
-
-## Batch 011 status
-
-Navigation search was added.
-
-The right panel can now search local grid cells, buildings, saved records, site labels, statuses, and visible designators. Selecting a search result recenters the map and selects the related cell or building.
-
-A coverage summary was added for:
-
-```text
-recorded buildings / total buildings
-latest observed unit total
-verified / revisit / conflict counts
-saved observation record count
-```
-
-This remains fully offline and database-free.
-
-## Batch 012 status
-
-Coverage review was added.
-
-The right panel now includes a review filter for:
-
-```text
-all buildings
-recorded
-unrecorded
-verified
-conflict
-revisit-needed
-counted
-observed
-```
-
-Matching buildings remain prominent and non-matching buildings are dimmed on the map.
-
-The right panel also shows coverage by visible grid cell, including recorded building count, total building count, latest observed units, conflict count, and revisit-needed count.
-
-This remains a fully offline, database-free review layer based on local observation records.
-
-## Immediate next step
-
-Recommended Batch 013:
-
-```text
-Add print/export review output.
-```
-
-Possible additions:
-
-- printable selected-building summary
-- printable grid-cell coverage report
-- export CSV for observations
-- export CSV for building coverage
-- preserve JSON as the full-fidelity backup format
-
-## Batch 013 — exports
-
-Added spreadsheet-friendly and report-friendly exports while keeping JSON as the complete backup format.
-
-New exports:
-
-```text
-Export JSON              full-fidelity backup / restore
-Export observation CSV   one row per saved observation record
-Export building CSV      one row per building summary
-Export field report      compact TXT coverage report
-```
-
-JSON remains the authoritative portable format. CSV and TXT are review outputs.
+Do this before importing real Kane County GIS data.
