@@ -153,3 +153,10 @@ The offline prototype currently supports:
 - building status markers on the map
 
 See `docs/EDIT_AND_STATUS.md` for the Batch 010 workflow.
+
+
+## Current prototype additions
+
+Batch 011 adds local navigation search. The app can search grid cells, building labels, saved observation records, site labels, visit statuses, and visible unit designators without using a server or database.
+
+The right panel also shows a coverage summary so the user can see how many demo buildings have saved records and how many latest observed units are represented by those records.

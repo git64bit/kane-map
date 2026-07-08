@@ -125,6 +125,18 @@
         </div>
 
         <div class="section">
+          <h2>Navigation search</h2>
+          <div class="search-row">
+            <input id="navSearch" type="search" placeholder="Search B20, N14-E08, King's Row, verified" />
+            <button id="clearSearch" type="button" class="secondary">Clear</button>
+          </div>
+          <ol id="searchResults" class="search-results">
+            <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
+          </ol>
+          <div id="coverageSummary" class="summary-box">Coverage summary pending.</div>
+        </div>
+
+        <div class="section">
           <h2>Offline records</h2>
           <p><strong id="recordCount">0</strong> local observation records</p>
           <div class="button-stack">
@@ -168,6 +180,7 @@
   <script src="src/storage/recordSchema.js"></script>
   <script src="src/storage/localStore.js"></script>
   <script src="src/field/designators.js"></script>
+  <script src="src/navigation/searchIndex.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>

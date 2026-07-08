@@ -279,3 +279,23 @@ Next recommended batch:
 ```text
 Batch 010 — building-status overlay from saved records
 ```
+
+
+## Batch 011 — Navigation search
+
+Status: complete in prototype.
+
+Added:
+
+- offline search over grid cells
+- offline search over buildings
+- offline search over saved field records
+- click-to-jump behavior for cells and buildings
+- coverage summary for recorded buildings and latest observed unit totals
+- `docs/NAVIGATION_SEARCH.md`
+
+Next likely work:
+
+- add a visit queue / revisit list
+- add CSV export for spreadsheet review
+- add a simple validation report for conflicts and suspicious counts
