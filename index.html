@@ -44,7 +44,8 @@
         </div>
 
         <form id="observationForm" class="section observation-form">
-          <h2>Offline observation</h2>
+          <h2 id="observationFormTitle">Offline observation</h2>
+          <p id="editModeNotice" class="edit-mode-notice" hidden>Editing saved local record.</p>
           <label>
             Site label / address note
             <input id="siteLabel" type="text" placeholder="Example: Building 2 / 1420 Example Dr" />
@@ -103,7 +104,10 @@
             <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
           </label>
           <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
-          <button type="submit">Add field observation</button>
+          <div class="form-actions">
+            <button id="saveObservation" type="submit">Add field observation</button>
+            <button id="cancelEdit" type="button" class="secondary" hidden>Cancel edit</button>
+          </div>
           <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
         </form>
       </aside>
@@ -130,6 +134,12 @@
               <input id="importRecords" type="file" accept="application/json,.json" />
             </label>
             <button id="clearRecords" type="button" class="danger">Clear saved records</button>
+          </div>
+          <div class="record-toolbar">
+            <label>
+              <input id="showSelectedOnly" type="checkbox" />
+              selected building only
+            </label>
           </div>
           <ol id="recordList" class="record-list"></ol>
         </div>

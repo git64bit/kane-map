@@ -134,3 +134,22 @@ bad local observation → delete record → enter corrected observation
 ```
 
 The exported record schema remains version 4 because the record shape did not change.
+
+## Current prototype capabilities
+
+The offline prototype currently supports:
+
+- direct `index.html` opening
+- Canvas rendering
+- chunked local demo geometry
+- pan, zoom, rotate, and reset
+- selected building and grid cell panels
+- local field observation records
+- visible designator parsing and unit-count auto-counting
+- JSON export/import
+- single-record delete
+- edit saved records in place
+- selected-building-only record filtering
+- building status markers on the map
+
+See `docs/EDIT_AND_STATUS.md` for the Batch 010 workflow.

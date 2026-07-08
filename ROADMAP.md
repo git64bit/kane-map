@@ -2,6 +2,22 @@
 
 This roadmap is organized so the project can pause and resume without losing direction.
 
+## Current milestone — Batch 010
+
+Status: ready for testing.
+
+Adds:
+
+- edit saved observation records in place
+- preserve record ID and original creation date during edit
+- add updated timestamp
+- filter records to selected building only
+- display map markers for buildings with saved observations
+- migrate local storage to schema v5
+
+Next likely milestone: search / locate / building registry.
+
+
 ## Phase 0 — Project memory
 
 Status: complete enough to proceed.
