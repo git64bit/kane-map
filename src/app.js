@@ -73,12 +73,18 @@
     exportBuildingCsv: document.getElementById("exportBuildingCsv"),
     exportFieldReport: document.getElementById("exportFieldReport"),
     importRecords: document.getElementById("importRecords"),
+    importPreview: document.getElementById("importPreview"),
+    importActions: document.getElementById("importActions"),
+    confirmImport: document.getElementById("confirmImport"),
+    cancelImport: document.getElementById("cancelImport"),
+    downloadBackupBeforeImport: document.getElementById("downloadBackupBeforeImport"),
     clearRecords: document.getElementById("clearRecords")
   };
 
   let selected = { cell: null, building: null };
   let visibleCellCodes = [];
   let editingRecordId = null;
+  let pendingImport = null;
 
   function init() {
     bindCanvasEvents();
@@ -179,12 +185,19 @@
     });
 
     els.importRecords.addEventListener("change", handleImportRecords);
+    els.confirmImport.addEventListener("click", confirmPendingImport);
+    els.cancelImport.addEventListener("click", clearImportPreview);
+    els.downloadBackupBeforeImport.addEventListener("click", () => {
+      const filename = `kane-map-before-import-${dateStamp()}.json`;
+      store.download(filename, store.exportJson());
+    });
 
     els.clearRecords.addEventListener("click", () => {
       if (!store.snapshot().length) return;
       const ok = confirm("Clear locally saved Kane-Map observation records from this browser?");
       if (!ok) return;
       stopEditing();
+      clearImportPreview();
       store.clear();
       refreshRecordUi();
     });
@@ -586,17 +599,69 @@
 
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        stopEditing();
-        store.importJson(String(reader.result || ""));
-        refreshRecordUi();
-      } catch (error) {
-        alert(`Import failed: ${error.message}`);
-      } finally {
-        event.target.value = "";
-      }
+      const knownBuildingIds = allBuildings.map((building) => building.id);
+      const knownCellCodes = grid.cells.map((cell) => cell.code);
+      const preview = global.KaneMapImportValidator.previewObservationImport(
+        String(reader.result || ""),
+        store.snapshot(),
+        { knownBuildingIds, knownCellCodes }
+      );
+
+      pendingImport = preview.ok ? preview : null;
+      renderImportPreview(preview, file.name);
+      event.target.value = "";
     };
     reader.readAsText(file);
+  }
+
+  function confirmPendingImport() {
+    if (!pendingImport || !pendingImport.ok) return;
+
+    const count = pendingImport.records.length;
+    const ok = confirm(`Replace all local observation records with ${count} imported records? Export a backup first if needed.`);
+    if (!ok) return;
+
+    stopEditing();
+    store.replaceAll(pendingImport.records);
+    clearImportPreview();
+    refreshRecordUi();
+  }
+
+  function renderImportPreview(preview, filename) {
+    const summary = preview.summary;
+    const status = preview.ok ? "Import can be applied." : "Import blocked.";
+    const warnings = preview.warnings.length
+      ? `<ul>${preview.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : `<p class="muted">No warnings.</p>`;
+    const errors = preview.errors.length
+      ? `<ul>${preview.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : `<p class="muted">No errors.</p>`;
+
+    els.importPreview.hidden = false;
+    els.importActions.hidden = false;
+    els.confirmImport.disabled = !preview.ok;
+    els.importPreview.innerHTML = [
+      `<strong>${escapeHtml(status)}</strong>`,
+      `<br><span class="muted">File: ${escapeHtml(filename)}</span>`,
+      `<div class="import-compare">`,
+      `<span>Current: ${summary.currentCount} records · ${summary.currentBuildings} buildings · ${summary.currentUnits} units</span>`,
+      `<span>Incoming: ${summary.incomingCount} records · ${summary.incomingBuildings} buildings · ${summary.incomingUnits} units</span>`,
+      `<span>Verified: ${summary.currentVerified} → ${summary.incomingVerified}</span>`,
+      `<span>Conflicts: ${summary.currentConflicts} → ${summary.incomingConflicts}</span>`,
+      `</div>`,
+      `<details ${preview.errors.length ? "open" : ""}><summary>Errors</summary>${errors}</details>`,
+      `<details ${preview.warnings.length ? "open" : ""}><summary>Warnings</summary>${warnings}</details>`,
+      `<p class="fine-print">Import uses replace mode. JSON backup remains the full-fidelity restore format.</p>`
+    ].join("");
+  }
+
+  function clearImportPreview() {
+    pendingImport = null;
+    els.importPreview.hidden = true;
+    els.importActions.hidden = true;
+    els.importPreview.innerHTML = "";
+    els.confirmImport.disabled = false;
+    els.importRecords.value = "";
   }
 
   function findBuildingById(buildingId) {
