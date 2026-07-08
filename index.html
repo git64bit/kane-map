@@ -161,9 +161,15 @@
             <button id="exportBuildingCsv" type="button">Export building CSV</button>
             <button id="exportFieldReport" type="button">Export field report</button>
             <label class="file-button">
-              Import JSON
+              Preview JSON import
               <input id="importRecords" type="file" accept="application/json,.json" />
             </label>
+            <div id="importPreview" class="import-preview" hidden></div>
+            <div id="importActions" class="button-grid" hidden>
+              <button id="downloadBackupBeforeImport" type="button" class="secondary">Download backup</button>
+              <button id="confirmImport" type="button">Replace local records</button>
+              <button id="cancelImport" type="button" class="secondary wide">Cancel import</button>
+            </div>
             <button id="clearRecords" type="button" class="danger">Clear saved records</button>
           </div>
           <div class="record-toolbar">
@@ -203,6 +209,7 @@
   <script src="src/navigation/searchIndex.js"></script>
   <script src="src/records/coverage.js"></script>
   <script src="src/export/exporters.js"></script>
+  <script src="src/import/importValidator.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>

@@ -2,21 +2,20 @@
 
 This roadmap is organized so the project can pause and resume without losing direction.
 
-## Current milestone — Batch 010
+## Current milestone — Batch 014
 
 Status: ready for testing.
 
 Adds:
 
-- edit saved observation records in place
-- preserve record ID and original creation date during edit
-- add updated timestamp
-- filter records to selected building only
-- display map markers for buildings with saved observations
-- migrate local storage to schema v5
+- JSON import preview before replacing local records
+- current versus incoming ledger comparison
+- warning and error reporting for imports
+- backup-before-import control
+- blocked import for duplicate incoming IDs or fieldwork boundary flag violations
+- documentation for import safety
 
-Next likely milestone: search / locate / building registry.
-
+Next likely milestone: split large application/UI files into smaller modules before adding more features.
 
 ## Phase 0 — Project memory
 
@@ -72,11 +71,12 @@ src/map/grid.js
 src/map/renderer.js
 src/storage/recordSchema.js
 src/storage/localStore.js
-docs/OFFLINE_FIRST.md
-docs/PROXY_LAYER.md
-docs/LOCAL_RECORDS.md
-docs/CHUNKED_DATA.md
-docs/PROJECT_STATE.md
+src/field/designators.js
+src/navigation/searchIndex.js
+src/records/coverage.js
+src/export/exporters.js
+src/import/importValidator.js
+docs/*.md
 ```
 
 Rules:
@@ -103,30 +103,21 @@ Completed features:
 - browser-local saved records through `localStorage`
 - record schema version field
 - export envelope with format and version
-- import validation and normalization
+- import normalization
+- import preview and validation
 - clear saved records control
 - storage status indicator
 - explicit fieldwork boundary flags in each exported record
-
-Completed in Batch 007:
-
-- [x] Add confidence selector
-- [x] Add visit-status selector
-- [x] Add entrance ID
-- [x] Add mailbox-bank ID
-- [x] Add visible designator list field
-- [x] Parse visible designators into a normalized list
-- [x] Derive unit count from designators when count is blank
-- [x] Add access-context field
-- [x] Add schema version 4
-- [x] Migrate local schema version 2 records when possible
+- visible designator parsing
+- unit-count auto-counting
+- record edit and delete
+- selected-building filtering
 
 Remaining tasks:
 
-- [ ] Add conflict status between public record and field observation
-- [x] Add record delete controls
-- [x] Add per-building summary panel
-- [ ] Add better import merge behavior
+- [ ] Add merge import behavior after conflict rules are defined
+- [ ] Add project namespace support
+- [ ] Add duplicate detection by building/designator/date
 
 Exit condition:
 
@@ -150,45 +141,63 @@ Exit condition:
 
 A grid cell code can be generated consistently from coordinates and shown on the map.
 
-## Phase 5 — Static bundle strategy
-
-Goal: support large local datasets without loading everything at once.
-
-Tasks:
-
-- [ ] Define chunk naming convention
-- [ ] Define grid-cell bundle format
-- [ ] Define building bundle format
-- [ ] Define road/water/forest bundle format
-- [ ] Define manifest file
-- [ ] Define lazy loading by visible grid cells
-- [ ] Decide when to move from JSON to compressed/tiled bundles
-
-Exit condition:
-
-The app can load only the local files needed for the current view.
-
-## Phase 5.5 — Chunked local data
-
-Goal: avoid the one-giant-array model before real Kane County data is imported.
+## Phase 5 — Chunked local data
 
 Status: implemented in Batch 006.
 
-Tasks:
+Goal: avoid the one-giant-array model before real Kane County data is imported.
 
-- [x] Add local data catalog
-- [x] Add data chunk registry
-- [x] Split synthetic data into local chunks
-- [x] Select render chunks from visible grid cells
-- [x] Add footer status for visible cells
-- [x] Add footer status for selected chunks
-- [x] Document chunked data model
+Completed features:
+
+- local data catalog
+- data chunk registry
+- synthetic data split into local chunks
+- render chunks selected from visible grid cells
+- footer status for visible cells
+- footer status for selected chunks
+- documentation for chunked data
 
 Exit condition:
 
 The app still opens directly as `index.html`, but the code no longer assumes all geometry should live in one giant feature file.
 
-## Phase 6 — Real geometry import
+## Phase 6 — Review dashboard
+
+Status: implemented enough for prototype use.
+
+Completed features:
+
+- local navigation search
+- jump to building or grid cell
+- selected-building summary
+- coverage summary
+- status-based map filter
+- visible-cell coverage table
+- map markers for buildings with records
+
+Future tasks:
+
+- [ ] clearer symbol legend for map status markers
+- [ ] better conflict visualization
+- [ ] visible-cell printable report
+- [ ] selected-building printable report
+
+## Phase 7 — Exports
+
+Status: implemented in Batch 013.
+
+Exports:
+
+```text
+Export JSON              full-fidelity backup / restore
+Export observation CSV   one row per saved observation record
+Export building CSV      one row per building summary
+Export field report      compact TXT coverage report
+```
+
+JSON remains the authoritative portable format. CSV and TXT are review outputs.
+
+## Phase 8 — Real geometry import
 
 Goal: replace synthetic geometry with real or derived local data.
 
@@ -216,107 +225,29 @@ Exit condition:
 
 The map displays real Kane County orientation layers.
 
-## Phase 7 — Server-assisted preparation layer
+## Phase 9 — Server-assisted preparation layer
 
-Goal: add online infrastructure only where it improves maintenance.
+Goal: keep runtime offline-first while allowing a future online layer to prepare, publish, and version data bundles.
 
-Tasks:
+Possible additions:
 
-- [ ] Define ingestion pipeline
-- [ ] Define geometry cleanup workflow
-- [ ] Define static bundle release format
-- [ ] Define version manifest
-- [ ] Define optional sync API shape
-- [ ] Keep runtime independent from server availability
+- ingestion scripts
+- GIS cleanup
+- local bundle generation
+- release manifests
+- optional sync service
+- optional public archive integration
 
-Exit condition:
+Do not make field use depend on server availability.
 
-A server/proxy can publish better data bundles, but the field map still runs offline.
+## Immediate next step
 
-## Current next step
-
-Batch 007 completed the first structured field-ledger pass. Batch 008 fixed designator count/display handling.
-
-Next likely batch:
+Recommended Batch 015:
 
 ```text
-building-status overlay from saved records
-revisit-needed highlighting on the map
-conflict highlighting on the map
-summary totals by visible grid cell
+Refactor app and style files into smaller modules before adding more features.
 ```
 
+Rationale:
 
-## Batch 008 — Designator count fix
-
-Completed:
-
-- [x] Visible designators now override accidental `0` counts
-- [x] Record list shows designator count and up to 24 designators
-- [x] Schema version advanced to 4
-- [x] Version 3 and version 2 local records migrate forward
-- [x] Inconsistent older records with visible designators and `0` unit count normalize to the designator count
-
-## Batch 009 — Record management and building summary
-
-Completed:
-
-- [x] Add delete control for individual records
-- [x] Keep schema version 4 because exported record shape did not change
-- [x] Add selected-building summary panel
-- [x] Highlight recent records for the selected building
-- [x] Refresh storage and summary panels after delete/import/clear/add
-- [x] Document conservative correction workflow
-
-Correction workflow:
-
-```text
-incorrect local observation → delete record → enter corrected observation
-```
-
-Next recommended batch:
-
-```text
-Batch 010 — building-status overlay from saved records
-```
-
-
-## Batch 011 — Navigation search
-
-Status: complete in prototype.
-
-Added:
-
-- offline search over grid cells
-- offline search over buildings
-- offline search over saved field records
-- click-to-jump behavior for cells and buildings
-- coverage summary for recorded buildings and latest observed unit totals
-- `docs/NAVIGATION_SEARCH.md`
-
-Next likely work:
-
-- add a visit queue / revisit list
-- add CSV export for spreadsheet review
-- add a simple validation report for conflicts and suspicious counts
-
-## Batch 012 — coverage filters
-
-Status: complete in this batch.
-
-Adds:
-
-- status-based review filter
-- recorded/unrecorded building review
-- conflict and revisit-needed review
-- visible-cell coverage table
-- footer review-filter count
-- documentation in `docs/COVERAGE_FILTERS.md`
-
-Next recommended work:
-
-```text
-Batch 013 — print and CSV export
-```
-
-The project now needs human-readable outputs for fieldwork review, not only JSON backup files.
+`src/app.js` and `styles/app.css` are now large enough that further feature work should be preceded by cleanup.
