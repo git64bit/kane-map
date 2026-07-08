@@ -64,7 +64,10 @@
               <button id="zoomOut" type="button">Zoom −</button>
               <button id="rotateLeft" type="button">Rotate ⟲</button>
               <button id="rotateRight" type="button">Rotate ⟳</button>
+              <button id="prevBuilding" type="button">Prev building</button>
+              <button id="nextBuilding" type="button">Next building</button>
               <button id="resetView" type="button" class="wide">Reset view</button>
+              <button id="copySelection" type="button" class="wide secondary">Copy selected summary</button>
             </div>
           </div>
 
@@ -174,6 +177,7 @@
             <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
             <div class="form-actions">
               <button id="saveObservation" type="submit">Add field observation</button>
+              <button id="clearObservationFormButton" type="button" class="secondary">Clear form</button>
               <button id="cancelEdit" type="button" class="secondary" hidden>Cancel edit</button>
             </div>
             <p class="fine-print">Records save locally in this browser and can be exported as JSON. No server. No database.</p>
@@ -276,6 +280,22 @@
             <p class="fine-print">Current record schema is managed in <code>src/storage/recordSchema.js</code>. Read <code>docs/PROJECT_STATE.md</code> first when resuming after a pause.</p>
           </div>
           <div class="section">
+            <h2>Keyboard shortcuts</h2>
+            <div class="shortcut-grid">
+              <span><kbd>/</kbd> search</span>
+              <span><kbd>1–7</kbd> tabs</span>
+              <span><kbd>N</kbd> next building</span>
+              <span><kbd>P</kbd> previous building</span>
+              <span><kbd>S</kbd> save observation</span>
+              <span><kbd>X</kbd> clear form</span>
+              <span><kbd>C</kbd> copy selected</span>
+              <span><kbd>E</kbd> export JSON</span>
+              <span><kbd>R</kbd> reset view</span>
+              <span><kbd>Esc</kbd> cancel / clear</span>
+            </div>
+            <p class="fine-print">Shortcuts are ignored while typing in normal text fields, except Escape and Ctrl/⌘+Enter.</p>
+          </div>
+          <div class="section">
             <h2>Danger zone</h2>
             <div class="button-stack">
               <button id="clearRecords" type="button" class="danger">Clear saved records</button>
@@ -295,6 +315,7 @@
         <span id="reviewFilterStatus">Review: all buildings</span>
         <span id="visitStatusSummary">Visits: 0 days / 0 sessions</span>
         <span id="planStatusSummary">Plan: 0 active</span>
+        <span id="shortcutStatus">Shortcuts ready</span>
         <span>No CDN · No server · No database</span>
       </footer>
     </section>
@@ -314,11 +335,20 @@
   <script src="src/field/visitSessions.js"></script>
   <script src="src/field/fieldPlan.js"></script>
   <script src="src/navigation/searchIndex.js"></script>
+  <script src="src/navigation/shortcuts.js"></script>
   <script src="src/records/coverage.js"></script>
   <script src="src/records/siteIdentity.js"></script>
   <script src="src/export/exporters.js"></script>
   <script src="src/import/importValidator.js"></script>
   <script src="src/map/renderer.js"></script>
+  <script src="src/utils/domUtils.js"></script>
+  <script src="src/app/context.js"></script>
+  <script src="src/controllers/workspaceController.js"></script>
+  <script src="src/controllers/mapController.js"></script>
+  <script src="src/controllers/observationController.js"></script>
+  <script src="src/controllers/reviewController.js"></script>
+  <script src="src/controllers/importExportController.js"></script>
+  <script src="src/controllers/shortcutsController.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>

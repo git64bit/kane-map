@@ -311,3 +311,49 @@ Next recommended batch:
 ## Batch 019 — Controller refactor
 
 Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The tabbed workspace solves interface clutter; the next maintenance issue is controller size.
+
+
+## Batch 019 — Keyboard and fieldwork speed
+
+Status: complete.
+
+Added:
+
+- keyboard shortcuts
+- shortcut status footer
+- next/previous visible building navigation
+- selected summary copy
+- clear-form action
+- save shortcut with empty-record guard
+- project documentation for shortcuts
+
+No record schema change.
+
+Next likely work:
+
+- split the large app controller into smaller UI controller files
+- add a lightweight command/help overlay if shortcuts continue to grow
+- begin preparing real geometry import documentation
+
+## Batch 020 — App controller refactor
+
+Status: complete pending user verification.
+
+Goal: split the large `src/app.js` file into smaller controller files without changing data schema, storage, exports, or user-facing behavior.
+
+Added structure:
+
+```text
+src/app/context.js
+src/controllers/workspaceController.js
+src/controllers/mapController.js
+src/controllers/observationController.js
+src/controllers/reviewController.js
+src/controllers/importExportController.js
+src/controllers/shortcutsController.js
+src/utils/domUtils.js
+```
+
+Exit condition:
+
+The app behaves the same as Batch 019, and all application JavaScript controller files remain comfortably below the 500–700 line target.

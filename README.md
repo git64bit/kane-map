@@ -190,3 +190,12 @@ Map · Observe · Records · Review · Plan · Export · Project
 The map remains visible. The left workspace switches task mode. A compact selected-building header remains visible across tabs so the user does not lose context while entering observations, reviewing records, planning fieldwork, or exporting data.
 
 This batch does not change storage, schema, exports, or offline behavior.
+
+
+## Batch 019 update
+
+Batch 019 adds keyboard and fieldwork-speed controls while keeping the application offline-first and schema-stable.
+
+New controls include search focus, numbered workspace tabs, next/previous visible building navigation, selected-summary copy, form clearing, save shortcut, JSON export shortcut, and Escape handling.
+
+See `docs/KEYBOARD_SHORTCUTS.md`.
