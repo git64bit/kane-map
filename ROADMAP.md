@@ -299,3 +299,24 @@ Next likely work:
 - add a visit queue / revisit list
 - add CSV export for spreadsheet review
 - add a simple validation report for conflicts and suspicious counts
+
+## Batch 012 — coverage filters
+
+Status: complete in this batch.
+
+Adds:
+
+- status-based review filter
+- recorded/unrecorded building review
+- conflict and revisit-needed review
+- visible-cell coverage table
+- footer review-filter count
+- documentation in `docs/COVERAGE_FILTERS.md`
+
+Next recommended work:
+
+```text
+Batch 013 — print and CSV export
+```
+
+The project now needs human-readable outputs for fieldwork review, not only JSON backup files.

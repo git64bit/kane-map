@@ -134,6 +134,22 @@
             <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
           </ol>
           <div id="coverageSummary" class="summary-box">Coverage summary pending.</div>
+          <div class="review-tools">
+            <label>
+              Review filter
+              <select id="statusFilter">
+                <option value="all">All buildings</option>
+                <option value="recorded">Recorded buildings</option>
+                <option value="unrecorded">Unrecorded buildings</option>
+                <option value="verified">Verified</option>
+                <option value="conflict">Conflict</option>
+                <option value="revisit-needed">Revisit needed</option>
+                <option value="counted">Counted</option>
+                <option value="observed">Observed</option>
+              </select>
+            </label>
+          </div>
+          <div id="coverageByCell" class="coverage-table">Coverage by grid cell pending.</div>
         </div>
 
         <div class="section">
@@ -164,6 +180,7 @@
         <span id="visibleCellStatus">Visible cells 0/0</span>
         <span>Mode: offline chunked canvas</span>
         <span id="storageStatus">Storage: checking</span>
+        <span id="reviewFilterStatus">Review: all buildings</span>
         <span>No CDN · No server · No database</span>
       </footer>
     </section>
@@ -181,6 +198,7 @@
   <script src="src/storage/localStore.js"></script>
   <script src="src/field/designators.js"></script>
   <script src="src/navigation/searchIndex.js"></script>
+  <script src="src/records/coverage.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>

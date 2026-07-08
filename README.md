@@ -160,3 +160,18 @@ See `docs/EDIT_AND_STATUS.md` for the Batch 010 workflow.
 Batch 011 adds local navigation search. The app can search grid cells, building labels, saved observation records, site labels, visit statuses, and visible unit designators without using a server or database.
 
 The right panel also shows a coverage summary so the user can see how many demo buildings have saved records and how many latest observed units are represented by those records.
+
+## Batch 012 coverage review
+
+Batch 012 adds status-based coverage review.
+
+The app can now:
+
+- filter the map by recorded, unrecorded, verified, conflict, revisit-needed, counted, or observed buildings
+- dim non-matching buildings without deleting or hiding data
+- show coverage by visible grid cell
+- show the active review filter in the footer
+
+This keeps the app offline and database-free while making fieldwork review more practical.
+
+See `docs/COVERAGE_FILTERS.md`.
