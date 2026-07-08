@@ -198,3 +198,33 @@ ZIP/shapefile conversion is handled in later batches.
 
 Generated downloads, raw files, prepared output, and reports are local working data and should not be committed to GitHub.
 
+
+## Roads ZIP conversion
+
+Batch 031 adds a one-source converter for road centerlines.
+
+Preview only:
+
+```bash
+python scripts/convert_roads_zip.py
+```
+
+Convert roads into `input/raw/kane-road-centerlines.geojson`:
+
+```bash
+python scripts/convert_roads_zip.py --execute
+```
+
+Overwrite an existing raw roads file:
+
+```bash
+python scripts/convert_roads_zip.py --execute --force
+```
+
+After conversion, run:
+
+```bash
+python scripts/intake_sources.py
+python scripts/build_manifest.py
+python scripts/validate_prepared_data.py
+```

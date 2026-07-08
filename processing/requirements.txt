@@ -1,7 +1,4 @@
-# Batch 026 intentionally requires no third-party packages.
-# Future real-geometry processing may add packages such as:
-# geopandas
-# shapely
-# pyproj
-# fiona
-# pyogrio
+# Kane-Map processing dependencies.
+# Keep this file small and explicit.
+
+pyshp>=2.3,<3
