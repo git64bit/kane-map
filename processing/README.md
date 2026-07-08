@@ -135,3 +135,33 @@ python scripts/show_source_urls.py
 This command prints the current candidate URLs and local targets from `input/sources/source_registry.json`.
 
 It does not download source files.
+
+## Controlled source downloader
+
+Batch 029 adds a dry-run-first downloader.
+
+Print the download plan only:
+
+```bash
+python scripts/download_sources.py
+```
+
+Execute one source:
+
+```bash
+python scripts/download_sources.py --execute --source kane-address-points
+```
+
+Execute all enabled sources:
+
+```bash
+python scripts/download_sources.py --execute
+```
+
+Downloaded files are written to:
+
+```text
+processing/input/downloads/
+```
+
+They are not browser-ready. Later scripts will convert and normalize downloaded source files into raw and prepared Kane-Map data.

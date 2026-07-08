@@ -9,6 +9,7 @@ REPO_ROOT = PROCESSING_ROOT.parent
 
 INPUT_DIR = PROCESSING_ROOT / "input"
 RAW_INPUT_DIR = INPUT_DIR / "raw"
+DOWNLOAD_DIR = INPUT_DIR / "downloads"
 SOURCE_DIR = INPUT_DIR / "sources"
 SOURCE_REGISTRY_PATH = SOURCE_DIR / "source_registry.json"
 
@@ -17,6 +18,7 @@ PREPARED_DIR = OUTPUT_DIR / "prepared"
 REPORTS_DIR = OUTPUT_DIR / "reports"
 MANIFEST_PATH = OUTPUT_DIR / "manifest.json"
 SOURCE_INTAKE_REPORT_PATH = REPORTS_DIR / "source_intake_report.json"
+SOURCE_DOWNLOAD_REPORT_PATH = REPORTS_DIR / "source_download_report.json"
 
 SUPPORTED_DATA_EXTENSIONS = {
     ".csv",
@@ -36,6 +38,16 @@ SUPPORTED_RAW_EXTENSIONS = {
     ".kmz",
 }
 
+SUPPORTED_DOWNLOAD_EXTENSIONS = {
+    ".csv",
+    ".json",
+    ".geojson",
+    ".zip",
+    ".gpkg",
+    ".kml",
+    ".kmz",
+}
+
 IGNORED_NAMES = {
     "README.md",
     "manifest.json",
@@ -44,4 +56,3 @@ IGNORED_NAMES = {
 MANIFEST_VERSION = 1
 SOURCE_REGISTRY_VERSION = 1
 PROJECT_NAME = "kane-map"
-

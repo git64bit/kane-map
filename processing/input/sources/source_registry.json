@@ -1,7 +1,7 @@
 {
   "project": "kane-map",
   "registry_version": 1,
-  "notes": "Candidate source registry. Batch 028 adds source-acquisition URLs and notes, but does not authorize automatic downloading yet. Local source files are copied into processing/input/raw before transformation scripts are added.",
+  "notes": "Candidate source registry. Batch 029 adds controlled download metadata. Downloaded files are placed in processing/input/downloads; transformed/normalized raw GeoJSON files will later be placed in processing/input/raw.",
   "sources": [
     {
       "source_id": "kane-county-boundary",
@@ -16,9 +16,13 @@
       "local_path": "raw/kane-county-boundary.geojson",
       "expected_format": "geojson",
       "required": false,
-      "acquisition_mode": "manual_or_scripted_later",
+      "acquisition_mode": "scripted_download_allowed",
       "license_review": "public-source review required before production use",
-      "notes": "Used later for clipping prepared geometry and validating grid extent. The raw source is a national county shapefile; prepared output should contain only Kane County, Illinois."
+      "notes": "Used later for clipping prepared geometry and validating grid extent. The raw source is a national county shapefile; prepared output should contain only Kane County, Illinois.",
+      "download_url": "https://www2.census.gov/geo/tiger/TIGER2025/COUNTY/tl_2025_us_county.zip",
+      "download_path": "downloads/kane-county-boundary.zip",
+      "download_enabled": true,
+      "download_notes": "Controlled download of source ZIP. Later processing must extract/convert/clip into raw GeoJSON."
     },
     {
       "source_id": "kane-address-points",
@@ -33,9 +37,13 @@
       "local_path": "raw/kane-address-points.geojson",
       "expected_format": "geojson",
       "required": false,
-      "acquisition_mode": "manual_or_scripted_later",
+      "acquisition_mode": "scripted_download_allowed",
       "license_review": "public-source review required before production use",
-      "notes": "Candidate source for address-location references; does not replace field observation and does not expose HOA unit counts by itself."
+      "notes": "Candidate source for address-location references; does not replace field observation and does not expose HOA unit counts by itself.",
+      "download_url": "https://services1.arcgis.com/oRKmdBXD6EbdmVgJ/ArcGIS/rest/services/KaneCo_IL_AddressPoints/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=geojson",
+      "download_path": "downloads/kane-address-points.geojson",
+      "download_enabled": true,
+      "download_notes": "Controlled download as GeoJSON from the FeatureServer query endpoint. Later processing may copy/normalize into raw/."
     },
     {
       "source_id": "kane-building-footprints",
@@ -50,9 +58,13 @@
       "local_path": "raw/kane-building-footprints.geojson",
       "expected_format": "geojson",
       "required": false,
-      "acquisition_mode": "manual_or_scripted_later",
+      "acquisition_mode": "scripted_download_allowed",
       "license_review": "public-source review required before production use",
-      "notes": "Candidate source for red residential building geometry. Building polygons may not equal separate residential buildings and may require classification and field verification."
+      "notes": "Candidate source for red residential building geometry. Building polygons may not equal separate residential buildings and may require classification and field verification.",
+      "download_url": "https://www.illinoisfloodmaps.org/download/building/kane_MS.zip",
+      "download_path": "downloads/kane-building-footprints.zip",
+      "download_enabled": true,
+      "download_notes": "Controlled download of source ZIP. Later processing must extract/convert/clip into raw GeoJSON."
     },
     {
       "source_id": "kane-road-centerlines",
@@ -67,9 +79,13 @@
       "local_path": "raw/kane-road-centerlines.geojson",
       "expected_format": "geojson",
       "required": false,
-      "acquisition_mode": "manual_or_scripted_later",
+      "acquisition_mode": "scripted_download_allowed",
       "license_review": "public-source review required before production use",
-      "notes": "Candidate source for white orientation roads. Later processing should simplify, classify, and possibly omit non-useful path types."
+      "notes": "Candidate source for white orientation roads. Later processing should simplify, classify, and possibly omit non-useful path types.",
+      "download_url": "https://www2.census.gov/geo/tiger/TIGER2025/ROADS/tl_2025_17089_roads.zip",
+      "download_path": "downloads/kane-road-centerlines.zip",
+      "download_enabled": true,
+      "download_notes": "Controlled download of source ZIP. Later processing must extract/convert/clip into raw GeoJSON."
     },
     {
       "source_id": "kane-water-polygons",
@@ -84,9 +100,13 @@
       "local_path": "raw/kane-water-polygons.geojson",
       "expected_format": "geojson",
       "required": false,
-      "acquisition_mode": "manual_or_scripted_later",
+      "acquisition_mode": "scripted_download_allowed",
       "license_review": "public-source review required before production use",
-      "notes": "Candidate source for blue ponds and water features. Later processing should retain orientation-useful water polygons and simplify very small slivers."
+      "notes": "Candidate source for blue ponds and water features. Later processing should retain orientation-useful water polygons and simplify very small slivers.",
+      "download_url": "https://www2.census.gov/geo/tiger/TIGER2025/AREAWATER/tl_2025_17089_areawater.zip",
+      "download_path": "downloads/kane-water-polygons.zip",
+      "download_enabled": true,
+      "download_notes": "Controlled download of source ZIP. Later processing must extract/convert/clip into raw GeoJSON."
     },
     {
       "source_id": "kane-forest-polygons",
@@ -103,7 +123,11 @@
       "required": false,
       "acquisition_mode": "deferred",
       "license_review": "source and reuse rights must be confirmed before production use",
-      "notes": "Candidate source for green orientation polygons. Forest preserves and wooded land cover are not identical; do not treat preserve boundaries as tree canopy without further review."
+      "notes": "Candidate source for green orientation polygons. Forest preserves and wooded land cover are not identical; do not treat preserve boundaries as tree canopy without further review.",
+      "download_url": "",
+      "download_path": "",
+      "download_enabled": false,
+      "download_notes": "Deferred until source and reuse rights are confirmed."
     }
   ]
 }

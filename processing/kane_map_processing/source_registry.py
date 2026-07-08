@@ -12,6 +12,7 @@ from .config import (
     PROJECT_NAME,
     SOURCE_REGISTRY_PATH,
     SOURCE_REGISTRY_VERSION,
+    SUPPORTED_DOWNLOAD_EXTENSIONS,
     SUPPORTED_RAW_EXTENSIONS,
 )
 
@@ -86,6 +87,24 @@ def validate_source_registry_shape(registry: dict[str, Any]) -> SourceValidation
             suffix = Path(local_path).suffix.lower()
             if suffix and suffix not in SUPPORTED_RAW_EXTENSIONS:
                 warnings.append(f"source {source_id or index} has uncommon raw extension: {suffix}")
+
+        download_enabled = source.get("download_enabled")
+        if download_enabled is not None and not isinstance(download_enabled, bool):
+            errors.append(f"source {source_id or index} download_enabled must be boolean")
+
+        download_path = source.get("download_path")
+        if isinstance(download_path, str) and download_path.strip():
+            if not is_safe_relative_path(download_path):
+                errors.append(f"source {source_id or index} has unsafe download_path: {download_path}")
+            elif not download_path.startswith("downloads/"):
+                errors.append(f"source {source_id or index} download_path must be inside downloads/: {download_path}")
+
+            suffix = Path(download_path).suffix.lower()
+            if suffix and suffix not in SUPPORTED_DOWNLOAD_EXTENSIONS:
+                warnings.append(f"source {source_id or index} has uncommon download extension: {suffix}")
+
+        if download_enabled and not source.get("download_url"):
+            warnings.append(f"source {source_id or index} download_enabled is true but download_url is empty")
 
         required = source.get("required")
         if required is not None and not isinstance(required, bool):
