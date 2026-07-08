@@ -121,3 +121,17 @@ Field use happens inside the browser.
 
 The browser consumes prepared static data.
 
+
+## Source acquisition reporting
+
+Batch 028 adds candidate source URL reporting.
+
+From this directory:
+
+```bash
+python scripts/show_source_urls.py
+```
+
+This command prints the current candidate URLs and local targets from `input/sources/source_registry.json`.
+
+It does not download source files.

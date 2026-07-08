@@ -1,16 +1,25 @@
-# Source registry
+# Source Registry
 
-`source_registry.json` lists expected public-data sources and their local file paths.
+This directory contains source-acquisition metadata for Kane-Map processing.
 
-The registry does not download data. It only tells the processing scripts what source files are expected and how they should be classified.
+Primary file:
 
-Run from `processing/`:
+```text
+source_registry.json
+```
+
+Supporting notes:
+
+```text
+source_notes.md
+```
+
+The registry lists candidate source files and candidate source URLs. Batch 028 does not authorize automatic downloads. It only records acquisition targets and reporting information.
+
+Use from `processing/`:
 
 ```bash
 python scripts/list_sources.py
+python scripts/show_source_urls.py
 python scripts/validate_sources.py
-python scripts/intake_sources.py
 ```
-
-At Batch 027, all source files are optional placeholders. Later batches can mark specific sources as required once an import path is proven.
-
