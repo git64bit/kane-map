@@ -4,197 +4,76 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Offline-first synthetic prototype with local records, search, coverage review, exports, and import safety.
+Offline fieldwork prototype with local records, import/export safety, coverage review, visit sessions, and field planning.
 
-Current batch: Batch 014 — import safety.
+## Current confirmed features
 
-## Repository direction
+- Pure Canvas renderer
+- No CDN
+- No server
+- No database
+- No package manager
+- No build step
+- Chunked local demo geometry
+- Pan, zoom, rotate, reset
+- Building and grid selection
+- Local observation records
+- Schema migration through version 8
+- JSON export/import
+- Import preview and blocking validation
+- Observation CSV export
+- Building summary CSV export
+- Visit-session CSV export
+- Field report export
+- Field-plan CSV export
+- Search for buildings, grid cells, statuses, sites, aliases, sessions, designators, and plan terms
+- Coverage filters
+- Site identity layer
+- Visit-session summary
+- Field-planning worklist
 
-Kane-Map is being built as an offline-first, browser-rendered civic field map for Kane County, Illinois.
+## Latest batch
 
-The project currently uses:
+Batch 017 — Field Plan.
 
-- direct `index.html` opening
-- no CDN
-- no server
-- no database
-- no package manager
-- no build step
-- pure Canvas rendering
-- local JavaScript data chunks
-- browser-local observation records
-- JSON backup/restore
-- CSV/TXT review exports
-
-## Current operational purpose
-
-The first operational purpose is residential address and unit-count reconstruction.
-
-Some HOAs and residential buildings do not expose unit numbers in ordinary public-facing sources. Kane-Map records visible field observations such as:
-
-```text
-site/address note
-building ID
-entrance ID
-mailbox bank ID
-visible designators
-observed unit count
-confidence
-visit status
-access context
-notes
-```
-
-The grid names places.
-
-The observation ledger records what was observed there.
-
-The unit list does not become part of the public grid code.
-
-## Hard fieldwork boundary
-
-The fieldwork model is visible observation only.
-
-Do not:
-
-- touch mailboxes
-- open mailboxes
-- insert anything into mailboxes
-- remove anything from mailboxes
-- read mail
-- record resident names
-- enter locked or restricted areas
-- bypass access control
-- treat an unlocked area as automatically lawful access
-
-Each exported observation record includes boundary flags for mailbox touching, mailbox opening, mail reading, and resident-name recording. Kane-Map import now blocks records where those flags violate the fieldwork boundary.
-
-## Current visual model
-
-The prototype renders synthetic data with:
+Added:
 
 ```text
-dark gray background
-thin wireframe grid
-human-readable grid labels
-red residential buildings
-1, 2, and 3 story block heights
-white roads
-blue ponds
-green forests
-simple geometry
-browser-side rendering
+src/field/fieldPlan.js
+docs/FIELD_PLAN.md
 ```
 
-## Current app capabilities
-
-The app currently supports:
-
-- Canvas map rendering
-- pan, zoom, rotate, reset
-- chunked local demo geometry
-- visible-cell chunk status
-- selected grid cell and selected building panel
-- structured field observation form
-- visible designator parser
-- automatic unit count from designators
-- localStorage persistence
-- record edit
-- record delete
-- selected-building-only record filter
-- building summary panel
-- map status markers for buildings with records
-- navigation search
-- jump to grid cell or building
-- status-based review filter
-- visible-cell coverage table
-- JSON export
-- JSON import preview and replace
-- observation CSV export
-- building-summary CSV export
-- compact TXT field report export
-
-## Current import behavior
-
-JSON import uses preview mode.
-
-The preview shows:
-
-- current local record count
-- incoming record count
-- current versus incoming building count
-- current versus incoming observed unit total
-- current versus incoming verified record count
-- current versus incoming conflict record count
-- warnings
-- blocking errors
-
-Import is currently replace mode.
-
-Use **Download backup** before replacing local records that matter.
-
-Merge import is deferred until conflict rules are defined.
-
-## Current storage model
+New record fields:
 
 ```text
-localStorage  saved observation records
-JSON          full-fidelity backup and restore
-CSV           spreadsheet review
-TXT           compact fieldwork report
-JS chunks     synthetic demo geometry
+planPriority
+planAction
 ```
 
-A future large dataset should not be stored as one giant array. It should use local chunks or generated bundles keyed by visible grid cells.
+The field plan derives a local worklist from:
 
-## Current source organization
+- priority-marked buildings
+- conflict records
+- revisit-needed records
+- unrecorded buildings
 
-```text
-index.html
-styles/app.css
-src/app.js
-src/data/geometry.js
-src/data/chunkRegistry.js
-src/data/demoCatalog.js
-src/data/chunks/*.js
-src/map/grid.js
-src/map/renderer.js
-src/storage/recordSchema.js
-src/storage/localStore.js
-src/field/designators.js
-src/navigation/searchIndex.js
-src/records/coverage.js
-src/export/exporters.js
-src/import/importValidator.js
-docs/*.md
-```
+## Current architecture decision
 
-## Known technical debt
+The project remains offline-first and server-assisted later.
 
-`src/app.js` and `styles/app.css` are now large enough that the next batch should probably refactor UI and styling into smaller files before adding substantial new features.
-
-Recommended split:
-
-```text
-src/ui/dom.js
-src/ui/recordsPanel.js
-src/ui/importPanel.js
-src/ui/searchPanel.js
-src/ui/coveragePanel.js
-src/ui/observationForm.js
-styles/base.css
-styles/panels.css
-styles/forms.css
-styles/records.css
-styles/map.css
-```
+The browser app should remain capable of working from local files. A future proxy/server layer may prepare, clean, version, and distribute Kane County geometry, but field use should not depend on network availability.
 
 ## Immediate next step
 
-Recommended Batch 015:
+The main application controller has grown large. The next maintenance step should be controller refactoring:
 
 ```text
-Refactor app and styles into smaller modules.
+src/app.js
+  -> src/ui/domRefs.js
+  -> src/ui/recordPanel.js
+  -> src/ui/importPanel.js
+  -> src/ui/planningPanel.js
+  -> src/ui/formController.js
 ```
 
-Do this before importing real Kane County GIS data.
+This should preserve behavior while reducing file size and keeping future changes safer.
