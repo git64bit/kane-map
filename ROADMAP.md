@@ -357,3 +357,59 @@ src/utils/domUtils.js
 Exit condition:
 
 The app behaves the same as Batch 019, and all application JavaScript controller files remain comfortably below the 500–700 line target.
+
+## Batch 021 — Renderer refactor
+
+Status: complete.
+
+The Canvas renderer has been split into smaller map modules:
+
+```text id="z0u1ug"
+src/map/rendererConfig.js
+src/map/viewport.js
+src/map/drawPrimitives.js
+src/map/statusMarkers.js
+src/map/drawLayers.js
+src/map/hitTest.js
+src/map/renderer.js
+```
+
+This was a structural refactor only. No schema, storage, import/export, shortcut, search, or drawing-behavior changes were intended.
+
+Next likely priorities:
+
+- test renderer refactor after push
+- decide whether `styles/app.css` needs a similar split
+- then continue with map/fieldwork features
+
+
+## Batch 022 — CSS/UI refactor
+
+Status: complete pending user verification.
+
+The single stylesheet has been split into focused files:
+
+```text
+styles/base.css
+styles/layout.css
+styles/panels.css
+styles/buttons.css
+styles/forms.css
+styles/records.css
+styles/navigation.css
+styles/review.css
+styles/import-export.css
+styles/tabs.css
+styles/status.css
+```
+
+`styles/app.css` remains only as a compatibility marker. `index.html` links the active stylesheet files directly.
+
+No behavior, schema, storage, import/export, rendering, or shortcut changes were intended.
+
+Next likely priorities after verification:
+
+- begin real-data ingestion planning
+- define static geometry bundle format
+- keep the synthetic demo map as a permanent test fixture
+

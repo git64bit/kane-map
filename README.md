@@ -199,3 +199,12 @@ Batch 019 adds keyboard and fieldwork-speed controls while keeping the applicati
 New controls include search focus, numbered workspace tabs, next/previous visible building navigation, selected-summary copy, form clearing, save shortcut, JSON export shortcut, and Escape handling.
 
 See `docs/KEYBOARD_SHORTCUTS.md`.
+
+
+## Batch 022 CSS refactor
+
+Batch 022 split the stylesheet layer into focused files under `styles/`. This was a structure-only change; no storage, schema, rendering, import/export, or field-record behavior was intentionally changed.
+
+Active stylesheet files now include `base.css`, `layout.css`, `panels.css`, `buttons.css`, `forms.css`, `records.css`, `navigation.css`, `review.css`, `import-export.css`, `tabs.css`, and `status.css`.
+
+See `docs/CSS_REFACTOR.md`.
