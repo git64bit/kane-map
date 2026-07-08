@@ -16,9 +16,11 @@ from .source_registry import load_source_registry, resolve_local_source_path
 
 ROADS_SOURCE_ID = "kane-road-centerlines"
 WATER_SOURCE_ID = "kane-water-polygons"
+COUNTY_BOUNDARY_SOURCE_ID = "kane-county-boundary"
 
 ROADS_CONVERSION_REPORT_PATH = REPORTS_DIR / "roads_conversion_report.json"
 WATER_CONVERSION_REPORT_PATH = REPORTS_DIR / "water_conversion_report.json"
+COUNTY_BOUNDARY_CONVERSION_REPORT_PATH = REPORTS_DIR / "county_boundary_conversion_report.json"
 
 
 @dataclass(frozen=True)
@@ -51,6 +53,7 @@ class SourceConversionSpec:
     preferred_name_tokens: tuple[str, ...]
     temp_prefix: str
     batch_reason: str
+    property_filter: dict[str, str] | None = None
 
 
 ROADS_SPEC = SourceConversionSpec(
@@ -71,6 +74,17 @@ WATER_SPEC = SourceConversionSpec(
     preferred_name_tokens=("water", "areawater"),
     temp_prefix="kane-map-water-",
     batch_reason="ready to convert water ZIP into raw GeoJSON",
+)
+
+COUNTY_BOUNDARY_SPEC = SourceConversionSpec(
+    source_id=COUNTY_BOUNDARY_SOURCE_ID,
+    report_path=COUNTY_BOUNDARY_CONVERSION_REPORT_PATH,
+    collection_name="kane-county-boundary",
+    allowed_geometry_types=frozenset({"Polygon", "MultiPolygon"}),
+    preferred_name_tokens=("county",),
+    temp_prefix="kane-map-county-boundary-",
+    batch_reason="ready to convert county boundary ZIP into raw GeoJSON",
+    property_filter={"STATEFP": "17", "COUNTYFP": "089"},
 )
 
 
@@ -139,6 +153,12 @@ def build_water_conversion_plan(source_id: str = WATER_SOURCE_ID) -> ConversionP
     return build_conversion_plan(WATER_SPEC)
 
 
+def build_county_boundary_conversion_plan(source_id: str = COUNTY_BOUNDARY_SOURCE_ID) -> ConversionPlan:
+    if source_id != COUNTY_BOUNDARY_SOURCE_ID:
+        raise ValueError("this helper only builds the county boundary conversion plan")
+    return build_conversion_plan(COUNTY_BOUNDARY_SPEC)
+
+
 def write_json_report(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -187,6 +207,15 @@ def properties_from_record(field_names: list[str], record: Any) -> dict[str, Any
     }
 
 
+def record_matches_filter(properties: dict[str, Any], property_filter: dict[str, str] | None) -> bool:
+    if not property_filter:
+        return True
+    for key, expected in property_filter.items():
+        if str(properties.get(key, "")) != expected:
+            return False
+    return True
+
+
 def convert_shapefile_zip_to_geojson(zip_path: Path, output_path: Path, spec: SourceConversionSpec) -> dict[str, Any]:
     try:
         import shapefile  # type: ignore[import-not-found]
@@ -208,6 +237,11 @@ def convert_shapefile_zip_to_geojson(zip_path: Path, output_path: Path, spec: So
         field_names = [field[0] for field in reader.fields[1:]]
 
         for item in reader.iterShapeRecords():
+            properties = properties_from_record(field_names, item.record)
+            if not record_matches_filter(properties, spec.property_filter):
+                skipped += 1
+                continue
+
             geometry = geometry_from_shape(item.shape, spec.allowed_geometry_types)
             if geometry is None:
                 skipped += 1
@@ -216,7 +250,7 @@ def convert_shapefile_zip_to_geojson(zip_path: Path, output_path: Path, spec: So
             features.append(
                 {
                     "type": "Feature",
-                    "properties": properties_from_record(field_names, item.record),
+                    "properties": properties,
                     "geometry": geometry,
                 }
             )
@@ -281,3 +315,7 @@ def convert_roads_zip(*, execute: bool, force: bool) -> ConversionResult:
 
 def convert_water_zip(*, execute: bool, force: bool) -> ConversionResult:
     return convert_zip_source(WATER_SPEC, execute=execute, force=force)
+
+
+def convert_county_boundary_zip(*, execute: bool, force: bool) -> ConversionResult:
+    return convert_zip_source(COUNTY_BOUNDARY_SPEC, execute=execute, force=force)

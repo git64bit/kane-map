@@ -51,9 +51,12 @@ python scripts/convert_roads_zip.py --execute
 
 python scripts/convert_water_zip.py
 python scripts/convert_water_zip.py --execute
+
+python scripts/convert_county_boundary_zip.py
+python scripts/convert_county_boundary_zip.py --execute
 ```
 
-Both scripts are dry-run by default.
+All conversion scripts are dry-run by default.
 
 ## Design rule
 
