@@ -411,3 +411,60 @@ dd {
   border-radius: 8px;
   background: rgba(116, 184, 255, 0.08);
 }
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+}
+
+button.secondary {
+  border-color: rgba(116, 184, 255, 0.28);
+  color: #cfe8ff;
+}
+
+.edit-mode-notice {
+  margin: -0.25rem 0 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(255, 208, 116, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 208, 116, 0.08);
+  color: #ffe2a8;
+  font-size: 0.78rem;
+}
+
+.record-toolbar {
+  margin: 0.75rem 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.record-toolbar input {
+  margin-right: 0.25rem;
+}
+
+.record-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.record-actions button {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.74rem;
+}
+
+.record-actions button[data-record-edit] {
+  border-color: rgba(116, 184, 255, 0.32);
+  color: #cfe8ff;
+}
+
+.status-pill {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
