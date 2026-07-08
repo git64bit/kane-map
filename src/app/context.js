@@ -80,14 +80,20 @@
   }
 
   function createAppContext() {
-    const catalog = global.KaneMapDemoCatalog;
-    const grid = global.KaneMapGrid.makeKaneGrid(catalog.meta.bounds, {
+    const dataAdapter = global.KaneMapDataAdapter.createDataAdapter({
+      sourcePreference: global.KaneMapSourceTypes.SOURCES.DEMO,
+      demoCatalog: global.KaneMapDemoCatalog,
+      chunkRegistry: global.KaneMapChunkRegistry,
+      preparedManifest: global.KaneMapPreparedDataManifest
+    });
+    const catalog = dataAdapter.getCatalog();
+    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), {
       rows: 4,
       cols: 6,
       startNorth: 11,
       startEast: 5
     });
-    const featureStore = global.KaneMapChunkRegistry.createFeatureStore(catalog);
+    const featureStore = dataAdapter.createFeatureStore();
     const allCellCodes = grid.cells.map((cell) => cell.code);
     const allBuildings = featureStore.buildDataForCells(allCellCodes).buildings;
     const initialData = featureStore.buildDataForCells(allCellCodes);
@@ -97,6 +103,8 @@
 
     const ctx = {
       global,
+      dataAdapter,
+      dataSource: dataAdapter.describe(),
       catalog,
       grid,
       featureStore,
