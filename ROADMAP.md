@@ -1,415 +1,242 @@
 # Kane-Map Roadmap
 
-This roadmap is organized so the project can pause and resume without losing direction.
+Last updated: 2026-07-08
 
-## Current milestone — Batch 014
+## Current checkpoint
 
-Status: ready for testing.
+Kane-Map has a working offline prototype with modular code, split CSS, split renderer, tabbed workspace, local records, imports/exports, and fieldwork planning tools.
 
-Adds:
-
-- JSON import preview before replacing local records
-- current versus incoming ledger comparison
-- warning and error reporting for imports
-- backup-before-import control
-- blocked import for duplicate incoming IDs or fieldwork boundary flag violations
-- documentation for import safety
-
-Next likely milestone: split large application/UI files into smaller modules before adding more features.
+The next major transition is from synthetic geometry to real-data planning.
 
 ## Phase 0 — Project memory
 
-Status: complete enough to proceed.
+Status: complete and ongoing.
 
-Goal: make the repository self-explaining before adding application code.
+Completed:
 
-Core files:
+```text
+README.md
+ROADMAP.md
+docs/PROJECT_STATE.md
+docs/README.md
+docs/FILE_MAP.md
+docs/CURRENT_ARCHITECTURE.md
+docs/NEXT_STEPS.md
+```
 
-- `README.md`
-- `ROADMAP.md`
-- `docs/PROJECT_STATE.md`
-- `docs/ARCHITECTURE.md`
-- `docs/DATA_MODEL.md`
-- `docs/FIELDWORK_RULES.md`
+Rule:
+
+Update `docs/PROJECT_STATE.md` after major batches.
 
 ## Phase 1 — Browser-only synthetic prototype
 
 Status: complete.
 
-Goal: prove the visual model without real GIS data.
+Completed:
 
-Completed features:
+```text
+dark canvas map
+synthetic grid
+red residential buildings
+roads
+ponds
+forests
+pan / zoom / rotate / reset
+selection
+legend/status panels
+```
 
-- dark map canvas
-- synthetic Kane-style grid cells
-- readable grid labels such as `N12-E07`
-- red residential building blocks
-- 1, 2, and 3 story height differences
-- white roads
-- blue ponds
-- green forest polygons
-- pan, zoom, rotate, and reset controls
-- basic legend and status panel
-
-## Phase 2 — Offline-first modular prototype
+## Phase 2 — Offline-first local records
 
 Status: complete.
 
-Goal: keep the prototype runnable offline while splitting files into maintainable units.
-
-Current structure:
+Completed:
 
 ```text
-index.html
-styles/app.css
-src/app.js
-src/data/geometry.js
-src/data/chunkRegistry.js
-src/data/demoCatalog.js
-src/data/chunks/*.js
-src/map/grid.js
-src/map/renderer.js
-src/storage/recordSchema.js
-src/storage/localStore.js
-src/field/designators.js
-src/navigation/searchIndex.js
-src/records/coverage.js
-src/export/exporters.js
-src/import/importValidator.js
-docs/*.md
+localStorage persistence
+record schema and migrations
+JSON export/import
+import preview and safety checks
+CSV/TXT exports
+edit/delete records
 ```
 
-Rules:
+## Phase 3 — Field ledger workflow
 
-- keep files generally under 500–700 lines
-- avoid build tools for now
-- avoid remote libraries for now
-- avoid CDN dependencies
-- avoid a remote database dependency
-- support JSON export/import for observations
+Status: complete for prototype use.
+
+Completed:
+
+```text
+visible designator parser
+unit count derivation
+site/address note
+building alias
+entrance ID
+mailbox bank ID
+confidence
+visit status
+visit date
+field session
+plan priority
+planned action
+```
+
+## Phase 4 — Usability and review tools
+
+Status: complete for prototype use.
+
+Completed:
+
+```text
+tabbed workspace
+persistent selected-object header
+search
+coverage filters
+building status markers
+field plan
+visit sessions
+keyboard shortcuts
+```
+
+## Phase 5 — Code structure and maintainability
+
+Status: complete for current scale.
+
+Completed:
+
+```text
+app controller refactor
+renderer refactor
+CSS refactor
+documentation index
+file map
+architecture summary
+next-step plan
+```
+
+## Phase 6 — Real-data planning
+
+Status: next.
+
+Goal:
+
+Plan the real Kane County data source and processing strategy before importing data.
+
+Recommended next files:
+
+```text
+docs/REAL_DATA_PLAN.md
+docs/SOURCE_LAYERS.md
+docs/DATA_LICENSE_CHECKLIST.md
+docs/GEOMETRY_PIPELINE.md
+```
+
+Questions to resolve:
+
+```text
+county boundary source
+roads source
+water/pond source
+forest/land-cover source
+building footprint source
+parcel/reference source
+licensing/terms
+geometry simplification
+chunk generation
+source/version metadata
+```
 
 Exit condition:
 
-Opening `index.html` directly shows the working offline prototype.
+A small real-data import can proceed without guessing the source strategy.
 
-## Phase 3 — Local saved observations
+## Phase 7 — Grid design lock
 
-Status: complete enough to proceed.
+Status: pending.
 
-Goal: make field observation records durable without introducing a server or database.
+Goal:
 
-Completed features:
-
-- browser-local saved records through `localStorage`
-- record schema version field
-- export envelope with format and version
-- import normalization
-- import preview and validation
-- clear saved records control
-- storage status indicator
-- explicit fieldwork boundary flags in each exported record
-- visible designator parsing
-- unit-count auto-counting
-- record edit and delete
-- selected-building filtering
-
-Remaining tasks:
-
-- [ ] Add merge import behavior after conflict rules are defined
-- [ ] Add project namespace support
-- [ ] Add duplicate detection by building/designator/date
-
-Exit condition:
-
-A building can carry durable local unit-count evidence without encoding unit details into the grid code.
-
-## Phase 4 — Kane-grid design
-
-Goal: define the local grid scheme.
+Stabilize the Kane-grid naming system before records depend on real geography.
 
 Tasks:
 
-- [ ] Define grid origin
-- [ ] Define cell size
-- [ ] Define row and column naming convention
-- [ ] Define clipping behavior at county boundary
-- [ ] Define how grid cells relate to Plus Codes
-- [ ] Define how grid cells relate to H3 indexes
-- [ ] Define how grid cells relate to building records
-
-Exit condition:
-
-A grid cell code can be generated consistently from coordinates and shown on the map.
-
-## Phase 5 — Chunked local data
-
-Status: implemented in Batch 006.
-
-Goal: avoid the one-giant-array model before real Kane County data is imported.
-
-Completed features:
-
-- local data catalog
-- data chunk registry
-- synthetic data split into local chunks
-- render chunks selected from visible grid cells
-- footer status for visible cells
-- footer status for selected chunks
-- documentation for chunked data
-
-Exit condition:
-
-The app still opens directly as `index.html`, but the code no longer assumes all geometry should live in one giant feature file.
-
-## Phase 6 — Review dashboard
-
-Status: implemented enough for prototype use.
-
-Completed features:
-
-- local navigation search
-- jump to building or grid cell
-- selected-building summary
-- coverage summary
-- status-based map filter
-- visible-cell coverage table
-- map markers for buildings with records
-
-Future tasks:
-
-- [ ] clearer symbol legend for map status markers
-- [ ] better conflict visualization
-- [ ] visible-cell printable report
-- [ ] selected-building printable report
-
-## Phase 7 — Exports
-
-Status: implemented in Batch 013.
-
-Exports:
-
 ```text
-Export JSON              full-fidelity backup / restore
-Export observation CSV   one row per saved observation record
-Export building CSV      one row per building summary
-Export field report      compact TXT coverage report
+define origin
+define cell size
+define naming convention
+define county-edge clipping
+define building-to-cell assignment
+define subcell rules
+define future Plus Code/H3 cross-reference fields
 ```
 
-JSON remains the authoritative portable format. CSV and TXT are review outputs.
+## Phase 8 — Small real-data pilot
 
-## Phase 8 — Real geometry import
+Status: pending.
 
-Goal: replace synthetic geometry with real or derived local data.
+Goal:
 
-Candidate layers:
+Import a limited real-data patch, not the whole county.
 
-- Kane County boundary
-- road centerlines
-- water polygons
-- forest or land-cover polygons
-- building footprints
-- parcel references
-- municipality/township boundaries
+Recommended scope:
 
-Tasks:
+```text
+one known area
+one or two grid cells
+roads/water/forest/buildings if available
+synthetic data retained for comparison
+```
 
-- [ ] Identify source datasets
-- [ ] Verify licensing and reuse terms
-- [ ] Normalize geometry
-- [ ] Clip to Kane County
-- [ ] Simplify geometry for browser rendering
-- [ ] Assign layer styles
-- [ ] Generate static bundles
+## Phase 9 — Performance guardrails
 
-Exit condition:
+Status: pending.
 
-The map displays real Kane County orientation layers.
+Goal:
 
-## Phase 9 — Server-assisted preparation layer
+Prepare for larger geometry.
 
-Goal: keep runtime offline-first while allowing a future online layer to prepare, publish, and version data bundles.
+Possible features:
+
+```text
+visible feature counts
+render-time status
+chunk-size warnings
+largest chunk warning
+record count warnings
+optional debug overlay
+```
+
+## Phase 10 — Offline release package
+
+Status: pending.
+
+Goal:
+
+Make Kane-Map easy to download, unzip, and run.
 
 Possible additions:
 
-- ingestion scripts
-- GIS cleanup
-- local bundle generation
-- release manifests
-- optional sync service
-- optional public archive integration
+```text
+VERSION.txt
+CHANGELOG.md
+README_OFFLINE_RELEASE.md
+kane-map-offline-v0.1.zip process
+```
 
-Do not make field use depend on server availability.
+## Work to avoid until Phase 6 is done
 
-## Immediate next step
-
-Recommended Batch 015:
+Avoid:
 
 ```text
-Refactor app and style files into smaller modules before adding more features.
+server sync
+authentication
+large framework migration
+remote-only basemaps
+new database backend
+large UI feature expansion
 ```
 
-Rationale:
+Reason:
 
-`src/app.js` and `styles/app.css` are now large enough that further feature work should be preceded by cleanup.
-
-
-## Phase 5.5 — Visit/session workflow
-
-Status: implemented in Batch 016.
-
-Tasks:
-
-- [x] Add visit date to observation records
-- [x] Add field session ID to observation records
-- [x] Preserve visit/session values across repeated saves
-- [x] Show visit-session summary in the UI
-- [x] Add footer visit/session status
-- [x] Add visit-session CSV export
-- [x] Migrate records to schema version 7
-
-Exit condition:
-
-A fieldwork outing can be represented as a group of offline records without a server or database.
-
-
-## Batch 017 — Field plan
-
-Status: complete.
-
-Added:
-
-- plan priority field
-- planned action field
-- field-plan panel
-- active worklist filter
-- priority / follow-up / unrecorded filters
-- field-plan CSV export
-- schema v8 migration
-
-Next recommended batch:
-
-## Batch 018 — Controller refactor
-
-Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The prototype is working, but the main controller is now too large for comfortable long-term maintenance.
-
-
-## Batch 018 — Tabbed workspace
-
-Status: complete.
-
-Added:
-
-- task tabs under the KANE-MAP header
-- persistent selected-object workspace header
-- Map / Observe / Records / Review / Plan / Export / Project screens
-- `docs/TABBED_WORKSPACE.md`
-
-No storage or schema change was made.
-
-Next recommended batch:
-
-## Batch 019 — Controller refactor
-
-Goal: split `src/app.js` into smaller UI controller modules while preserving all behavior. The tabbed workspace solves interface clutter; the next maintenance issue is controller size.
-
-
-## Batch 019 — Keyboard and fieldwork speed
-
-Status: complete.
-
-Added:
-
-- keyboard shortcuts
-- shortcut status footer
-- next/previous visible building navigation
-- selected summary copy
-- clear-form action
-- save shortcut with empty-record guard
-- project documentation for shortcuts
-
-No record schema change.
-
-Next likely work:
-
-- split the large app controller into smaller UI controller files
-- add a lightweight command/help overlay if shortcuts continue to grow
-- begin preparing real geometry import documentation
-
-## Batch 020 — App controller refactor
-
-Status: complete pending user verification.
-
-Goal: split the large `src/app.js` file into smaller controller files without changing data schema, storage, exports, or user-facing behavior.
-
-Added structure:
-
-```text
-src/app/context.js
-src/controllers/workspaceController.js
-src/controllers/mapController.js
-src/controllers/observationController.js
-src/controllers/reviewController.js
-src/controllers/importExportController.js
-src/controllers/shortcutsController.js
-src/utils/domUtils.js
-```
-
-Exit condition:
-
-The app behaves the same as Batch 019, and all application JavaScript controller files remain comfortably below the 500–700 line target.
-
-## Batch 021 — Renderer refactor
-
-Status: complete.
-
-The Canvas renderer has been split into smaller map modules:
-
-```text id="z0u1ug"
-src/map/rendererConfig.js
-src/map/viewport.js
-src/map/drawPrimitives.js
-src/map/statusMarkers.js
-src/map/drawLayers.js
-src/map/hitTest.js
-src/map/renderer.js
-```
-
-This was a structural refactor only. No schema, storage, import/export, shortcut, search, or drawing-behavior changes were intended.
-
-Next likely priorities:
-
-- test renderer refactor after push
-- decide whether `styles/app.css` needs a similar split
-- then continue with map/fieldwork features
-
-
-## Batch 022 — CSS/UI refactor
-
-Status: complete pending user verification.
-
-The single stylesheet has been split into focused files:
-
-```text
-styles/base.css
-styles/layout.css
-styles/panels.css
-styles/buttons.css
-styles/forms.css
-styles/records.css
-styles/navigation.css
-styles/review.css
-styles/import-export.css
-styles/tabs.css
-styles/status.css
-```
-
-`styles/app.css` remains only as a compatibility marker. `index.html` links the active stylesheet files directly.
-
-No behavior, schema, storage, import/export, rendering, or shortcut changes were intended.
-
-Next likely priorities after verification:
-
-- begin real-data ingestion planning
-- define static geometry bundle format
-- keep the synthetic demo map as a permanent test fixture
-
+The main open question is now the real-data pipeline.
