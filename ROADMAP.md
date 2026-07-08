@@ -26,6 +26,8 @@ This roadmap is organized so the project can pause and resume without losing dir
 - Renderer refactor
 - CSS refactor
 - Documentation index
+- Real-data planning docs
+- Data adapter skeleton
 
 ## Current phase — Real-data planning
 
@@ -54,30 +56,27 @@ static CSV/JSON/JS chunk outputs copied into the app
 
 ## Phase — Data adapter skeleton
 
+Status: complete.
+
+Batch 025 adds a browser-side data adapter path for demo and future prepared geometry sources. Demo geometry remains active. No real Kane County geometry is imported yet.
+
+## Phase — Processing folder skeleton
+
 Next planned batch:
 
 ```text
-Batch 025 — data adapter skeleton
+Batch 026 — processing-node skeleton
 ```
-
-Goal:
-
-- preserve current demo behavior
-- prepare for demo vs production data catalogs
-- avoid importing real data too early
-- document data mode switching
-
-## Phase — Processing folder skeleton
 
 Goal: establish repeatable local processing workflow.
 
 Possible files:
 
 ```text
-processing/README.md
-processing/requirements.txt
-processing/scripts/
-processing/output/
+tools/processing/README.md
+tools/processing/requirements.txt
+tools/processing/scripts/
+tools/processing/output/
 ```
 
 ## Phase — First real layer

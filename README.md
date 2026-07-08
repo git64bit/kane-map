@@ -13,6 +13,7 @@ It currently supports:
 - direct `index.html` opening
 - offline Canvas rendering
 - local synthetic chunks
+- data adapter skeleton for demo/prepared geometry sources
 - building selection
 - visible designator entry
 - automatic unit counts
@@ -66,7 +67,7 @@ docs/REAL_DATA_PLAN.md
 
 ## Current next step
 
-Prepare a data-adapter skeleton for future demo/production catalog support.
+Prepare the processing-node skeleton that will eventually generate static production data chunks.
 
-No real Kane County geometry should be imported until source and processing rules are approved.
+No real Kane County geometry should be imported until the processing structure and output format are approved.
 
