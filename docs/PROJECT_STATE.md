@@ -4,180 +4,83 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-The project is at a stable offline prototype checkpoint.
+Real-data planning.
 
-The current priority is to prepare for real Kane County geometry by documenting source layers, licensing, and the geometry pipeline before importing data.
+The offline prototype is working and has been refactored into maintainable modules.
 
-## Current repository state
+## Current stable checkpoints
 
-The app currently includes:
+- Offline Canvas renderer works.
+- Browser-local persistence works.
+- JSON export/import works.
+- Import preview and safety checks work.
+- Field ledger supports visible designators and unit counts.
+- Record edit/delete works.
+- Search works.
+- Coverage filters work.
+- CSV/TXT exports work.
+- Tabbed workspace works.
+- Keyboard shortcuts work.
+- App controller refactor works.
+- Renderer refactor works.
+- CSS refactor works.
+- Documentation index exists.
 
-```text
-static offline index.html
-split CSS files
-modular JavaScript controllers
-split Canvas renderer
-synthetic local data chunks
-field observation ledger
-localStorage persistence
-JSON import/export
-CSV/TXT exports
-search
-coverage filters
-field planning
-visit sessions
-keyboard shortcuts
-tabbed workspace
-documentation index
-```
-
-## Recent completed batches
+## Current architecture
 
 ```text
-Batch 018 — tabbed workspace
-Batch 019 — keyboard and fieldwork speed
-Batch 020 — app controller refactor
-Batch 021 — renderer refactor
-Batch 022 — CSS/UI refactor
-Batch 023 — documentation index and file map
+Static offline app
+  -> direct index.html opening
+  -> no server required
+  -> no database required
+  -> no package manager required
+  -> localStorage for current ledger
+  -> JSON backup/restore
+  -> CSV/TXT review exports
 ```
 
-## Current stable behavior
-
-Confirmed working by user testing:
+## Preferred real-data processing architecture
 
 ```text
-open index.html directly
-pan / zoom / rotate / reset
-building selection
-record save/edit/delete
-record persistence
-JSON export/import
-CSV/TXT exports
-search
-review filters
-coverage counts
-field plan
-visit sessions
-tabbed workspace
-keyboard shortcuts
+Debian 12 or Debian 13 processing node
+  -> Python virtual environment
+  -> source-data intake
+  -> geometry normalization
+  -> Kane-grid assignment
+  -> static production files
+  -> copy files into Kane-Map local data folder
 ```
 
-## Architecture decision
+This is preferred, not mandatory.
 
-Kane-Map is currently:
+## Key principle
 
 ```text
-offline-first
-browser-only
-server-free at runtime
-CDN-free
-package-manager-free
-build-step-free
-Canvas-rendered
-localStorage-backed
-JSON-portable
+Heavy processing happens outside the browser.
+Field use happens inside the browser.
+The browser consumes prepared static data.
 ```
 
-Future server/proxy infrastructure may be useful for data preparation, versioning, and optional sync, but field use should remain offline-capable.
+## Data scale assumption
 
-## Current visual model
+Kane County is not expected to require a permanent database server for single-user offline use.
 
-The map renders:
+The expected limiting factor is not raw record count. The limiting factors are:
 
-```text
-dark gray background
-Kane-style grid
-cell labels
-red residential buildings
-building status markers
-white roads
-blue ponds/water
-green forests/wooded areas
-simple polygon/line geometry
-```
-
-## Current fieldwork model
-
-The active use case is residential address/unit-count reconstruction.
-
-The app supports:
-
-```text
-site/address note
-building alias
-entrance ID
-mailbox bank ID
-visible designators
-parsed unit count
-confidence
-visit status
-access context
-visit date
-field session
-plan priority
-planned action
-```
-
-The project boundary remains:
-
-```text
-visible observation only
-no mailbox contact
-no mailbox opening
-no inserted items
-no reading mail
-no resident-name capture
-no access bypassing
-```
-
-## Current code health
-
-Recent refactors reduced large files:
-
-```text
-src/app.js is now a small bootstrap file
-controllers are split by task
-renderer is split by drawing/viewport/hit-test/status modules
-CSS is split by UI responsibility
-```
-
-General rule:
-
-```text
-Application JS, HTML, and CSS should stay small and readable.
-Generated geometry/data files may grow more freely.
-```
-
-## Current documentation entry points
-
-Read these first:
-
-```text
-docs/README.md
-docs/PROJECT_STATE.md
-docs/NEXT_STEPS.md
-docs/CURRENT_ARCHITECTURE.md
-docs/FILE_MAP.md
-```
+- source provenance
+- stable IDs
+- geometry cleanup
+- chunk generation
+- data model discipline
+- field-record safety
 
 ## Immediate next step
 
-Create the real-data planning documentation.
+Add data-adapter code skeleton for demo vs production data catalogs without importing real data yet.
 
-Recommended next batch:
-
-```text
-Batch 024 — real-data source plan
-```
-
-Suggested files:
+Suggested next batch:
 
 ```text
-docs/REAL_DATA_PLAN.md
-docs/SOURCE_LAYERS.md
-docs/DATA_LICENSE_CHECKLIST.md
-docs/GEOMETRY_PIPELINE.md
+Batch 025 — data adapter skeleton
 ```
 
-Do not import real Kane County data until the source/layer plan is written.
