@@ -157,6 +157,9 @@
           <p><strong id="recordCount">0</strong> local observation records</p>
           <div class="button-stack">
             <button id="exportRecords" type="button">Export JSON</button>
+            <button id="exportObservationCsv" type="button">Export observation CSV</button>
+            <button id="exportBuildingCsv" type="button">Export building CSV</button>
+            <button id="exportFieldReport" type="button">Export field report</button>
             <label class="file-button">
               Import JSON
               <input id="importRecords" type="file" accept="application/json,.json" />
@@ -199,6 +202,7 @@
   <script src="src/field/designators.js"></script>
   <script src="src/navigation/searchIndex.js"></script>
   <script src="src/records/coverage.js"></script>
+  <script src="src/export/exporters.js"></script>
   <script src="src/map/renderer.js"></script>
   <script src="src/app.js"></script>
 </body>

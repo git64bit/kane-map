@@ -175,3 +175,16 @@ The app can now:
 This keeps the app offline and database-free while making fieldwork review more practical.
 
 See `docs/COVERAGE_FILTERS.md`.
+
+
+## Export formats
+
+Kane-Map supports multiple offline export formats:
+
+```text
+JSON  complete backup and restore format
+CSV   spreadsheet review format
+TXT   compact fieldwork report
+```
+
+Use JSON when preserving the ledger. Use CSV or TXT when reviewing observations outside the app.
