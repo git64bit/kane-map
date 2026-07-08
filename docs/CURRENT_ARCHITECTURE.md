@@ -17,6 +17,7 @@ Static files on disk
 
 Browser runtime
   ├── Canvas renderer
+  ├── data adapter layer
   ├── local synthetic geometry chunks
   ├── generated Kane-style grid
   ├── localStorage field ledger
@@ -46,9 +47,10 @@ The current app does use:
 
 ```text
 browser Canvas
-ES modules
+plain JavaScript files
 localStorage
 local JavaScript geometry chunks
+data adapter for demo/prepared source switching
 JSON export/import
 CSV/TXT file downloads
 ```
@@ -72,7 +74,7 @@ MapLibre, PMTiles, or vector tiles may still be appropriate later for larger rea
 
 ## Data strategy
 
-The app currently uses synthetic local data chunks.
+The app currently uses synthetic local data chunks through the data adapter.
 
 Current data strategy:
 
@@ -84,6 +86,7 @@ Forests          local chunk geometry
 Buildings        local chunk geometry
 Observations     localStorage + JSON export
 Reports          CSV/TXT export
+Adapter          demo source active, prepared source placeholder
 ```
 
 Future real-data strategy:
@@ -96,6 +99,25 @@ Chunks                generated as static local bundles
 Field observations    remain local/exportable first
 Sync                  optional later
 ```
+
+
+## Data adapter layer
+
+Batch 025 adds a data adapter between app controllers and geometry sources.
+
+Current source mode:
+
+```text
+demo
+```
+
+Future source mode:
+
+```text
+prepared
+```
+
+The renderer, search, review filters, and field ledger should not need to know whether geometry came from synthetic demo chunks or prepared Kane County production chunks.
 
 ## Server-assisted, not server-dependent
 

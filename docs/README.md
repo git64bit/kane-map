@@ -87,3 +87,14 @@ modularized enough for the next stage
 ```
 
 The next strategic shift is from synthetic geometry to real-data planning.
+
+## Real-data preparation documents
+
+| File | Purpose |
+|---|---|
+| `DATA_PROCESSING_NODE.md` | Preferred Debian/Python processing-node model. |
+| `DATA_SOURCES.md` | Candidate public data sources and provenance questions. |
+| `GEOMETRY_INTAKE.md` | Geometry cleanup, clipping, simplification, and intake rules. |
+| `KANE_GRID_SPEC.md` | Draft Kane-grid naming and assignment rules. |
+| `REAL_DATA_PLAN.md` | Ordered plan before importing real Kane County data. |
+| `DATA_ADAPTER.md` | Browser-side source adapter for demo and future prepared geometry. |

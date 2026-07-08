@@ -1,60 +1,42 @@
 # Next Steps
 
-Status after Batch 024.
+## Current next step
 
-## Immediate next batch
-
-```text
-Batch 025 — data adapter skeleton
-```
+Batch 026 should add a processing-node skeleton.
 
 Goal:
 
 ```text
-prepare the app to understand data catalogs and demo/production modes
-without replacing current synthetic demo chunks
+Prepare the repo for Debian/Python geometry processing without importing real data yet.
 ```
 
-Possible additions:
+Candidate files:
 
 ```text
-src/data/dataCatalog.js
-src/data/dataAdapter.js
-src/data/demoDataMode.js
-docs/DATA_ADAPTER.md
+tools/processing/README.md
+tools/processing/requirements.txt
+tools/processing/scripts/inspect_source.py
+tools/processing/scripts/normalize_geometry.py
+tools/processing/scripts/build_manifest.py
+docs/PROCESSING_PIPELINE.md
 ```
 
-No real GIS import yet.
+## Why this is next
 
-## Next processing batch after that
+Batch 025 added the browser-side data adapter skeleton. The next missing piece is the external processing path that will eventually produce prepared static chunks.
+
+## Do not do yet
+
+Do not import real production geometry yet.
+
+First define the processing tool structure, script responsibilities, output folders, and manifest format.
+
+## Near-term sequence
 
 ```text
-Batch 026 — processing folder skeleton
+Batch 026 — processing-node skeleton
+Batch 027 — prepared-data output format
+Batch 028 — sample generated chunk from synthetic input
+Batch 029 — source inspection reports
+Batch 030 — first real-data intake experiment
 ```
-
-Possible additions:
-
-```text
-processing/README.md
-processing/requirements.txt
-processing/scripts/build_demo_catalog.py
-processing/scripts/validate_catalog.py
-processing/output/.gitkeep
-```
-
-This would establish the Debian/Python processing direction without depending on real data yet.
-
-## First real-data decision
-
-Choose one small, low-risk source layer.
-
-Recommended candidates:
-
-```text
-county boundary
-road centerlines
-water polygons
-```
-
-Do not start with building footprints unless the source and ID strategy are already clear.
-

@@ -4,83 +4,90 @@ Last updated: 2026-07-08
 
 ## Current phase
 
-Real-data planning.
+Phase 6 preparation — real-data intake planning and data adapter skeleton.
 
-The offline prototype is working and has been refactored into maintainable modules.
+The app remains an offline-first browser application using synthetic demo geometry. Batch 025 adds a data adapter layer so the renderer and controllers no longer need to care whether geometry comes from demo chunks or future prepared Kane County chunks.
 
-## Current stable checkpoints
+## Stable checkpoints
 
-- Offline Canvas renderer works.
-- Browser-local persistence works.
-- JSON export/import works.
-- Import preview and safety checks work.
-- Field ledger supports visible designators and unit counts.
-- Record edit/delete works.
-- Search works.
-- Coverage filters work.
-- CSV/TXT exports work.
-- Tabbed workspace works.
-- Keyboard shortcuts work.
-- App controller refactor works.
-- Renderer refactor works.
-- CSS refactor works.
-- Documentation index exists.
+Recent stable checkpoints:
+
+```text
+Batch 018 — tabbed workspace
+Batch 019 — keyboard and fieldwork speed
+Batch 020 — app controller refactor
+Batch 021 — renderer refactor
+Batch 022 — CSS refactor
+Batch 023 — documentation index
+Batch 024 — real data plan
+Batch 025 — data adapter skeleton
+```
 
 ## Current architecture
 
 ```text
-Static offline app
-  -> direct index.html opening
-  -> no server required
-  -> no database required
-  -> no package manager required
-  -> localStorage for current ledger
-  -> JSON backup/restore
-  -> CSV/TXT review exports
+Browser app
+  ├── static HTML/CSS/JS
+  ├── Canvas renderer
+  ├── local demo geometry chunks
+  ├── data adapter skeleton
+  ├── localStorage observation ledger
+  ├── JSON backup/restore
+  ├── CSV/TXT review exports
+  └── no server/database requirement
 ```
 
-## Preferred real-data processing architecture
+## Current active geometry source
 
 ```text
-Debian 12 or Debian 13 processing node
-  -> Python virtual environment
-  -> source-data intake
-  -> geometry normalization
-  -> Kane-grid assignment
-  -> static production files
-  -> copy files into Kane-Map local data folder
+Synthetic demo geometry
 ```
 
-This is preferred, not mandatory.
+No real Kane County geometry is bundled yet.
 
-## Key principle
+## Data adapter decision
+
+The app now has a formal source path:
 
 ```text
-Heavy processing happens outside the browser.
-Field use happens inside the browser.
-The browser consumes prepared static data.
+src/data/adapter.js
+src/data/sourceTypes.js
+src/data/preparedDataManifest.js
+src/data/realDataPlaceholder.js
 ```
 
-## Data scale assumption
+The renderer and controllers should receive geometry through the adapter path, not directly from a specific source implementation.
 
-Kane County is not expected to require a permanent database server for single-user offline use.
+## Preferred real-data processing path
 
-The expected limiting factor is not raw record count. The limiting factors are:
-
-- source provenance
-- stable IDs
-- geometry cleanup
-- chunk generation
-- data model discipline
-- field-record safety
-
-## Immediate next step
-
-Add data-adapter code skeleton for demo vs production data catalogs without importing real data yet.
-
-Suggested next batch:
+The preferred production-data path is:
 
 ```text
-Batch 025 — data adapter skeleton
+Debian 12 or 13 node
+Python venv
+source data intake
+geometry cleanup
+Kane-grid assignment
+static output generation
+copy prepared files to local drive or repo
+browser renders prepared static files offline
 ```
 
+This is a preference, not a hard dependency.
+
+## Current next step
+
+Add the first data-processing-node skeleton:
+
+```text
+tools/
+  processing/
+    README.md
+    requirements.txt
+    scripts/
+      inspect_source.py
+      normalize_geometry.py
+      build_manifest.py
+```
+
+This should remain separate from the browser app and should not be required to open `index.html`.
