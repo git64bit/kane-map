@@ -38,6 +38,7 @@
       selectedBuildingId: null,
       selectedCellCode: null,
       recordSummaryByBuilding: {},
+      buildingFilterIds: null,
       dragging: false,
       lastPointer: null
     };
@@ -233,6 +234,10 @@
     function drawBuilding(building) {
       const heightPx = building.stories * 16 * Math.max(0.75, state.zoom);
       const selected = building.id === state.selectedBuildingId;
+      const filteredOut = state.buildingFilterIds && !state.buildingFilterIds.has(building.id);
+
+      ctx.save();
+      ctx.globalAlpha = filteredOut && !selected ? 0.18 : 1;
       drawBuildingSides(building.polygon, heightPx, selected);
 
       pathPolygon(building.polygon, heightPx);
@@ -243,6 +248,7 @@
       ctx.stroke();
       drawBuildingLabel(building, heightPx);
       drawBuildingStatusMarker(building, heightPx);
+      ctx.restore();
     }
 
     function drawBuildingSides(polygon, heightPx, selected) {
@@ -370,6 +376,11 @@
       render();
     }
 
+    function setBuildingFilter(buildingIds) {
+      state.buildingFilterIds = Array.isArray(buildingIds) ? new Set(buildingIds) : null;
+      render();
+    }
+
     function hitTest(screenPoint) {
       const worldPoint = screenToWorld(screenPoint);
       const cell = global.KaneMapGrid.findCell(grid, worldPoint);
@@ -411,6 +422,7 @@
       resetView,
       setSelected,
       setBuildingRecordSummary,
+      setBuildingFilter,
       centerOnWorldPoint,
       centerOnPolygon,
       hitTest,

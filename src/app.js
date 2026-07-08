@@ -22,6 +22,11 @@
     buildings: allBuildings,
     getRecords: () => store.snapshot()
   });
+  const coverageModel = global.KaneMapCoverage.createCoverageModel({
+    grid,
+    buildings: allBuildings,
+    getRecords: () => store.snapshot()
+  });
 
   const els = {
     selectedCell: document.getElementById("selectedCell"),
@@ -51,6 +56,7 @@
     viewStatus: document.getElementById("viewStatus"),
     chunkStatus: document.getElementById("chunkStatus"),
     visibleCellStatus: document.getElementById("visibleCellStatus"),
+    reviewFilterStatus: document.getElementById("reviewFilterStatus"),
     zoomIn: document.getElementById("zoomIn"),
     zoomOut: document.getElementById("zoomOut"),
     rotateLeft: document.getElementById("rotateLeft"),
@@ -60,6 +66,8 @@
     clearSearch: document.getElementById("clearSearch"),
     searchResults: document.getElementById("searchResults"),
     coverageSummary: document.getElementById("coverageSummary"),
+    statusFilter: document.getElementById("statusFilter"),
+    coverageByCell: document.getElementById("coverageByCell"),
     exportRecords: document.getElementById("exportRecords"),
     importRecords: document.getElementById("importRecords"),
     clearRecords: document.getElementById("clearRecords")
@@ -79,8 +87,7 @@
     updateDesignatorPreview();
     updateRecordPanel();
     updateBuildingSummary();
-    updateBuildingStatusOverlay();
-    updateCoverageSummary();
+    updateReviewUi();
     updateStorageStatus();
     updateViewAndChunkStatus();
   }
@@ -138,6 +145,7 @@
       els.navSearch.focus();
     });
     els.searchResults.addEventListener("click", handleSearchResultClick);
+    els.statusFilter.addEventListener("change", updateReviewUi);
     els.showSelectedOnly.addEventListener("change", updateRecordPanel);
     els.cancelEdit.addEventListener("click", () => {
       stopEditing();
@@ -298,6 +306,7 @@
     const visibleCells = global.KaneMapGrid.findCellsIntersectingBounds(grid, visibleBounds);
     visibleCellCodes = visibleCells.map((cell) => cell.code);
     renderer.setData(featureStore.buildDataForCells(visibleCellCodes));
+    updateCoverageByCell(coverageModel.build());
   }
 
   function selectAt(event) {
@@ -396,7 +405,7 @@
       return;
     }
 
-    const summary = summarizeRecords(records);
+    const summary = coverageModel.build().summaryByBuilding[selected.building.id];
     const count = summary.observedUnitCount === null ? "unknown" : String(summary.observedUnitCount);
     const conflict = summary.countVariants.length > 1
       ? `<br><span class="status-warning">Count conflict: ${escapeHtml(summary.countVariants.join(" / "))}</span>`
@@ -452,50 +461,65 @@
   function refreshRecordUi() {
     updateRecordPanel();
     updateBuildingSummary();
-    updateBuildingStatusOverlay();
-    updateCoverageSummary();
+    updateReviewUi();
     handleNavigationSearch();
     updateStorageStatus();
   }
 
-  function updateBuildingStatusOverlay() {
-    renderer.setBuildingRecordSummary(summarizeByBuilding(store.snapshot()));
+  function updateReviewUi() {
+    const coverage = coverageModel.build();
+    updateBuildingStatusOverlay(coverage);
+    updateCoverageSummary(coverage);
+    updateCoverageByCell(coverage);
+    updateMapReviewFilter(coverage);
   }
 
-  function updateCoverageSummary() {
-    const summary = searchIndex.coverage();
+  function updateBuildingStatusOverlay(coverage) {
+    renderer.setBuildingRecordSummary(coverage.summaryByBuilding);
+  }
+
+  function updateCoverageSummary(coverage) {
+    const summary = coverage.totals;
     els.coverageSummary.innerHTML = [
       `<strong>${summary.recordedBuildings}/${summary.totalBuildings}</strong> buildings have records`,
+      `<br>${summary.unrecordedBuildings} buildings still unrecorded`,
       `<br>${summary.latestUnitTotal} latest observed units`,
       `<br>${summary.verifiedBuildings} verified · ${summary.revisitBuildings} revisit · ${summary.conflictBuildings} conflict`,
       `<br>${summary.recordCount} saved observation records`
     ].join("");
   }
 
-  function summarizeByBuilding(records) {
-    const groups = {};
-    records.forEach((record) => {
-      if (!groups[record.buildingId]) groups[record.buildingId] = [];
-      groups[record.buildingId].push(record);
-    });
+  function updateCoverageByCell(coverage) {
+    const visible = new Set(visibleCellCodes);
+    const rows = coverage.cellRows
+      .filter((row) => visible.size === 0 || visible.has(row.cellCode))
+      .filter((row) => row.totalBuildings > 0)
+      .sort((a, b) => b.recordedBuildings - a.recordedBuildings || a.cellCode.localeCompare(b.cellCode))
+      .slice(0, 8);
 
-    return Object.fromEntries(Object.entries(groups).map(([buildingId, group]) => [buildingId, summarizeRecords(group)]));
+    if (!rows.length) {
+      els.coverageByCell.textContent = "No residential buildings in the current visible cells.";
+      return;
+    }
+
+    els.coverageByCell.innerHTML = rows.map((row) => [
+      `<div class="coverage-row">`,
+      `<strong>${escapeHtml(row.cellCode)}</strong>`,
+      `<span>${row.recordedBuildings}/${row.totalBuildings} recorded</span>`,
+      `<span>${row.latestUnitTotal} units</span>`,
+      `<span>${row.conflictBuildings} conflict · ${row.revisitBuildings} revisit</span>`,
+      `</div>`
+    ].join("")).join("");
   }
 
-  function summarizeRecords(records) {
-    const sorted = records.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-    const latest = sorted[0];
-    const countVariants = [...new Set(records.map((record) => record.observedUnitCount).filter((value) => value !== null))].sort((a, b) => a - b);
-    const status = records.some((record) => record.visitStatus === "conflict") ? "conflict"
-      : records.some((record) => record.visitStatus === "revisit-needed") ? "revisit-needed"
-      : latest.visitStatus;
+  function updateMapReviewFilter(coverage) {
+    const filter = els.statusFilter.value;
+    const ids = global.KaneMapCoverage.filterBuildingIds(allBuildings, coverage.summaryByBuilding, filter);
+    renderer.setBuildingFilter(ids);
 
-    return {
-      observedUnitCount: latest.observedUnitCount,
-      confidence: latest.confidence,
-      status,
-      countVariants
-    };
+    const matching = ids === null ? allBuildings.length : ids.length;
+    const label = global.KaneMapCoverage.labelForFilter(filter);
+    els.reviewFilterStatus.textContent = `Review: ${label} (${matching}/${allBuildings.length})`;
   }
 
   function resolveObservedUnitCount(rawUnitCount, parsedDesignators) {
