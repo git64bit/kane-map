@@ -1,19 +1,15 @@
 # Processing output
 
-Prepared static Kane-Map files should be written here.
+This folder holds generated data and reports.
 
-Examples of future outputs:
+Use this structure:
 
 ```text
-manifest.json
-prepared-grid.json
-prepared-buildings.json
-prepared-roads.json
-prepared-water.json
-prepared-forests.json
-chunks/
-  N14-E08.js
-  N14-E09.js
+processing/output/
+  prepared/   static data intended for browser consumption later
+  reports/    processing reports and validation output
+  manifest.json
 ```
 
-The browser app should consume copied, versioned outputs rather than raw source geometry.
+The manifest describes prepared data only. Reports are useful for the processing node, but they are not browser map layers.
+

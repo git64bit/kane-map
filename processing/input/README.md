@@ -1,17 +1,16 @@
 # Processing input
 
-Place raw or source data here while preparing Kane-Map static geometry.
+This folder holds source material before Kane-Map transforms it into prepared static data.
 
-Examples of future inputs:
+Do not place production data directly in the browser app.
+
+Use this structure:
 
 ```text
-address points
-building footprints
-road centerlines
-water polygons
-forest or land-cover polygons
-county boundary
-municipality or township boundaries
+processing/input/
+  raw/        copied or downloaded source files
+  sources/    source registry and source notes
 ```
 
-Do not commit large raw data files unless they are intentionally small test fixtures.
+The source registry is the authority for what the processing scripts expect to find.
+

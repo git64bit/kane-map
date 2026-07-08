@@ -10,6 +10,9 @@ No real Kane County geometry is imported by this scaffold.
 
 ```text
 source public data
+  -> copy/download into processing/input/raw
+  -> register in processing/input/sources/source_registry.json
+  -> validate source presence and provenance
   -> normalize and validate
   -> clip to Kane County
   -> simplify geometry
@@ -18,20 +21,28 @@ source public data
   -> copy prepared outputs into the browser app
 ```
 
-## Quick start
+## Quick start on the processing node
 
-From the repository root:
+The current dedicated-user layout is:
 
-```bash
-cd processing
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python scripts/check_environment.py
+```text
+/home/kaneproc/kane-map/                    repo
+/home/kaneproc/kane-map/processing/         processing scripts
+/home/kaneproc/.venvs/kane-map-processing/  Python venv
 ```
 
-The initial scaffold uses only the Python standard library. The virtual environment is still useful because later geometry tooling will likely add geospatial dependencies.
+From an interactive login as `kaneproc`, the shell should already be in the venv and in `~/kane-map/processing`.
+
+Run:
+
+```bash
+python scripts/check_environment.py
+python scripts/list_sources.py
+python scripts/validate_sources.py
+python scripts/intake_sources.py
+python scripts/build_manifest.py
+python scripts/validate_prepared_data.py
+```
 
 ## Folder layout
 
@@ -41,35 +52,54 @@ processing/
   requirements.txt
   pyproject.toml
   input/
-    README.md
+    raw/
+    sources/
+      source_registry.json
   output/
-    README.md
+    prepared/
+    reports/
+    manifest.json
   scripts/
     check_environment.py
+    list_sources.py
+    validate_sources.py
+    intake_sources.py
     build_manifest.py
     validate_prepared_data.py
   kane_map_processing/
-    __init__.py
     config.py
     manifest.py
+    source_registry.py
+    source_intake.py
     validation.py
 ```
 
-## Input folder
+## Source intake
 
-Use `processing/input/` for downloaded or copied source files.
+Source intake is not transformation.
 
-Do not commit large raw files unless they are deliberately small test fixtures.
+Batch 027 only answers:
 
-## Output folder
+```text
+What source files are expected?
+Are those files present?
+How large are they?
+What hash identifies them?
+Which layer will each source eventually feed?
+```
 
-Use `processing/output/` for prepared Kane-Map static outputs.
+It does not yet answer:
 
-The browser app should eventually consume files copied from this folder.
+```text
+How should geometry be transformed?
+How should records be simplified?
+How should building IDs be assigned?
+How should chunks be written?
+```
 
 ## Manifest
 
-The manifest records file names, sizes, hashes, and basic metadata. It gives the browser app and the maintainer a stable way to know what prepared data is present.
+The manifest now describes `processing/output/prepared/` only.
 
 Run:
 
@@ -90,3 +120,4 @@ Heavy processing happens outside the browser.
 Field use happens inside the browser.
 
 The browser consumes prepared static data.
+

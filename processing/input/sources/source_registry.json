@@ -1,0 +1,79 @@
+{
+  "project": "kane-map",
+  "registry_version": 1,
+  "notes": "Candidate source registry. Local source files are copied into processing/input/raw before transformation scripts are added.",
+  "sources": [
+    {
+      "source_id": "kane-county-boundary",
+      "label": "Kane County boundary",
+      "layer": "county_boundary",
+      "status": "planned",
+      "authority": "public GIS / county source",
+      "source_url": "",
+      "local_path": "raw/kane-county-boundary.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Used later for clipping prepared geometry and validating grid extent."
+    },
+    {
+      "source_id": "kane-address-points",
+      "label": "Kane County address points",
+      "layer": "address_points",
+      "status": "planned",
+      "authority": "public GIS / county source",
+      "source_url": "",
+      "local_path": "raw/kane-address-points.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Candidate source for address-location references; does not replace field observation."
+    },
+    {
+      "source_id": "kane-building-footprints",
+      "label": "Building footprints",
+      "layer": "buildings",
+      "status": "candidate",
+      "authority": "public GIS or derived open source",
+      "source_url": "",
+      "local_path": "raw/kane-building-footprints.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Candidate source for red residential building geometry."
+    },
+    {
+      "source_id": "kane-road-centerlines",
+      "label": "Road centerlines",
+      "layer": "roads",
+      "status": "planned",
+      "authority": "public GIS / county or municipal source",
+      "source_url": "",
+      "local_path": "raw/kane-road-centerlines.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Candidate source for white orientation roads."
+    },
+    {
+      "source_id": "kane-water-polygons",
+      "label": "Water polygons",
+      "layer": "water",
+      "status": "planned",
+      "authority": "public GIS / county, municipal, or open source",
+      "source_url": "",
+      "local_path": "raw/kane-water-polygons.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Candidate source for blue ponds and water features."
+    },
+    {
+      "source_id": "kane-forest-polygons",
+      "label": "Forest and wooded polygons",
+      "layer": "forests",
+      "status": "planned",
+      "authority": "public GIS / county, forest preserve, municipal, or open source",
+      "source_url": "",
+      "local_path": "raw/kane-forest-polygons.geojson",
+      "expected_format": "geojson",
+      "required": false,
+      "notes": "Candidate source for green orientation polygons."
+    }
+  ]
+}
