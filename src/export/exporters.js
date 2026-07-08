@@ -6,7 +6,12 @@
       ["id", (record) => record.id],
       ["building_id", (record) => record.buildingId],
       ["building_label", (record) => record.buildingLabel],
+      ["building_alias", (record) => record.buildingAlias],
       ["grid_cell", (record) => record.gridCell],
+      ["visit_date", (record) => record.visitDate],
+      ["field_session_id", (record) => record.fieldSessionId],
+      ["plan_priority", (record) => record.planPriority],
+      ["plan_action", (record) => record.planAction],
       ["site_label", (record) => record.siteLabel],
       ["entrance_id", (record) => record.entranceId],
       ["mailbox_bank_id", (record) => record.mailboxBankId],
@@ -35,6 +40,11 @@
       ["status", (row) => row.summary ? row.summary.status : "unrecorded"],
       ["confidence", (row) => row.summary ? row.summary.confidence : ""],
       ["count_variants", (row) => row.summary ? row.summary.countVariants.join(" | ") : ""],
+      ["plan_priority", (row) => row.summary ? row.summary.planPriority : ""],
+      ["plan_action", (row) => row.summary ? row.summary.planAction : ""],
+      ["site_labels", (row) => row.summary ? (row.summary.siteLabels || []).join(" | ") : ""],
+      ["building_aliases", (row) => row.summary ? (row.summary.buildingAliases || []).join(" | ") : ""],
+      ["latest_visit_date", (row) => row.summary ? row.summary.latestVisitDate : ""],
       ["latest_updated_at", (row) => row.summary ? row.summary.latestUpdatedAt : ""]
     ];
 
@@ -74,6 +84,42 @@
     return `${lines.join("\n")}\n`;
   }
 
+  function visitSessionCsv(visitSummary) {
+    const columns = [
+      ["session_id", (row) => row.sessionId],
+      ["record_count", (row) => row.recordCount],
+      ["building_count", (row) => row.buildingCount],
+      ["unit_total", (row) => row.unitTotal],
+      ["verified_count", (row) => row.verifiedCount],
+      ["conflict_count", (row) => row.conflictCount],
+      ["revisit_count", (row) => row.revisitCount],
+      ["latest_updated_at", (row) => row.latestUpdatedAt]
+    ];
+
+    return csvFromRows(visitSummary.sessionRows || [], columns);
+  }
+
+
+  function fieldPlanCsv(planSummary) {
+    const columns = [
+      ["building_id", (row) => row.buildingId],
+      ["building_label", (row) => row.buildingLabel],
+      ["building_name", (row) => row.buildingName],
+      ["grid_cell", (row) => row.gridCell],
+      ["recorded", (row) => row.recorded ? "yes" : "no"],
+      ["status", (row) => row.status],
+      ["confidence", (row) => row.confidence],
+      ["plan_priority", (row) => row.planPriority],
+      ["plan_action", (row) => row.planAction],
+      ["latest_unit_count", (row) => row.observedUnitCount === null ? "" : row.observedUnitCount],
+      ["latest_visit_date", (row) => row.latestVisitDate],
+      ["site_label", (row) => row.siteLabel],
+      ["building_alias", (row) => row.buildingAlias]
+    ];
+
+    return csvFromRows(planSummary.filteredRows || [], columns);
+  }
+
   function csvFromRows(rows, columns) {
     const header = columns.map(([name]) => csvCell(name)).join(",");
     const body = rows.map((row) => columns
@@ -98,7 +144,9 @@
 
   global.KaneMapExporters = {
     buildingSummaryCsv,
+    fieldPlanCsv,
     fieldReport,
-    observationCsv
+    observationCsv,
+    visitSessionCsv
   };
 })(window);

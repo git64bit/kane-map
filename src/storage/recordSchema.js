@@ -2,7 +2,7 @@
   "use strict";
 
   const FORMAT = "kane-map-observation-records";
-  const VERSION = 5;
+  const VERSION = 8;
   const RECORD_PREFIX = "KMO";
 
   function createObservationRecord(input, sequenceNumber) {
@@ -17,7 +17,12 @@
       buildingId: input.buildingId,
       buildingLabel: input.buildingLabel,
       buildingName: input.buildingName,
+      buildingAlias: input.buildingAlias,
       stories: input.stories,
+      visitDate: input.visitDate,
+      fieldSessionId: input.fieldSessionId,
+      planPriority: input.planPriority,
+      planAction: input.planAction,
       siteLabel: input.siteLabel,
       entranceId: input.entranceId,
       mailboxBankId: input.mailboxBankId,
@@ -49,7 +54,12 @@
       buildingId: input.buildingId,
       buildingLabel: input.buildingLabel,
       buildingName: input.buildingName,
+      buildingAlias: input.buildingAlias,
       stories: input.stories,
+      visitDate: input.visitDate,
+      fieldSessionId: input.fieldSessionId,
+      planPriority: input.planPriority,
+      planAction: input.planAction,
       siteLabel: input.siteLabel,
       entranceId: input.entranceId,
       mailboxBankId: input.mailboxBankId,
@@ -78,7 +88,12 @@
       buildingId: cleanText(record.buildingId, "unknown"),
       buildingLabel: cleanText(record.buildingLabel, "unknown"),
       buildingName: cleanText(record.buildingName, ""),
+      buildingAlias: cleanText(record.buildingAlias, ""),
       stories: normalizeStories(record.stories),
+      visitDate: normalizeVisitDate(record.visitDate || record.createdAt),
+      fieldSessionId: cleanText(record.fieldSessionId, ""),
+      planPriority: normalizePlanPriority(record.planPriority),
+      planAction: cleanText(record.planAction, ""),
       siteLabel: cleanText(record.siteLabel, ""),
       entranceId: cleanText(record.entranceId, ""),
       mailboxBankId: cleanText(record.mailboxBankId, ""),
@@ -152,6 +167,16 @@
 
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? Math.floor(number) : null;
+  }
+
+  function normalizeVisitDate(value) {
+    const text = cleanText(value, "").slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : new Date().toISOString().slice(0, 10);
+  }
+
+  function normalizePlanPriority(value) {
+    const text = cleanText(value, "none").toLowerCase();
+    return ["none", "low", "medium", "high", "urgent"].includes(text) ? text : "none";
   }
 
   function normalizeStories(value) {

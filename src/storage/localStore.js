@@ -1,8 +1,11 @@
 (function attachLocalStore(global) {
   "use strict";
 
-  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v5";
+  const DEFAULT_STORAGE_KEY = "kane-map.local-observations.v8";
   const LEGACY_STORAGE_KEYS = [
+    "kane-map.local-observations.v7",
+    "kane-map.local-observations.v6",
+    "kane-map.local-observations.v5",
     "kane-map.local-observations.v4",
     "kane-map.local-observations.v3",
     "kane-map.local-observations.v2"

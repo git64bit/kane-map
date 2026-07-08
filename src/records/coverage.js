@@ -70,6 +70,11 @@
       confidence: latest.confidence || "unreviewed",
       status,
       latestUpdatedAt: latest.updatedAt || "",
+      latestVisitDate: latest.visitDate || String(latest.createdAt || "").slice(0, 10),
+      siteLabels: uniqueText(records.map((record) => record.siteLabel)),
+      buildingAliases: uniqueText(records.map((record) => record.buildingAlias)),
+      planPriority: latest.planPriority || "none",
+      planAction: latest.planAction || "",
       countVariants
     };
   }
@@ -133,6 +138,10 @@
     if (!summary) return false;
     if (filter === "counted") return Number.isFinite(summary.observedUnitCount);
     return summary.status === filter;
+  }
+
+  function uniqueText(values) {
+    return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort();
   }
 
   function labelForFilter(filter) {

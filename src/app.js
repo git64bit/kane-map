@@ -27,18 +27,27 @@
     buildings: allBuildings,
     getRecords: () => store.snapshot()
   });
+  const siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({
+    getRecords: () => store.snapshot()
+  });
 
   const els = {
     selectedCell: document.getElementById("selectedCell"),
     selectedBuilding: document.getElementById("selectedBuilding"),
     selectedStories: document.getElementById("selectedStories"),
     buildingSummary: document.getElementById("buildingSummary"),
+    identitySummary: document.getElementById("identitySummary"),
     observationForm: document.getElementById("observationForm"),
     observationFormTitle: document.getElementById("observationFormTitle"),
     editModeNotice: document.getElementById("editModeNotice"),
     saveObservation: document.getElementById("saveObservation"),
     cancelEdit: document.getElementById("cancelEdit"),
+    visitDate: document.getElementById("visitDate"),
+    fieldSessionId: document.getElementById("fieldSessionId"),
+    planPriority: document.getElementById("planPriority"),
+    planAction: document.getElementById("planAction"),
     siteLabel: document.getElementById("siteLabel"),
+    buildingAlias: document.getElementById("buildingAlias"),
     entranceId: document.getElementById("entranceId"),
     mailboxBankId: document.getElementById("mailboxBankId"),
     visibleDesignators: document.getElementById("visibleDesignators"),
@@ -57,6 +66,7 @@
     chunkStatus: document.getElementById("chunkStatus"),
     visibleCellStatus: document.getElementById("visibleCellStatus"),
     reviewFilterStatus: document.getElementById("reviewFilterStatus"),
+    visitStatusSummary: document.getElementById("visitStatusSummary"),
     zoomIn: document.getElementById("zoomIn"),
     zoomOut: document.getElementById("zoomOut"),
     rotateLeft: document.getElementById("rotateLeft"),
@@ -68,10 +78,18 @@
     coverageSummary: document.getElementById("coverageSummary"),
     statusFilter: document.getElementById("statusFilter"),
     coverageByCell: document.getElementById("coverageByCell"),
+    visitSessionSummary: document.getElementById("visitSessionSummary"),
+    fieldPlanSummary: document.getElementById("fieldPlanSummary"),
+    planFilter: document.getElementById("planFilter"),
+    fieldPlanRows: document.getElementById("fieldPlanRows"),
+    planStatusSummary: document.getElementById("planStatusSummary"),
+    visitSessionRows: document.getElementById("visitSessionRows"),
     exportRecords: document.getElementById("exportRecords"),
     exportObservationCsv: document.getElementById("exportObservationCsv"),
     exportBuildingCsv: document.getElementById("exportBuildingCsv"),
     exportFieldReport: document.getElementById("exportFieldReport"),
+    exportVisitCsv: document.getElementById("exportVisitCsv"),
+    exportPlanCsv: document.getElementById("exportPlanCsv"),
     importRecords: document.getElementById("importRecords"),
     importPreview: document.getElementById("importPreview"),
     importActions: document.getElementById("importActions"),
@@ -87,6 +105,7 @@
   let pendingImport = null;
 
   function init() {
+    setDefaultVisitDate();
     bindCanvasEvents();
     bindControlEvents();
     bindObservationEvents();
@@ -96,7 +115,10 @@
     updateDesignatorPreview();
     updateRecordPanel();
     updateBuildingSummary();
+    updateIdentitySummary();
     updateReviewUi();
+    updateVisitSessionUi();
+    updateFieldPlanUi();
     updateStorageStatus();
     updateViewAndChunkStatus();
   }
@@ -155,6 +177,8 @@
     });
     els.searchResults.addEventListener("click", handleSearchResultClick);
     els.statusFilter.addEventListener("change", updateReviewUi);
+    els.planFilter.addEventListener("change", updateFieldPlanUi);
+    els.fieldPlanRows.addEventListener("click", handleFieldPlanClick);
     els.showSelectedOnly.addEventListener("change", updateRecordPanel);
     els.cancelEdit.addEventListener("click", () => {
       stopEditing();
@@ -182,6 +206,19 @@
       const filename = `kane-map-field-report-${dateStamp()}.txt`;
       const report = global.KaneMapExporters.fieldReport(coverageModel.build());
       store.download(filename, report, "text/plain");
+    });
+
+    els.exportVisitCsv.addEventListener("click", () => {
+      const filename = `kane-map-visit-sessions-${dateStamp()}.csv`;
+      const csv = global.KaneMapExporters.visitSessionCsv(global.KaneMapVisitSessions.summarize(store.snapshot(), allBuildings));
+      store.download(filename, csv, "text/csv");
+    });
+
+    els.exportPlanCsv.addEventListener("click", () => {
+      const filename = `kane-map-field-plan-${dateStamp()}.csv`;
+      const plan = currentFieldPlan();
+      const csv = global.KaneMapExporters.fieldPlanCsv(plan);
+      store.download(filename, csv, "text/csv");
     });
 
     els.importRecords.addEventListener("change", handleImportRecords);
@@ -257,7 +294,12 @@
       buildingId: selected.building.id,
       buildingLabel: selected.building.label,
       buildingName: selected.building.name,
+      buildingAlias: els.buildingAlias.value.trim(),
       stories: selected.building.stories,
+      visitDate: els.visitDate.value || global.KaneMapVisitSessions.today(),
+      fieldSessionId: els.fieldSessionId.value.trim(),
+      planPriority: els.planPriority.value,
+      planAction: els.planAction.value.trim(),
       siteLabel: els.siteLabel.value.trim(),
       entranceId: els.entranceId.value.trim(),
       mailboxBankId: els.mailboxBankId.value.trim(),
@@ -289,7 +331,12 @@
     els.saveObservation.textContent = "Update field observation";
     els.cancelEdit.hidden = false;
 
+    els.visitDate.value = record.visitDate || global.KaneMapVisitSessions.today();
+    els.fieldSessionId.value = record.fieldSessionId || "";
+    els.planPriority.value = record.planPriority || "none";
+    els.planAction.value = record.planAction || "";
     els.siteLabel.value = record.siteLabel || "";
+    els.buildingAlias.value = record.buildingAlias || "";
     els.entranceId.value = record.entranceId || "";
     els.mailboxBankId.value = record.mailboxBankId || "";
     els.visibleDesignators.value = record.designatorRaw || record.visibleDesignators.join(", ");
@@ -312,7 +359,14 @@
   }
 
   function clearObservationForm() {
+    const keepVisitDate = els.visitDate.value || global.KaneMapVisitSessions.today();
+    const keepSessionId = els.fieldSessionId.value;
+    els.visitDate.value = keepVisitDate;
+    els.fieldSessionId.value = keepSessionId;
+    els.planPriority.value = "none";
+    els.planAction.value = "";
     els.siteLabel.value = "";
+    els.buildingAlias.value = "";
     els.entranceId.value = "";
     els.mailboxBankId.value = "";
     els.visibleDesignators.value = "";
@@ -341,6 +395,7 @@
     visibleCellCodes = visibleCells.map((cell) => cell.code);
     renderer.setData(featureStore.buildDataForCells(visibleCellCodes));
     updateCoverageByCell(coverageModel.build());
+    updateFieldPlanUi();
   }
 
   function selectAt(event) {
@@ -425,6 +480,7 @@
       : "None";
     els.selectedStories.textContent = selected.building ? `${selected.building.stories}` : "—";
     updateBuildingSummary();
+    updateIdentitySummary();
   }
 
   function updateBuildingSummary() {
@@ -451,8 +507,22 @@
       `<br>Latest count: ${escapeHtml(count)}`,
       `<br>Latest status: ${escapeHtml(summary.status)}`,
       `<br>Confidence: ${escapeHtml(summary.confidence)}`,
+      `<br>Latest visit: ${escapeHtml(summary.latestVisitDate || "undated")}`,
       conflict
     ].join("");
+  }
+
+  function updateIdentitySummary() {
+    if (!selected.building) { els.identitySummary.textContent = "Select a building to review site identity."; return; }
+    const identity = siteIdentityModel.analyzeBuilding(selected.building.id);
+    const lines = [`<strong>Identity layer</strong>`,
+      `<br>Site labels: ${escapeHtml(identity.labels.join(" / ") || "none")}`,
+      `<br>Building aliases: ${escapeHtml(identity.aliases.join(" / ") || "none")}`,
+      `<br>Entrances: ${escapeHtml(identity.entrances.join(" / ") || "none")}`,
+      `<br>Mailbanks: ${escapeHtml(identity.mailbanks.join(" / ") || "none")}`];
+    identity.warnings.slice(0, 3).forEach((w) => lines.push(`<br><span class="status-warning">${escapeHtml(w)}</span>`));
+    siteIdentityModel.globalWarnings().slice(0, 2).forEach((w) => lines.push(`<br><span class="status-warning">Global: ${escapeHtml(w)}</span>`));
+    els.identitySummary.innerHTML = lines.join("");
   }
 
   function updateRecordPanel() {
@@ -482,9 +552,12 @@
       `<button type="button" data-record-delete="${escapeHtml(record.id)}">Delete</button>`,
       `</span></div>`,
       ` ${escapeHtml(record.gridCell)} · ${escapeHtml(count)}`,
-      `<br><span class="muted">${escapeHtml(record.id)} · updated ${escapeHtml(date)}</span>`,
+      `<br><span class="muted">${escapeHtml(record.id)} · visit ${escapeHtml(record.visitDate || "undated")} · updated ${escapeHtml(date)}</span>`,
       `<br><span class="status-pill">${escapeHtml(record.visitStatus)} · ${escapeHtml(record.confidence)}</span>`,
+      record.fieldSessionId ? `<br>Session: ${escapeHtml(record.fieldSessionId)}` : "",
+      record.planPriority && record.planPriority !== "none" ? `<br>Plan: ${escapeHtml(record.planPriority)}${record.planAction ? " · " + escapeHtml(record.planAction) : ""}` : "",
       record.siteLabel ? `<br>Site: ${escapeHtml(record.siteLabel)}` : "",
+      record.buildingAlias ? `<br>Alias: ${escapeHtml(record.buildingAlias)}` : "",
       record.mailboxBankId ? `<br>Mailbank: ${escapeHtml(record.mailboxBankId)}` : "",
       designatorText ? `<br>Designators: ${escapeHtml(designatorText)}` : "",
       record.notes ? `<br>${escapeHtml(record.notes)}` : ""
@@ -495,9 +568,80 @@
   function refreshRecordUi() {
     updateRecordPanel();
     updateBuildingSummary();
+    updateIdentitySummary();
     updateReviewUi();
+    updateVisitSessionUi();
+    updateFieldPlanUi();
     handleNavigationSearch();
     updateStorageStatus();
+  }
+
+  function updateVisitSessionUi() {
+    const visits = global.KaneMapVisitSessions.summarize(store.snapshot(), allBuildings);
+    els.visitStatusSummary.textContent = `Visits: ${visits.totals.visitDates} days / ${visits.totals.sessions} sessions`;
+
+    if (!visits.totals.records) {
+      els.visitSessionSummary.textContent = "No saved visit-session records yet.";
+      els.visitSessionRows.textContent = "No visit sessions yet.";
+      return;
+    }
+
+    els.visitSessionSummary.innerHTML = [
+      `<strong>${visits.totals.records}</strong> records across ${visits.totals.buildings} buildings`,
+      `<br>${visits.totals.visitDates} visit date${visits.totals.visitDates === 1 ? "" : "s"} · ${visits.totals.sessions} session${visits.totals.sessions === 1 ? "" : "s"}`,
+      `<br>${visits.revisitRecords.length} follow-up record${visits.revisitRecords.length === 1 ? "" : "s"}`
+    ].join("");
+
+    els.visitSessionRows.innerHTML = visits.sessionRows.slice(0, 6).map((row) => [
+      `<div class="coverage-row">`,
+      `<strong>${escapeHtml(row.sessionId)}</strong>`,
+      `<span>${row.recordCount} records · ${row.buildingCount} buildings</span>`,
+      `<span>${row.unitTotal} units</span>`,
+      `<span>${row.conflictCount} conflict · ${row.revisitCount} revisit</span>`,
+      `</div>`
+    ].join("")).join("");
+  }
+
+  function currentFieldPlan() {
+    return global.KaneMapFieldPlan.summarize(allBuildings, coverageModel.build(), store.snapshot(), {
+      filter: els.planFilter ? els.planFilter.value : "active",
+      visibleCellCodes
+    });
+  }
+
+  function updateFieldPlanUi() {
+    if (!els.fieldPlanSummary || !els.fieldPlanRows) return;
+    const plan = currentFieldPlan();
+    const totals = plan.totals;
+    const rows = plan.visibleRows.slice(0, 8);
+
+    els.planStatusSummary.textContent = `Plan: ${plan.filteredRows.length} active / ${totals.priorityBuildings} priority`;
+    els.fieldPlanSummary.innerHTML = [
+      `<strong>${plan.filteredRows.length}</strong> buildings in current plan filter`,
+      `<br>${totals.priorityBuildings} priority · ${totals.highPriorityBuildings} high/urgent`,
+      `<br>${totals.conflictBuildings} conflict · ${totals.revisitBuildings} revisit`,
+      `<br>${totals.unrecordedBuildings} unrecorded buildings`
+    ].join("");
+
+    if (!rows.length) {
+      els.fieldPlanRows.textContent = "No field-plan rows in the current visible cells.";
+      return;
+    }
+
+    els.fieldPlanRows.innerHTML = rows.map((row) => [
+      `<button type="button" class="plan-row" data-building-id="${escapeHtml(row.buildingId)}">`,
+      `<strong>${escapeHtml(row.buildingLabel)}</strong>`,
+      `<span>${escapeHtml(row.gridCell)} · ${escapeHtml(row.status)} · ${row.observedUnitCount === null ? "unknown" : row.observedUnitCount + " units"}</span>`,
+      `<span>Priority: ${escapeHtml(global.KaneMapFieldPlan.labelForPriority(row.planPriority))}</span>`,
+      row.planAction ? `<span>${escapeHtml(row.planAction)}</span>` : `<span class="muted">No planned action note.</span>`,
+      `</button>`
+    ].join("")).join("");
+  }
+
+  function handleFieldPlanClick(event) {
+    const button = event.target.closest("button[data-building-id]");
+    if (!button) return;
+    jumpToBuilding(button.getAttribute("data-building-id"));
   }
 
   function updateReviewUi() {
@@ -591,6 +735,10 @@
     els.chunkStatus.textContent = `Chunks ${chunkStatus.selected}/${chunkStatus.total}`;
     els.chunkStatus.title = chunkStatus.ids.join(", ");
     els.visibleCellStatus.textContent = `Visible cells ${visibleCellCodes.length}/${grid.cells.length}`;
+  }
+
+  function setDefaultVisitDate() {
+    if (els.visitDate && !els.visitDate.value) els.visitDate.value = global.KaneMapVisitSessions.today();
   }
 
   function handleImportRecords(event) {
