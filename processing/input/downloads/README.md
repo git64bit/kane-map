@@ -1,6 +1,6 @@
 # Downloaded source files
 
-This directory is for controlled downloaded source files.
+This folder is for original acquired source files.
 
 Examples:
 
@@ -12,9 +12,20 @@ kane-road-centerlines.zip
 kane-water-polygons.zip
 ```
 
-Downloaded files are not automatically production-ready. They are source inputs.
-Later processing scripts will convert, filter, clip, simplify, and normalize them
-into `processing/input/raw/` and then into `processing/output/prepared/`.
+These files are local working data and should not be committed to GitHub.
 
-Do not commit large downloaded source files unless the project deliberately
-chooses to vendor a small static source snapshot.
+Pipeline meaning:
+
+```text
+input/downloads/  original acquired source files
+input/raw/        staged or converted working source files
+output/prepared/  browser-ready Kane-Map data
+```
+
+Use:
+
+```bash
+python scripts/list_downloads.py
+```
+
+to report local downloaded files.

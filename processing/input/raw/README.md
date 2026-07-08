@@ -1,26 +1,19 @@
-# Raw source files
+# Raw staged source files
 
-Copy downloaded public source files here.
+This folder is for source files after they have been staged or converted into a working raw format.
 
-Examples:
+Raw files are not the same as downloaded files. A downloaded file may be a ZIP archive, shapefile bundle, or direct GeoJSON. Raw files should be easier for the processing pipeline to read.
 
-```text
-processing/input/raw/kane-county-boundary.geojson
-processing/input/raw/kane-address-points.geojson
-processing/input/raw/kane-road-centerlines.geojson
-processing/input/raw/kane-water-polygons.geojson
-processing/input/raw/kane-forest-polygons.geojson
-processing/input/raw/kane-building-footprints.geojson
-```
-
-Do not commit large raw source files unless they are deliberately small fixtures.
-
-The normal pattern is:
+Expected early raw files:
 
 ```text
-raw source files on processing node
-  -> processing scripts
-  -> prepared static output
-  -> selected prepared files copied into the browser app later
+kane-address-points.geojson
+kane-county-boundary.geojson
+kane-building-footprints.geojson
+kane-road-centerlines.geojson
+kane-water-polygons.geojson
 ```
 
+Batch 030 can stage direct GeoJSON downloads only. ZIP/shapefile conversion is handled later.
+
+These files are local working data and should not be committed to GitHub.

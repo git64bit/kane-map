@@ -19,6 +19,8 @@ REPORTS_DIR = OUTPUT_DIR / "reports"
 MANIFEST_PATH = OUTPUT_DIR / "manifest.json"
 SOURCE_INTAKE_REPORT_PATH = REPORTS_DIR / "source_intake_report.json"
 SOURCE_DOWNLOAD_REPORT_PATH = REPORTS_DIR / "source_download_report.json"
+DOWNLOAD_INVENTORY_REPORT_PATH = REPORTS_DIR / "download_inventory_report.json"
+RAW_STAGING_REPORT_PATH = REPORTS_DIR / "raw_staging_report.json"
 
 SUPPORTED_DATA_EXTENSIONS = {
     ".csv",

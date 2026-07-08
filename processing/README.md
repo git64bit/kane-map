@@ -165,3 +165,36 @@ processing/input/downloads/
 ```
 
 They are not browser-ready. Later scripts will convert and normalize downloaded source files into raw and prepared Kane-Map data.
+
+## Download inventory and raw staging
+
+Batch 030 separates acquired source files from staged raw files.
+
+```text
+input/downloads/  original downloaded source files
+input/raw/        staged or converted working source files
+output/prepared/  browser-ready Kane-Map output
+```
+
+List downloaded files:
+
+```bash
+python scripts/list_downloads.py
+```
+
+Preview raw staging:
+
+```bash
+python scripts/stage_downloads.py
+```
+
+Stage direct GeoJSON downloads when a safe rule exists:
+
+```bash
+python scripts/stage_downloads.py --execute
+```
+
+ZIP/shapefile conversion is handled in later batches.
+
+Generated downloads, raw files, prepared output, and reports are local working data and should not be committed to GitHub.
+
