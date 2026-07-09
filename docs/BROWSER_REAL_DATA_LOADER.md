@@ -46,13 +46,19 @@ sample
 
 ## Portable app default
 
-The generated portable app rewrites `src/data/realBundleConfig.js` so the app can default to the copied production bundle:
+The generated portable app keeps source files generic and writes the production-data default outside `src/`:
+
+```text
+portable_config.js
+```
+
+This generated root file overrides the source-tree default and points at the copied portable bundle:
 
 ```text
 data/kane-county
 ```
 
-That means the generated portable app should load the Kane County production bundle with no query string once it is opened through a local static file-serving mechanism.
+The source file `src/data/realBundleConfig.js` remains demo-safe for GitHub but attempts to load the optional root `portable_config.js` during browser startup. This allows USB testing to refresh `src/` without resetting the portable app back to demo mode.
 
 The portable app still accepts an explicit demo override:
 
