@@ -31,6 +31,7 @@
     ctx.updateFieldPlanUi();
     ctx.updateStorageStatus();
     ctx.updateViewAndChunkStatus();
+    updateRuntimeModeStatus(ctx);
     updateDataSourceStatus(ctx);
   }
 
@@ -41,8 +42,11 @@
     const message = error && error.message ? error.message : "Boot failed";
     const chunkStatus = document.getElementById("chunkStatus");
     if (chunkStatus) chunkStatus.textContent = message;
+    updateRuntimeModeStatus(null);
     const sourceStatus = ensureFooterStatusSpan("dataSourceStatus");
     if (sourceStatus) sourceStatus.textContent = dataUnavailableLabel(message);
+    const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
+    if (loadStatus) loadStatus.textContent = "Load: unavailable";
   }
 
   function updateDataSourceStatus(ctx) {
@@ -51,6 +55,26 @@
 
     const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
     if (loadStatus) loadStatus.textContent = sourceLoadLabel(ctx && ctx.dataSource);
+  }
+
+  function updateRuntimeModeStatus(ctx) {
+    const runtimeStatus = ensureRuntimeStatusSpan();
+    if (runtimeStatus) runtimeStatus.textContent = runtimeModeLabel(ctx && ctx.dataSource);
+  }
+
+  function ensureRuntimeStatusSpan() {
+    let element = document.getElementById("runtimeModeStatus");
+    if (element) return element;
+    const footer = document.querySelector(".status-bar");
+    if (!footer) return null;
+    const spans = Array.from(footer.querySelectorAll("span"));
+    element = spans.find((span) => /demo mode by default/i.test(span.textContent || ""));
+    if (!element) {
+      element = document.createElement("span");
+      footer.appendChild(element);
+    }
+    element.id = "runtimeModeStatus";
+    return element;
   }
 
   function ensureFooterStatusSpan(id) {
@@ -62,6 +86,17 @@
     element.id = id;
     footer.appendChild(element);
     return element;
+  }
+
+  function runtimeModeLabel(dataSource) {
+    const config = global.KaneMapRealBundleConfig || {};
+    const portable = global.KaneMapPortableConfig || {};
+    if (dataSource && dataSource.sourceType === "prepared") return "Runtime: production data active";
+    if (config.enabledByDefault && portable.role === "portable-production-default") {
+      return "Runtime: portable production default";
+    }
+    if (config.enabledByDefault) return "Runtime: production default";
+    return "Runtime: source demo default";
   }
 
   function sourceLabel(dataSource) {
@@ -86,7 +121,7 @@
     if (dataSource.totalChunks) parts.push(`Chunks ${formatNumber(dataSource.totalChunks)}`);
     if (dataSource.totalFeatures) parts.push(`Features ${formatNumber(dataSource.totalFeatures)}`);
     if (!parts.length && dataSource.dataVersion) parts.push(`Version ${dataSource.dataVersion}`);
-    return parts.length ? parts.join(" · ") : "Load: ready";
+    return parts.length ? `Load: ${parts.join(" · ")}` : "Load: ready";
   }
 
   function formatNumber(value) {
