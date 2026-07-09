@@ -7,7 +7,6 @@
     const preparedManifest = options && options.preparedManifest;
     const demoCatalog = options && options.demoCatalog;
     const chunkRegistry = options && options.chunkRegistry;
-
     const activeSource = chooseActiveSource(requestedSource, preparedManifest, demoCatalog);
 
     function getActiveSource() {
@@ -26,27 +25,21 @@
       if (activeSource.sourceType === sourceTypes.SOURCES.DEMO) {
         return chunkRegistry.createFeatureStore(activeSource.catalog);
       }
-
       return createPreparedFeatureStore(activeSource.catalog);
     }
 
     function describe() {
-      return {
+      const stats = describeCatalogStats(activeSource.catalog);
+      return Object.assign({}, stats, {
         sourceType: activeSource.sourceType,
         label: activeSource.label,
         dataVersion: activeSource.catalog.meta.dataVersion || "unknown",
         active: activeSource.active,
         loadError: activeSource.loadError || ""
-      };
+      });
     }
 
-    return {
-      getActiveSource,
-      getCatalog,
-      getBounds,
-      createFeatureStore,
-      describe
-    };
+    return { getActiveSource, getCatalog, getBounds, createFeatureStore, describe };
   }
 
   async function createDataAdapterAsync(options) {
@@ -60,13 +53,14 @@
         finalOptions.preparedManifest = {
           active: true,
           sourceType: sourceTypes.SOURCES.PREPARED,
-          label: loaded.label || "Prepared Kane County chunked bundle",
+          label: loaded.label || "Kane County production bundle",
           data: loaded.data
         };
       } else {
         finalOptions.preparedManifest = {
           active: false,
-          loadError: loaded && loaded.error ? loaded.error : loaded && loaded.reason ? loaded.reason : "prepared data unavailable"
+          loadError: loadFailureMessage(loaded),
+          bundleRoot: loaded && loaded.bundleRoot ? loaded.bundleRoot : ""
         };
       }
     }
@@ -87,10 +81,17 @@
     if (preparedIsAvailable) {
       return {
         sourceType: sources.PREPARED,
-        label: preparedManifest.label || "Prepared Kane County geometry",
+        label: preparedManifest.label || "Kane County production bundle",
         catalog: preparedManifest.data,
         active: true
       };
+    }
+
+    if (requestedSource === sources.PREPARED) {
+      const reason = preparedManifest && preparedManifest.loadError
+        ? preparedManifest.loadError
+        : "production data bundle was requested but could not be loaded";
+      throw new Error(`Production data unavailable: ${reason}`);
     }
 
     return {
@@ -98,8 +99,34 @@
       label: "Synthetic demo geometry",
       catalog: demoCatalog,
       active: true,
-      loadError: preparedManifest && preparedManifest.loadError ? preparedManifest.loadError : ""
+      loadError: ""
     };
+  }
+
+  function loadFailureMessage(loaded) {
+    if (!loaded) return "production data loader did not return a result";
+    if (loaded.error) return loaded.error;
+    if (loaded.reason) return loaded.reason;
+    return "production data unavailable";
+  }
+
+  function describeCatalogStats(catalog) {
+    const meta = catalog && catalog.meta ? catalog.meta : {};
+    const chunks = catalog && Array.isArray(catalog.chunks) ? catalog.chunks : [];
+    return {
+      bundleRoot: meta.bundleRoot || "",
+      totalLayers: numberOrNull(meta.totalLayers),
+      totalChunks: numberOrNull(meta.totalChunks) || chunks.length,
+      totalFeatures: numberOrNull(meta.totalFeatures),
+      totalBytes: numberOrNull(meta.totalBytes),
+      dataMode: meta.dataMode || "",
+      status: meta.status || ""
+    };
+  }
+
+  function numberOrNull(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
   }
 
   function createPreparedFeatureStore(catalog) {
@@ -128,11 +155,7 @@
       };
     }
 
-    return {
-      allChunks,
-      buildDataForCells,
-      statusForCells
-    };
+    return { allChunks, buildDataForCells, statusForCells };
   }
 
   function combinePreparedChunks(catalog, chunks) {
@@ -150,7 +173,6 @@
   function flatten(chunks, key) {
     const output = [];
     const seen = new Set();
-
     chunks.forEach((chunk) => {
       (chunk[key] || []).forEach((feature) => {
         const id = feature && feature.id ? feature.id : `${key}-${output.length}`;
@@ -159,12 +181,8 @@
         output.push(feature);
       });
     });
-
     return output;
   }
 
-  global.KaneMapDataAdapter = {
-    createDataAdapter,
-    createDataAdapterAsync
-  };
+  global.KaneMapDataAdapter = { createDataAdapter, createDataAdapterAsync };
 })(window);
