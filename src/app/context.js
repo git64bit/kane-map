@@ -1,6 +1,15 @@
 (function kaneMapAppContext(global) {
   "use strict";
 
+  const DEFAULT_LAYER_VISIBILITY = Object.freeze({
+    roads: false,
+    water: false,
+    forests: false,
+    buildings: false,
+    addressPoints: false,
+    labels: false
+  });
+
   function createDomReferences() {
     return {
       selectedCell: document.getElementById("selectedCell"),
@@ -91,14 +100,23 @@
       preparedManifest: global.KaneMapPreparedDataManifest
     });
     const catalog = dataAdapter.getCatalog();
-    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), { rows: 4, cols: 6, startNorth: 11, startEast: 5 });
+    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), {
+      rows: 4,
+      cols: 6,
+      startNorth: 11,
+      startEast: 5
+    });
     const featureStore = dataAdapter.createFeatureStore();
     const allCellCodes = grid.cells.map((cell) => cell.code);
-    const initialData = featureStore.buildDataForCells(allCellCodes);
-    const allBuildings = initialData.buildings;
+    const fullInitialData = featureStore.buildDataForCells(allCellCodes);
+    const baseMapData = baseMapOnlyData(fullInitialData);
+    const allBuildings = fullInitialData.buildings;
     const store = global.KaneMapLocalStore.createLocalObservationStore();
     const canvas = document.getElementById("mapCanvas");
-    const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
+    const layerVisibility = Object.assign({}, DEFAULT_LAYER_VISIBILITY);
+    const renderer = global.KaneMapRenderer.createRenderer(canvas, baseMapData, grid);
+    renderer.setMapLayerState(layerVisibility, []);
+    const totalChunkCount = featureStore.statusForCells(allCellCodes).total;
     const ctx = {
       global,
       dataAdapter,
@@ -108,6 +126,11 @@
       featureStore,
       allCellCodes,
       allBuildings,
+      fullInitialData,
+      baseMapData,
+      totalChunkCount,
+      layerVisibility,
+      activeCellCodes: [],
       store,
       canvas,
       renderer,
@@ -119,7 +142,6 @@
       pendingImport: null,
       shortcutController: null
     };
-
     ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
     ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
     ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({ getRecords: () => store.snapshot() });
@@ -133,6 +155,18 @@
     ctx.dateStamp = global.KaneMapDomUtils.dateStamp;
     ctx.copyText = global.KaneMapDomUtils.copyText;
     return ctx;
+  }
+
+  function baseMapOnlyData(sourceData) {
+    return {
+      meta: sourceData.meta,
+      roads: [],
+      water: [],
+      forests: [],
+      buildings: [],
+      addressPoints: [],
+      countyBoundary: Array.isArray(sourceData.countyBoundary) ? sourceData.countyBoundary : []
+    };
   }
 
   global.KaneMapAppContext = { createAppContext };

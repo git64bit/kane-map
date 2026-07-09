@@ -10,7 +10,6 @@
     const ctx = canvas.getContext("2d");
     const bounds = initialData.meta.bounds;
     let data = initialData;
-
     const state = {
       width: 0,
       height: 0,
@@ -21,6 +20,15 @@
       offsetY: 18,
       selectedBuildingId: null,
       selectedCellCode: null,
+      activeCellCodes: [],
+      layerVisibility: {
+        roads: false,
+        water: false,
+        forests: false,
+        buildings: false,
+        addressPoints: false,
+        labels: false
+      },
       recordSummaryByBuilding: {},
       buildingFilterIds: null,
       dragging: false,
@@ -45,6 +53,12 @@
 
     function setData(nextData) {
       data = nextData;
+      render();
+    }
+
+    function setMapLayerState(layerVisibility, activeCellCodes) {
+      state.layerVisibility = Object.assign({}, state.layerVisibility, layerVisibility || {});
+      state.activeCellCodes = Array.isArray(activeCellCodes) ? activeCellCodes.slice() : [];
       render();
     }
 
@@ -121,6 +135,7 @@
       resize,
       render,
       setData,
+      setMapLayerState,
       visibleWorldBounds,
       zoomBy,
       rotateBy,
@@ -137,7 +152,5 @@
     };
   }
 
-  global.KaneMapRenderer = {
-    createRenderer
-  };
+  global.KaneMapRenderer = { createRenderer };
 })(window);

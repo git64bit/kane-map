@@ -13,13 +13,17 @@
 
   function drawMap(ctx, state, bounds, data, grid) {
     const worldToScreen = (point) => viewport.worldToScreen(state, bounds, point);
+    const layers = state.layerVisibility || {};
 
     drawBackground(ctx, state);
+    drawCountyBoundary(ctx, data, worldToScreen);
     drawGrid(ctx, state, grid, worldToScreen);
-    drawForests(ctx, state, data, worldToScreen);
-    drawWater(ctx, data, worldToScreen);
-    drawRoads(ctx, state, data, worldToScreen);
-    drawBuildings(ctx, state, bounds, data, worldToScreen);
+
+    if (layers.forests) drawForests(ctx, state, data, worldToScreen);
+    if (layers.water) drawWater(ctx, data, worldToScreen);
+    if (layers.roads) drawRoads(ctx, state, data, worldToScreen);
+    if (layers.addressPoints) drawAddressPoints(ctx, state, data, worldToScreen);
+    if (layers.buildings) drawBuildings(ctx, state, bounds, data, worldToScreen);
   }
 
   function drawBackground(ctx, state) {
@@ -27,23 +31,47 @@
     ctx.fillRect(0, 0, state.width, state.height);
   }
 
+  function drawCountyBoundary(ctx, data, worldToScreen) {
+    const boundaries = Array.isArray(data.countyBoundary) ? data.countyBoundary : [];
+    if (!boundaries.length) return;
+
+    ctx.save();
+    boundaries.forEach((feature) => {
+      primitives.pathPolygon(ctx, worldToScreen, feature.polygon);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 233, 168, 0.95)";
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
   function drawGrid(ctx, state, grid, worldToScreen) {
+    const activeCells = new Set(Array.isArray(state.activeCellCodes) ? state.activeCellCodes : []);
+
     ctx.save();
     ctx.font = "600 15px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
     grid.cells.forEach((cell) => {
+      const selected = cell.code === state.selectedCellCode;
+      const active = activeCells.has(cell.code);
       primitives.pathPolygon(ctx, worldToScreen, cell.polygon);
-      ctx.strokeStyle = cell.code === state.selectedCellCode ? config.COLORS.selected : config.COLORS.grid;
-      ctx.lineWidth = cell.code === state.selectedCellCode ? 2 : 1;
+      if (active) {
+        ctx.fillStyle = "rgba(255, 233, 168, 0.08)";
+        ctx.fill();
+      }
+      ctx.strokeStyle = selected ? config.COLORS.selected : active ? "rgba(255, 233, 168, 0.82)" : config.COLORS.grid;
+      ctx.lineWidth = selected ? 2.4 : active ? 1.8 : 1;
       ctx.stroke();
 
       const [x, y] = worldToScreen(cell.center);
       ctx.lineWidth = 4;
       ctx.strokeStyle = config.COLORS.labelHalo;
       ctx.strokeText(cell.code, x, y);
-      ctx.fillStyle = config.COLORS.gridText;
+      ctx.fillStyle = active || selected ? config.COLORS.selected : config.COLORS.gridText;
       ctx.fillText(cell.code, x, y);
     });
 
@@ -51,9 +79,12 @@
   }
 
   function drawRoads(ctx, state, data, worldToScreen) {
+    const roads = Array.isArray(data.roads) ? data.roads : [];
+    if (!roads.length) return;
+
     ctx.save();
 
-    data.roads.forEach((road) => {
+    roads.forEach((road) => {
       primitives.pathPolyline(ctx, worldToScreen, road.path);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -71,13 +102,15 @@
   }
 
   function drawWater(ctx, data, worldToScreen) {
-    data.water.forEach((feature) => {
+    const water = Array.isArray(data.water) ? data.water : [];
+    water.forEach((feature) => {
       primitives.fillPolygon(ctx, worldToScreen, feature.polygon, config.COLORS.water, config.COLORS.waterEdge, 1.2);
     });
   }
 
   function drawForests(ctx, state, data, worldToScreen) {
-    data.forests.forEach((feature) => {
+    const forests = Array.isArray(data.forests) ? data.forests : [];
+    forests.forEach((feature) => {
       primitives.fillPolygon(ctx, worldToScreen, feature.polygon, config.COLORS.forest, config.COLORS.forestEdge, 1);
       drawTreeDots(ctx, state, feature.polygon, worldToScreen);
     });
@@ -99,6 +132,40 @@
         ctx.fill();
       }
     }
+
+    ctx.restore();
+  }
+
+  function drawAddressPoints(ctx, state, data, worldToScreen) {
+    const points = Array.isArray(data.addressPoints) ? data.addressPoints : [];
+    if (!points.length) return;
+
+    const drawLabels = state.layerVisibility && state.layerVisibility.labels && state.zoom >= BUILDING_LABEL_ZOOM;
+    const radius = Math.max(2, Math.min(6, state.zoom * 2.2));
+
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 10px system-ui, sans-serif";
+
+    points.forEach((item) => {
+      const [x, y] = worldToScreen(item.point);
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 234, 143, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(20, 24, 26, 0.7)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      if (drawLabels && item.address) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = config.COLORS.labelHalo;
+        ctx.strokeText(item.address, x + radius + 4, y);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(item.address, x + radius + 4, y);
+      }
+    });
 
     ctx.restore();
   }
@@ -129,6 +196,7 @@
   }
 
   function shouldDrawBuildingLabels(state, buildings) {
+    if (!(state.layerVisibility && state.layerVisibility.labels)) return false;
     if (state.zoom >= BUILDING_LABEL_ZOOM) return true;
     return buildings.length <= MAX_LABELS_WITHOUT_HIGH_ZOOM;
   }
