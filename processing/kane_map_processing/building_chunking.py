@@ -48,31 +48,88 @@ def chunk_file_name(index: int) -> str:
 def load_existing_manifest() -> dict[str, Any]:
     if CHUNK_MANIFEST_PATH.exists():
         try:
-            return load_json(CHUNK_MANIFEST_PATH)
+            data = load_json(CHUNK_MANIFEST_PATH)
+            if isinstance(data, dict):
+                return data
         except Exception:
             pass
     return {
-        "type": "kane_map_chunk_manifest",
+        "format": "kane-map-prepared-chunk-manifest",
         "version": 1,
         "generated_at": utc_now(),
-        "layers": {},
+        "output_root": str(OUTPUT_ROOT),
+        "total_chunks": 0,
+        "total_features": 0,
+        "total_bytes": 0,
+        "layers": [],
     }
+
+
+def normalize_manifest_layers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    existing = manifest.get("layers")
+    if isinstance(existing, list):
+        return [item for item in existing if isinstance(item, dict)]
+    if isinstance(existing, dict):
+        layers: list[dict[str, Any]] = []
+        for layer_name, layer_data in existing.items():
+            if isinstance(layer_data, dict):
+                entry = dict(layer_data)
+                entry.setdefault("layer", str(layer_name))
+                layers.append(entry)
+        return layers
+    return []
+
+
+def layer_feature_total(layer: dict[str, Any]) -> int:
+    value = layer.get("source_features", layer.get("feature_count"))
+    if isinstance(value, int):
+        return value
+    chunks = layer.get("chunks")
+    if isinstance(chunks, list):
+        return sum(int(chunk.get("feature_count", 0)) for chunk in chunks if isinstance(chunk, dict))
+    return 0
+
+
+def layer_byte_total(layer: dict[str, Any]) -> int:
+    value = layer.get("byte_count")
+    if isinstance(value, int):
+        return value
+    chunks = layer.get("chunks")
+    if isinstance(chunks, list):
+        total = 0
+        for chunk in chunks:
+            if not isinstance(chunk, dict):
+                continue
+            total += int(chunk.get("bytes", chunk.get("byte_count", 0)))
+        return total
+    return 0
 
 
 def update_manifest(layer_entries: list[dict[str, Any]], total_features: int, total_bytes: int) -> None:
     manifest = load_existing_manifest()
-    manifest["generated_at"] = utc_now()
-    manifest.setdefault("layers", {})["buildings"] = {
+    existing_layers = normalize_manifest_layers(manifest)
+    existing_layers = [layer for layer in existing_layers if layer.get("layer") != "buildings"]
+
+    building_layer = {
         "layer": "buildings",
-        "source_file": "prepared/buildings.json",
-        "chunk_dir": "buildings",
+        "status": "chunked",
+        "source_path": str(SOURCE_FILE),
+        "source_features": total_features,
+        "max_features_per_chunk": DEFAULT_MAX_FEATURES,
         "chunk_count": len(layer_entries),
-        "feature_count": total_features,
-        "byte_count": total_bytes,
         "chunks": layer_entries,
     }
-    write_json(CHUNK_MANIFEST_PATH, manifest)
+    existing_layers.append(building_layer)
 
+    manifest["format"] = manifest.get("format", "kane-map-prepared-chunk-manifest")
+    manifest["version"] = manifest.get("version", 1)
+    manifest["generated_at"] = utc_now()
+    manifest["output_root"] = str(OUTPUT_ROOT)
+    manifest["layers"] = existing_layers
+    manifest["total_chunks"] = sum(int(layer.get("chunk_count", len(layer.get("chunks", [])))) for layer in existing_layers)
+    manifest["total_features"] = sum(layer_feature_total(layer) for layer in existing_layers)
+    manifest["total_bytes"] = sum(layer_byte_total(layer) for layer in existing_layers)
+    write_json(CHUNK_MANIFEST_PATH, manifest)
 
 def remove_old_building_chunks() -> None:
     if not BUILDING_CHUNK_DIR.exists():
@@ -139,10 +196,11 @@ def chunk_buildings(max_features: int = DEFAULT_MAX_FEATURES, execute: bool = Fa
             collection = build_chunk_feature_collection(source_data, chunk_features, position, len(chunks))
             byte_count = write_json(output_path, collection)
         entry = {
-            "file": rel_path,
+            "layer": "buildings",
             "chunk_index": position,
+            "path": str(output_path),
             "feature_count": len(chunk_features),
-            "byte_count": byte_count,
+            "bytes": byte_count,
         }
         chunk_entries.append(entry)
         result["chunks"].append(entry)
