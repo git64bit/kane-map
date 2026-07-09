@@ -35,7 +35,8 @@
         sourceType: activeSource.sourceType,
         label: activeSource.label,
         dataVersion: activeSource.catalog.meta.dataVersion || "unknown",
-        active: activeSource.active
+        active: activeSource.active,
+        loadError: activeSource.loadError || ""
       };
     }
 
@@ -46,6 +47,31 @@
       createFeatureStore,
       describe
     };
+  }
+
+  async function createDataAdapterAsync(options) {
+    const sourceTypes = global.KaneMapSourceTypes;
+    const requestedSource = sourceTypes.normalizeSourceType(options && options.sourcePreference);
+    const finalOptions = Object.assign({}, options || {}, { sourcePreference: requestedSource });
+
+    if (requestedSource === sourceTypes.SOURCES.PREPARED && global.KaneMapChunkedBundleLoader) {
+      const loaded = await global.KaneMapChunkedBundleLoader.loadFromLocation();
+      if (loaded && loaded.active && loaded.data) {
+        finalOptions.preparedManifest = {
+          active: true,
+          sourceType: sourceTypes.SOURCES.PREPARED,
+          label: loaded.label || "Prepared Kane County chunked bundle",
+          data: loaded.data
+        };
+      } else {
+        finalOptions.preparedManifest = {
+          active: false,
+          loadError: loaded && loaded.error ? loaded.error : loaded && loaded.reason ? loaded.reason : "prepared data unavailable"
+        };
+      }
+    }
+
+    return createDataAdapter(finalOptions);
   }
 
   function chooseActiveSource(requestedSource, preparedManifest, demoCatalog) {
@@ -71,7 +97,8 @@
       sourceType: sources.DEMO,
       label: "Synthetic demo geometry",
       catalog: demoCatalog,
-      active: true
+      active: true,
+      loadError: preparedManifest && preparedManifest.loadError ? preparedManifest.loadError : ""
     };
   }
 
@@ -114,7 +141,9 @@
       roads: flatten(chunks, "roads"),
       water: flatten(chunks, "water"),
       forests: flatten(chunks, "forests"),
-      buildings: flatten(chunks, "buildings")
+      buildings: flatten(chunks, "buildings"),
+      addressPoints: flatten(chunks, "addressPoints"),
+      countyBoundary: flatten(chunks, "countyBoundary")
     };
   }
 
@@ -135,6 +164,7 @@
   }
 
   global.KaneMapDataAdapter = {
-    createDataAdapter
+    createDataAdapter,
+    createDataAdapterAsync
   };
 })(window);

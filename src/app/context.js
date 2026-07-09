@@ -79,9 +79,13 @@
     };
   }
 
-  function createAppContext() {
-    const dataAdapter = global.KaneMapDataAdapter.createDataAdapter({
-      sourcePreference: global.KaneMapSourceTypes.SOURCES.DEMO,
+  async function createAppContext() {
+    const sourcePreference = global.KaneMapSourceTypes.sourceFromLocation
+      ? global.KaneMapSourceTypes.sourceFromLocation(global.location)
+      : global.KaneMapSourceTypes.SOURCES.DEMO;
+    const dataAdapterFactory = global.KaneMapDataAdapter.createDataAdapterAsync || global.KaneMapDataAdapter.createDataAdapter;
+    const dataAdapter = await dataAdapterFactory({
+      sourcePreference,
       demoCatalog: global.KaneMapDemoCatalog,
       chunkRegistry: global.KaneMapChunkRegistry,
       preparedManifest: global.KaneMapPreparedDataManifest
