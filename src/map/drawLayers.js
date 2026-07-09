@@ -6,6 +6,11 @@
   const viewport = global.KaneMapViewport;
   const statusMarkers = global.KaneMapStatusMarkers;
 
+  const BUILDING_DETAIL_ZOOM = 2.25;
+  const BUILDING_LABEL_ZOOM = 3.25;
+  const MAX_BUILDINGS_WITHOUT_ZOOM = 1200;
+  const MAX_LABELS_WITHOUT_HIGH_ZOOM = 250;
+
   function drawMap(ctx, state, bounds, data, grid) {
     const worldToScreen = (point) => viewport.worldToScreen(state, bounds, point);
 
@@ -41,11 +46,13 @@
       ctx.fillStyle = config.COLORS.gridText;
       ctx.fillText(cell.code, x, y);
     });
+
     ctx.restore();
   }
 
   function drawRoads(ctx, state, data, worldToScreen) {
     ctx.save();
+
     data.roads.forEach((road) => {
       primitives.pathPolyline(ctx, worldToScreen, road.path);
       ctx.lineCap = "round";
@@ -59,6 +66,7 @@
       ctx.lineWidth = road.width * state.zoom;
       ctx.stroke();
     });
+
     ctx.restore();
   }
 
@@ -78,8 +86,10 @@
   function drawTreeDots(ctx, state, polygon, worldToScreen) {
     const b = primitives.polygonBounds(polygon);
     const spacing = 48;
+
     ctx.save();
     ctx.fillStyle = "rgba(35, 76, 38, 0.34)";
+
     for (let y = b.minY + 20; y < b.maxY; y += spacing) {
       for (let x = b.minX + 18; x < b.maxX; x += spacing) {
         if (!global.KaneMapGrid.polygonContainsPoint(polygon, [x, y])) continue;
@@ -89,31 +99,60 @@
         ctx.fill();
       }
     }
+
     ctx.restore();
   }
 
   function drawBuildings(ctx, state, bounds, data, worldToScreen) {
-    const sorted = [...data.buildings].sort((a, b) => primitives.centroid(a.polygon)[1] - primitives.centroid(b.polygon)[1]);
-    sorted.forEach((building) => drawBuilding(ctx, state, bounds, building, worldToScreen));
+    const buildings = Array.isArray(data.buildings) ? data.buildings : [];
+    if (!buildings.length) return;
+
+    const selectedBuilding = selectedBuildingFrom(buildings, state.selectedBuildingId);
+    if (!shouldDrawBuildingDetail(state, buildings)) {
+      if (selectedBuilding) drawBuilding(ctx, state, bounds, selectedBuilding, worldToScreen, { forceLabel: true });
+      return;
+    }
+
+    const sorted = [...buildings].sort((a, b) => primitives.centroid(a.polygon)[1] - primitives.centroid(b.polygon)[1]);
+    const drawLabels = shouldDrawBuildingLabels(state, sorted);
+    sorted.forEach((building) => drawBuilding(ctx, state, bounds, building, worldToScreen, { drawLabel: drawLabels }));
   }
 
-  function drawBuilding(ctx, state, bounds, building, worldToScreen) {
+  function selectedBuildingFrom(buildings, selectedBuildingId) {
+    if (!selectedBuildingId) return null;
+    return buildings.find((building) => building.id === selectedBuildingId) || null;
+  }
+
+  function shouldDrawBuildingDetail(state, buildings) {
+    if (state.zoom >= BUILDING_DETAIL_ZOOM) return true;
+    return buildings.length <= MAX_BUILDINGS_WITHOUT_ZOOM;
+  }
+
+  function shouldDrawBuildingLabels(state, buildings) {
+    if (state.zoom >= BUILDING_LABEL_ZOOM) return true;
+    return buildings.length <= MAX_LABELS_WITHOUT_HIGH_ZOOM;
+  }
+
+  function drawBuilding(ctx, state, bounds, building, worldToScreen, options) {
     const heightPx = building.stories * 16 * Math.max(0.75, state.zoom);
     const selected = building.id === state.selectedBuildingId;
     const filteredOut = state.buildingFilterIds && !state.buildingFilterIds.has(building.id);
+    const drawLabel = selected || Boolean(options && (options.forceLabel || options.drawLabel));
 
     ctx.save();
     ctx.globalAlpha = filteredOut && !selected ? 0.18 : 1;
-    drawBuildingSides(ctx, building.polygon, heightPx, selected, worldToScreen);
 
+    drawBuildingSides(ctx, building.polygon, heightPx, selected, worldToScreen);
     primitives.pathPolygon(ctx, worldToScreen, building.polygon, heightPx);
     ctx.fillStyle = selected ? config.COLORS.selected : config.COLORS.buildingTop;
     ctx.fill();
     ctx.strokeStyle = selected ? "#fff4bf" : "rgba(255, 226, 220, 0.8)";
     ctx.lineWidth = selected ? 2.5 : 1.2;
     ctx.stroke();
-    drawBuildingLabel(ctx, building, heightPx, worldToScreen);
+
+    if (drawLabel) drawBuildingLabel(ctx, building, heightPx, worldToScreen);
     statusMarkers.drawBuildingStatusMarker(ctx, state, bounds, building, heightPx);
+
     ctx.restore();
   }
 
@@ -142,6 +181,7 @@
 
   function drawBuildingLabel(ctx, building, heightPx, worldToScreen) {
     const [x, y] = worldToScreen(primitives.centroid(building.polygon));
+
     ctx.save();
     ctx.font = "700 11px system-ui, sans-serif";
     ctx.textAlign = "center";
