@@ -8,6 +8,8 @@
     defaultPortableBundlePath: "processing/output/prepared",
     defaultBundleFormat: "flat-prepared",
     label: "Kane County prepared JSON files",
+    flatPreparedChunkSize: 5000,
+    flatPreparedYieldEvery: 2500,
     urlParameters: {
       source: ["data", "source", "mode"],
       bundle: ["bundle", "bundleRoot", "bundle-root"],

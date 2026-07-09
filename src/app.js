@@ -2,7 +2,7 @@
   "use strict";
 
   const PRODUCTION_BUNDLE_ROOT = "processing/output/prepared";
-  const BATCH_LABEL = "UI: Batch 066";
+  const BATCH_LABEL = "UI: Batch 067";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -116,9 +116,7 @@
     const link = document.createElement("a");
     link.href = modeUrl(mode);
     link.textContent = active ? `${label} active` : label;
-    link.title = mode === "production"
-      ? "Open Kane County production data using processing/output/prepared"
-      : "Open synthetic demo data";
+    link.title = mode === "production" ? "Open Kane County production data using processing/output/prepared" : "Open synthetic demo data";
     return link;
   }
 
@@ -168,9 +166,7 @@
   function requestedDataMode() {
     const params = new URLSearchParams(global.location && global.location.search ? global.location.search : "");
     const config = global.KaneMapRealBundleConfig || {};
-    const names = config.urlParameters && Array.isArray(config.urlParameters.source)
-      ? config.urlParameters.source
-      : ["data", "source", "mode"];
+    const names = config.urlParameters && Array.isArray(config.urlParameters.source) ? config.urlParameters.source : ["data", "source", "mode"];
     for (const name of names) {
       const value = params.get(name);
       if (value !== null && value !== undefined && String(value).trim() !== "") {
@@ -223,7 +219,6 @@
   }
 
   markBootPending();
-
   global.KaneMapAppContext.createAppContext()
     .then((ctx) => {
       installControllers(ctx);

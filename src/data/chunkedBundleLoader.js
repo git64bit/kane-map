@@ -39,29 +39,39 @@
     if (!requestedPreparedMode(config, global.location)) {
       return { active: false, reason: "prepared data mode not requested" };
     }
+
     const bundleRoot = requestedBundleRoot(config, global.location);
     if (!bundleRoot) {
       return { active: false, error: "prepared bundle root is not configured" };
     }
+
     const bundleFormat = requestedBundleFormat(config, global.location);
     try {
-      if (bundleFormat === "flat-prepared" || bundleFormat === "flat" || bundleFormat === "prepared-json") {
+      if (isFlatPreparedFormat(bundleFormat)) {
         return await loadFlatPreparedBundle(bundleRoot, config);
       }
       return await loadChunkedBundle(bundleRoot, config);
     } catch (error) {
       console.warn("Kane-Map prepared bundle load failed", error);
-      return { active: false, error: error && error.message ? error.message : String(error), bundleRoot };
+      return {
+        active: false,
+        error: error && error.message ? error.message : String(error),
+        bundleRoot
+      };
     }
   }
 
   async function loadBundle(bundleRoot, config) {
     const finalConfig = Object.assign({}, global.KaneMapRealBundleConfig || {}, config || {});
     const bundleFormat = String(finalConfig.defaultBundleFormat || "chunked").trim().toLowerCase();
-    if (bundleFormat === "flat-prepared" || bundleFormat === "flat" || bundleFormat === "prepared-json") {
+    if (isFlatPreparedFormat(bundleFormat)) {
       return loadFlatPreparedBundle(bundleRoot, finalConfig);
     }
     return loadChunkedBundle(bundleRoot, finalConfig);
+  }
+
+  function isFlatPreparedFormat(value) {
+    return ["flat-prepared", "flat", "prepared-json"].includes(String(value || "").trim().toLowerCase());
   }
 
   async function loadChunkedBundle(bundleRoot, config) {
@@ -80,6 +90,7 @@
         const features = Array.isArray(collection.features) ? collection.features : [];
         features.forEach((feature) => expandBoundsWithFeature(rawBounds, feature));
         rawChunks.push({ layerName, chunkEntry, collection, features });
+        await yieldToBrowser();
       }
     }
 
@@ -90,7 +101,11 @@
     const projection = createProjection(rawBounds, config.projectedBounds, Number(config.padding || 0));
     const gridSpec = config.grid || {};
     const projectedBounds = projection.bounds;
-    const catalogChunks = rawChunks.map((chunk) => convertChunk(chunk, projection, gridSpec));
+    const catalogChunks = [];
+    for (const chunk of rawChunks) {
+      catalogChunks.push(convertChunk(chunk, projection, gridSpec));
+      await yieldToBrowser();
+    }
 
     return {
       active: true,
@@ -121,19 +136,17 @@
   async function loadFlatPreparedBundle(bundleRoot, config) {
     const rawChunks = [];
     const rawBounds = createEmptyBounds();
+    const featureChunkSize = positiveInteger(config.flatPreparedChunkSize, 5000);
+    const yieldEvery = positiveInteger(config.flatPreparedYieldEvery, 2500);
     let totalFeatures = 0;
 
     for (const layer of FLAT_PREPARED_LAYERS) {
       const collection = await fetchJson(joinUrl(bundleRoot, layer.path));
       const features = Array.isArray(collection.features) ? collection.features : [];
-      features.forEach((feature) => expandBoundsWithFeature(rawBounds, feature));
+      await expandBoundsWithFeatures(rawBounds, features, yieldEvery);
       totalFeatures += features.length;
-      rawChunks.push({
-        layerName: layer.layer,
-        chunkEntry: { chunk_index: rawChunks.length + 1, path: layer.path, feature_count: features.length },
-        collection,
-        features
-      });
+      splitFlatLayerFeatures(rawChunks, layer.layer, layer.path, features, featureChunkSize);
+      await yieldToBrowser();
     }
 
     if (!isCompleteBounds(rawBounds)) {
@@ -143,7 +156,12 @@
     const projection = createProjection(rawBounds, config.projectedBounds, Number(config.padding || 0));
     const gridSpec = config.grid || {};
     const projectedBounds = projection.bounds;
-    const catalogChunks = rawChunks.map((chunk) => convertChunk(chunk, projection, gridSpec));
+    const catalogChunks = [];
+
+    for (const chunk of rawChunks) {
+      catalogChunks.push(convertChunk(chunk, projection, gridSpec));
+      await yieldToBrowser();
+    }
 
     return {
       active: true,
@@ -151,14 +169,18 @@
       bundleRoot,
       manifest: {
         format: "flat-prepared",
+        browser_chunking: "feature-count",
+        flat_prepared_chunk_size: featureChunkSize,
         total_layers: FLAT_PREPARED_LAYERS.length,
         total_chunks: catalogChunks.length,
         total_features: totalFeatures,
-        layers: FLAT_PREPARED_LAYERS.map((layer, index) => ({
+        layers: FLAT_PREPARED_LAYERS.map((layer) => ({
           layer: layer.layer,
           path: layer.path,
-          chunk_index: index + 1,
-          feature_count: rawChunks[index] ? rawChunks[index].features.length : 0
+          feature_count: rawChunks
+            .filter((chunk) => chunk.layerName === layer.layer)
+            .reduce((total, chunk) => total + chunk.features.length, 0),
+          chunks: rawChunks.filter((chunk) => chunk.layerName === layer.layer).length
         }))
       },
       data: {
@@ -166,8 +188,8 @@
           name: "Kane County prepared JSON files",
           coordinateSystem: "projected browser-local units from prepared GeoJSON",
           sourceCoordinateSystem: "prepared GeoJSON coordinate pairs",
-          dataMode: "local static flat prepared JSON files",
-          dataVersion: "flat-prepared-local",
+          dataMode: "local static flat prepared JSON files, browser-chunked",
+          dataVersion: "flat-prepared-local-browser-chunked",
           status: "loaded",
           bundleRoot,
           totalLayers: FLAT_PREPARED_LAYERS.length,
@@ -179,6 +201,49 @@
         chunks: catalogChunks
       }
     };
+  }
+
+  function splitFlatLayerFeatures(output, layerName, path, features, featureChunkSize) {
+    if (!features.length) {
+      output.push({
+        layerName,
+        chunkEntry: {
+          chunk_index: 1,
+          path,
+          feature_count: 0,
+          format: "flat-prepared-slice",
+          feature_start: 0,
+          feature_end: 0
+        },
+        features: []
+      });
+      return;
+    }
+
+    for (let start = 0, index = 1; start < features.length; start += featureChunkSize, index += 1) {
+      const end = Math.min(features.length, start + featureChunkSize);
+      output.push({
+        layerName,
+        chunkEntry: {
+          chunk_index: index,
+          path,
+          feature_count: end - start,
+          format: "flat-prepared-slice",
+          feature_start: start,
+          feature_end: end
+        },
+        features: features.slice(start, end)
+      });
+    }
+  }
+
+  async function expandBoundsWithFeatures(bounds, features, yieldEvery) {
+    for (let index = 0; index < features.length; index += 1) {
+      expandBoundsWithFeature(bounds, features[index]);
+      if (index > 0 && index % yieldEvery === 0) {
+        await yieldToBrowser();
+      }
+    }
   }
 
   function countFeatures(rawChunks) {
@@ -198,25 +263,27 @@
       countyBoundary: []
     };
     const featureBounds = createEmptyBounds();
+
     chunk.features.forEach((feature, index) => {
-      const convertedFeatures = convertFeature(chunk.layerName, feature, projection, index);
+      const convertedFeatures = convertFeature(chunk.layerName, feature, projection, chunkIndexId(chunk, index));
       convertedFeatures.forEach((item) => appendConvertedFeature(converted, chunk.layerName, item));
       expandBoundsWithFeature(featureBounds, feature);
     });
+
     converted.cells = cellsForRawBounds(featureBounds, projection, gridSpec);
     if (!converted.cells.length) converted.cells = allGridCells(gridSpec);
     return converted;
   }
 
-  function convertFeature(layerName, feature, projection, index) {
+  function convertFeature(layerName, feature, projection, id) {
     const props = feature.properties || {};
     const geometry = feature.geometry || {};
-    const id = String(feature.id || props.id || props.source_id || `${layerName}-${index + 1}`);
-    if (layerName === "roads") return convertRoad(feature, props, geometry, projection, id);
-    if (layerName === "water") return convertArea(feature, props, geometry, projection, id, "water");
-    if (layerName === "county_boundary") return convertArea(feature, props, geometry, projection, id, "countyBoundary");
-    if (layerName === "buildings") return convertBuilding(feature, props, geometry, projection, id);
-    if (layerName === "address_points") return convertAddressPoint(feature, props, geometry, projection, id);
+    const sourceId = String(feature.id || props.id || props.source_id || id);
+    if (layerName === "roads") return convertRoad(feature, props, geometry, projection, sourceId);
+    if (layerName === "water") return convertArea(feature, props, geometry, projection, sourceId, "water");
+    if (layerName === "county_boundary") return convertArea(feature, props, geometry, projection, sourceId, "countyBoundary");
+    if (layerName === "buildings") return convertBuilding(feature, props, geometry, projection, sourceId);
+    if (layerName === "address_points") return convertAddressPoint(feature, props, geometry, projection, sourceId);
     return [];
   }
 
@@ -300,12 +367,26 @@
 
   function chunkId(chunk) {
     const entry = chunk.chunkEntry || {};
+    if (entry.format === "flat-prepared-slice") {
+      return `${chunk.layerName}-flat-${String(entry.chunk_index || 1).padStart(6, "0")}`;
+    }
     if (entry.path && !entry.path.includes("/")) return `${chunk.layerName}-flat`;
     return `${chunk.layerName}-${String(entry.chunk_index || 1).padStart(6, "0")}`;
   }
 
+  function chunkIndexId(chunk, index) {
+    const entry = chunk.chunkEntry || {};
+    if (entry.format === "flat-prepared-slice") {
+      return `${chunk.layerName}-${Number(entry.feature_start || 0) + index + 1}`;
+    }
+    return `${chunk.layerName}-${index + 1}`;
+  }
+
   function chunkLabel(chunk) {
     const entry = chunk.chunkEntry || {};
+    if (entry.format === "flat-prepared-slice") {
+      return `${chunk.layerName} prepared JSON ${entry.chunk_index || 1}`;
+    }
     if (entry.path && !entry.path.includes("/")) return `${chunk.layerName} prepared JSON`;
     return `${chunk.layerName} chunk ${entry.chunk_index || 1}`;
   }
@@ -470,6 +551,16 @@
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function positiveInteger(value, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 1) return fallback;
+    return Math.floor(number);
+  }
+
+  function yieldToBrowser() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   global.KaneMapChunkedBundleLoader = { loadFromLocation, loadBundle };

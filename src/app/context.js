@@ -91,20 +91,14 @@
       preparedManifest: global.KaneMapPreparedDataManifest
     });
     const catalog = dataAdapter.getCatalog();
-    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), {
-      rows: 4,
-      cols: 6,
-      startNorth: 11,
-      startEast: 5
-    });
+    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), { rows: 4, cols: 6, startNorth: 11, startEast: 5 });
     const featureStore = dataAdapter.createFeatureStore();
     const allCellCodes = grid.cells.map((cell) => cell.code);
-    const allBuildings = featureStore.buildDataForCells(allCellCodes).buildings;
     const initialData = featureStore.buildDataForCells(allCellCodes);
+    const allBuildings = initialData.buildings;
     const store = global.KaneMapLocalStore.createLocalObservationStore();
     const canvas = document.getElementById("mapCanvas");
     const renderer = global.KaneMapRenderer.createRenderer(canvas, initialData, grid);
-
     const ctx = {
       global,
       dataAdapter,
@@ -126,20 +120,9 @@
       shortcutController: null
     };
 
-    ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({
-      grid,
-      buildings: allBuildings,
-      getRecords: () => store.snapshot()
-    });
-    ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({
-      grid,
-      buildings: allBuildings,
-      getRecords: () => store.snapshot()
-    });
-    ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({
-      getRecords: () => store.snapshot()
-    });
-
+    ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
+    ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
+    ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({ getRecords: () => store.snapshot() });
     ctx.findBuildingById = (buildingId) => allBuildings.find((building) => building.id === buildingId) || null;
     ctx.cellForCode = (code) => grid.cells.find((cell) => cell.code === code) || null;
     ctx.pointerPosition = (event) => {
@@ -149,7 +132,6 @@
     ctx.escapeHtml = global.KaneMapDomUtils.escapeHtml;
     ctx.dateStamp = global.KaneMapDomUtils.dateStamp;
     ctx.copyText = global.KaneMapDomUtils.copyText;
-
     return ctx;
   }
 
