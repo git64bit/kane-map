@@ -6,31 +6,15 @@
     manifestName: "chunk_manifest.json",
     defaultBundlePath: "processing/output/prepared",
     defaultPortableBundlePath: "processing/output/prepared",
+    defaultBundleFormat: "flat-prepared",
     label: "Kane County prepared JSON files",
-    bundleFormat: "flat-prepared",
     urlParameters: {
       source: ["data", "source", "mode"],
-      bundle: ["bundle", "bundleRoot", "bundle-root"]
+      bundle: ["bundle", "bundleRoot", "bundle-root"],
+      format: ["format", "bundleFormat", "bundle-format"]
     },
-    preparedLayerFiles: {
-      county_boundary: "county_boundary.json",
-      roads: "roads.json",
-      water: "water.json",
-      buildings: "buildings.json",
-      address_points: "address_points.json"
-    },
-    grid: {
-      rows: 4,
-      cols: 6,
-      startNorth: 11,
-      startEast: 5
-    },
-    projectedBounds: {
-      minX: 0,
-      minY: 0,
-      maxX: 1400,
-      maxY: 900
-    },
+    grid: { rows: 4, cols: 6, startNorth: 11, startEast: 5 },
+    projectedBounds: { minX: 0, minY: 0, maxX: 1400, maxY: 900 },
     padding: 35
   };
 })(window);

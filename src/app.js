@@ -2,7 +2,7 @@
   "use strict";
 
   const PRODUCTION_BUNDLE_ROOT = "processing/output/prepared";
-  const BATCH_LABEL = "UI: Batch 064";
+  const BATCH_LABEL = "UI: Batch 066";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -22,10 +22,8 @@
     ctx.bindImportExportEvents();
     ctx.bindKeyboardShortcuts();
     ctx.bindObservationEvents();
-
     window.addEventListener("resize", ctx.handleResize);
     ctx.handleResize();
-
     ctx.updateSelectedPanel();
     ctx.updateDesignatorPreview();
     ctx.updateRecordPanel();
@@ -36,7 +34,6 @@
     ctx.updateFieldPlanUi();
     ctx.updateStorageStatus();
     ctx.updateViewAndChunkStatus();
-
     updateRuntimeModeStatus(ctx);
     updateDataSourceStatus(ctx);
     updateDataSwitchStatus(ctx);
@@ -45,23 +42,17 @@
 
   function showBootError(error) {
     console.error("Kane-Map boot failed", error);
-
     const status = document.getElementById("renderStatus");
     if (status) status.textContent = "Render: boot failed";
-
     const message = error && error.message ? error.message : "Boot failed";
     const chunkStatus = document.getElementById("chunkStatus");
     if (chunkStatus) chunkStatus.textContent = message;
-
     const runtimeStatus = ensureRuntimeStatusSpan();
     if (runtimeStatus) runtimeStatus.textContent = bootErrorRuntimeLabel();
-
     const sourceStatus = ensureFooterStatusSpan("dataSourceStatus");
     if (sourceStatus) sourceStatus.textContent = dataUnavailableLabel(message);
-
     const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
     if (loadStatus) loadStatus.textContent = "Load: unavailable";
-
     updateDataSwitchStatus(null);
     updateUiBatchStatus();
   }
@@ -69,7 +60,6 @@
   function updateDataSourceStatus(ctx) {
     const sourceStatus = ensureFooterStatusSpan("dataSourceStatus");
     if (sourceStatus) sourceStatus.textContent = sourceLabel(ctx && ctx.dataSource);
-
     const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
     if (loadStatus) loadStatus.textContent = sourceLoadLabel(ctx && ctx.dataSource);
   }
@@ -87,10 +77,8 @@
   function ensureRuntimeStatusSpan() {
     let element = document.getElementById("runtimeModeStatus");
     if (element) return element;
-
     const footer = document.querySelector(".status-bar");
     if (!footer) return null;
-
     const spans = Array.from(footer.querySelectorAll("span"));
     element = spans.find((span) => /demo mode by default/i.test(span.textContent || ""));
     if (!element) {
@@ -104,10 +92,8 @@
   function ensureFooterStatusSpan(id) {
     let element = document.getElementById(id);
     if (element) return element;
-
     const footer = document.querySelector(".status-bar");
     if (!footer) return null;
-
     element = document.createElement("span");
     element.id = id;
     footer.appendChild(element);
@@ -117,10 +103,8 @@
   function updateDataSwitchStatus(ctx) {
     const element = ensureFooterStatusSpan("dataSwitchStatus");
     if (!element) return;
-
     const dataSource = ctx && ctx.dataSource ? ctx.dataSource : null;
     const active = dataSource && dataSource.sourceType === "prepared" ? "production" : "demo";
-
     element.textContent = "";
     element.appendChild(document.createTextNode("Switch: "));
     element.appendChild(modeLink("Demo", "demo", active === "demo"));
@@ -160,7 +144,6 @@
     if (dataSource && dataSource.sourceType === "prepared") return "Runtime: production data active";
     if (requestedPreparedMode()) return "Runtime: production requested";
     if (requestedDemoMode()) return "Runtime: demo forced by URL";
-
     const config = global.KaneMapRealBundleConfig || {};
     return config.enabledByDefault ? "Runtime: production default" : "Runtime: source demo default";
   }
@@ -214,7 +197,6 @@
 
   function sourceLoadLabel(dataSource) {
     if (!dataSource) return "Load: unavailable";
-
     const parts = [];
     if (dataSource.totalLayers) parts.push(`Layers ${formatNumber(dataSource.totalLayers)}`);
     if (dataSource.totalChunks) parts.push(`Chunks ${formatNumber(dataSource.totalChunks)}`);
@@ -232,13 +214,10 @@
   function markBootPending() {
     const runtimeStatus = ensureRuntimeStatusSpan();
     if (runtimeStatus) runtimeStatus.textContent = "Runtime: resolving data mode";
-
     const sourceStatus = ensureFooterStatusSpan("dataSourceStatus");
     if (sourceStatus) sourceStatus.textContent = "Data: resolving";
-
     const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
     if (loadStatus) loadStatus.textContent = "Load: pending";
-
     updateDataSwitchStatus(null);
     updateUiBatchStatus();
   }
