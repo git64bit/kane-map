@@ -30,6 +30,18 @@
     return stripTrailingSlash(value || config.defaultBundlePath || "");
   }
 
+  function requestedBundleFormat(config, locationObject) {
+    const location = locationObject || global.location;
+    const params = new URLSearchParams(location && location.search ? location.search : "");
+    const value = params.get("format") || params.get("bundleFormat") || params.get("bundle-format") || config.bundleFormat || "chunked";
+    return String(value || "chunked").toLowerCase();
+  }
+
+  function prefersFlatPrepared(config, locationObject) {
+    const format = requestedBundleFormat(config, locationObject);
+    return ["flat", "flat-prepared", "prepared-json", "prepared-json-files"].includes(format);
+  }
+
   async function loadFromLocation(options) {
     const config = Object.assign({}, global.KaneMapRealBundleConfig || {}, options || {});
     if (!requestedPreparedMode(config, global.location)) {
@@ -39,6 +51,19 @@
     const bundleRoot = requestedBundleRoot(config, global.location);
     if (!bundleRoot) {
       return { active: false, error: "prepared data root is not configured" };
+    }
+
+    if (prefersFlatPrepared(config, global.location)) {
+      try {
+        return await loadFlatPreparedLayers(bundleRoot, config);
+      } catch (flatError) {
+        console.warn("Kane-Map flat prepared data load failed", flatError);
+        return {
+          active: false,
+          error: errorMessage(flatError),
+          bundleRoot
+        };
+      }
     }
 
     try {

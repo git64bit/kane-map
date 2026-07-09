@@ -143,9 +143,10 @@
     if (mode === "production") {
       url.searchParams.set("data", "prepared");
       url.searchParams.set("bundle", productionBundleRoot());
+      url.searchParams.set("format", "flat-prepared");
     } else {
       url.searchParams.set("data", "demo");
-      ["bundle", "bundleRoot", "bundle-root"].forEach((name) => url.searchParams.delete(name));
+      ["bundle", "bundleRoot", "bundle-root", "format", "bundleFormat", "bundle-format"].forEach((name) => url.searchParams.delete(name));
     }
     return url.href;
   }

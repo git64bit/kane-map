@@ -7,6 +7,7 @@
     defaultBundlePath: "processing/output/prepared",
     defaultPortableBundlePath: "processing/output/prepared",
     label: "Kane County prepared JSON files",
+    bundleFormat: "flat-prepared",
     urlParameters: {
       source: ["data", "source", "mode"],
       bundle: ["bundle", "bundleRoot", "bundle-root"]
