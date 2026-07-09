@@ -4,18 +4,32 @@
   global.KaneMapRealBundleConfig = {
     enabledByDefault: false,
     manifestName: "chunk_manifest.json",
-    defaultBundlePath: "processing/output/bundles/kane-map-chunked-prepared-20260709T094356Z",
-    label: "Kane County production bundle",
+    defaultBundlePath: "processing/output/prepared",
+    defaultPortableBundlePath: "processing/output/prepared",
+    label: "Kane County prepared JSON files",
     urlParameters: {
       source: ["data", "source", "mode"],
       bundle: ["bundle", "bundleRoot", "bundle-root"]
     },
-    grid: { rows: 4, cols: 6, startNorth: 11, startEast: 5 },
-    projectedBounds: { minX: 0, minY: 0, maxX: 1400, maxY: 900 },
+    preparedLayerFiles: {
+      county_boundary: "county_boundary.json",
+      roads: "roads.json",
+      water: "water.json",
+      buildings: "buildings.json",
+      address_points: "address_points.json"
+    },
+    grid: {
+      rows: 4,
+      cols: 6,
+      startNorth: 11,
+      startEast: 5
+    },
+    projectedBounds: {
+      minX: 0,
+      minY: 0,
+      maxX: 1400,
+      maxY: 900
+    },
     padding: 35
   };
-
-  // Portable app bundles place a generated portable_config.js beside index.html.
-  // src/app.js loads that root file before app context creation so src/ can be
-  // recopied to a USB app without resetting the packaged production default.
 })(window);

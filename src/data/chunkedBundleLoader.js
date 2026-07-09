@@ -1,19 +1,31 @@
 (function attachChunkedBundleLoader(global) {
   "use strict";
 
+  const DEFAULT_LAYER_FILES = Object.freeze({
+    county_boundary: "county_boundary.json",
+    roads: "roads.json",
+    water: "water.json",
+    buildings: "buildings.json",
+    address_points: "address_points.json"
+  });
+
   function requestedPreparedMode(config, locationObject) {
     const location = locationObject || global.location;
     const params = new URLSearchParams(location && location.search ? location.search : "");
-    const names = config.urlParameters.source || [];
+    const names = config.urlParameters && Array.isArray(config.urlParameters.source)
+      ? config.urlParameters.source
+      : [];
     const value = names.map((name) => params.get(name)).find(Boolean);
     if (!value) return Boolean(config.enabledByDefault);
-    return ["prepared", "real", "chunked", "chunked-prepared"].includes(String(value).toLowerCase());
+    return ["prepared", "real", "chunked", "chunked-prepared", "production", "prod"].includes(String(value).toLowerCase());
   }
 
   function requestedBundleRoot(config, locationObject) {
     const location = locationObject || global.location;
     const params = new URLSearchParams(location && location.search ? location.search : "");
-    const names = config.urlParameters.bundle || [];
+    const names = config.urlParameters && Array.isArray(config.urlParameters.bundle)
+      ? config.urlParameters.bundle
+      : [];
     const value = names.map((name) => params.get(name)).find(Boolean);
     return stripTrailingSlash(value || config.defaultBundlePath || "");
   }
@@ -26,18 +38,22 @@
 
     const bundleRoot = requestedBundleRoot(config, global.location);
     if (!bundleRoot) {
-      return { active: false, error: "prepared bundle root is not configured" };
+      return { active: false, error: "prepared data root is not configured" };
     }
 
     try {
       return await loadBundle(bundleRoot, config);
-    } catch (error) {
-      console.warn("Kane-Map prepared bundle load failed", error);
-      return {
-        active: false,
-        error: error && error.message ? error.message : String(error),
-        bundleRoot
-      };
+    } catch (chunkedError) {
+      try {
+        return await loadFlatPreparedLayers(bundleRoot, config, chunkedError);
+      } catch (flatError) {
+        console.warn("Kane-Map prepared data load failed", { chunkedError, flatError });
+        return {
+          active: false,
+          error: errorMessage(flatError) || errorMessage(chunkedError),
+          bundleRoot
+        };
+      }
     }
   }
 
@@ -71,12 +87,12 @@
 
     return {
       active: true,
-      label: "Prepared Kane County chunked bundle",
+      label: config.label || "Kane County production bundle",
       bundleRoot,
       manifest,
       data: {
         meta: {
-          name: "Kane County prepared chunked bundle",
+          name: config.label || "Kane County prepared chunked bundle",
           coordinateSystem: "projected browser-local units from prepared GeoJSON",
           sourceCoordinateSystem: "prepared GeoJSON coordinate pairs",
           dataMode: "local static chunked prepared bundle",
@@ -95,6 +111,88 @@
     };
   }
 
+  async function loadFlatPreparedLayers(bundleRoot, config, chunkedError) {
+    const layerFiles = Object.assign({}, DEFAULT_LAYER_FILES, config.preparedLayerFiles || {});
+    const rawChunks = [];
+    const rawBounds = createEmptyBounds();
+    let totalFeatures = 0;
+    let totalBytes = 0;
+    let index = 0;
+
+    for (const layerName of Object.keys(DEFAULT_LAYER_FILES)) {
+      index += 1;
+      const path = layerFiles[layerName];
+      const url = joinUrl(bundleRoot, path);
+      const collection = await fetchJson(url);
+      const features = Array.isArray(collection.features) ? collection.features : [];
+      features.forEach((feature) => expandBoundsWithFeature(rawBounds, feature));
+      totalFeatures += features.length;
+      totalBytes += JSON.stringify(collection).length;
+      rawChunks.push({
+        layerName,
+        collection,
+        features,
+        chunkEntry: { chunk_index: index, path }
+      });
+    }
+
+    if (!isCompleteBounds(rawBounds)) {
+      const fallback = chunkedError ? ` Previous chunked-load error: ${errorMessage(chunkedError)}` : "";
+      throw new Error(`Prepared JSON files have no usable feature coordinates.${fallback}`);
+    }
+
+    const projection = createProjection(rawBounds, config.projectedBounds, Number(config.padding || 0));
+    const gridSpec = config.grid || {};
+    const projectedBounds = projection.bounds;
+    const catalogChunks = rawChunks.map((chunk) => convertChunk(chunk, projection, gridSpec));
+    const generatedAt = newestLayerTimestamp(rawChunks);
+
+    return {
+      active: true,
+      label: config.label || "Kane County prepared JSON files",
+      bundleRoot,
+      manifest: {
+        schema: "kane-map-flat-prepared-v1",
+        generated_at: generatedAt || "flat-prepared-local",
+        total_layers: rawChunks.length,
+        total_chunks: rawChunks.length,
+        total_features: totalFeatures,
+        total_bytes: totalBytes,
+        layers: rawChunks.map((chunk) => ({
+          layer: chunk.layerName,
+          path: chunk.chunkEntry.path,
+          features: chunk.features.length
+        }))
+      },
+      data: {
+        meta: {
+          name: config.label || "Kane County prepared JSON files",
+          coordinateSystem: "projected browser-local units from prepared GeoJSON",
+          sourceCoordinateSystem: "prepared GeoJSON coordinate pairs",
+          dataMode: "local static flat prepared JSON files",
+          dataVersion: generatedAt || "flat-prepared-local",
+          status: "loaded",
+          bundleRoot,
+          totalLayers: rawChunks.length,
+          totalChunks: rawChunks.length,
+          totalFeatures,
+          totalBytes,
+          rawBounds: rawBoundsToArray(rawBounds),
+          bounds: projectedBounds
+        },
+        chunks: catalogChunks
+      }
+    };
+  }
+
+  function newestLayerTimestamp(rawChunks) {
+    const values = rawChunks
+      .map((chunk) => chunk.collection && chunk.collection.kane_map_layer ? chunk.collection.kane_map_layer.generated_at_utc : "")
+      .filter(Boolean)
+      .sort();
+    return values.length ? values[values.length - 1] : "";
+  }
+
   function convertChunk(chunk, projection, gridSpec) {
     const converted = {
       id: chunkId(chunk),
@@ -107,8 +205,8 @@
       addressPoints: [],
       countyBoundary: []
     };
-
     const featureBounds = createEmptyBounds();
+
     chunk.features.forEach((feature, index) => {
       const convertedFeatures = convertFeature(chunk.layerName, feature, projection, index);
       convertedFeatures.forEach((item) => appendConvertedFeature(converted, chunk.layerName, item));
@@ -124,7 +222,6 @@
     const props = feature.properties || {};
     const geometry = feature.geometry || {};
     const id = String(feature.id || props.id || props.source_id || `${layerName}-${index + 1}`);
-
     if (layerName === "roads") return convertRoad(feature, props, geometry, projection, id);
     if (layerName === "water") return convertArea(feature, props, geometry, projection, id, "water");
     if (layerName === "county_boundary") return convertArea(feature, props, geometry, projection, id, "countyBoundary");
@@ -268,7 +365,10 @@
     const offsetX = target.minX + (target.maxX - target.minX - usedWidth) / 2;
     const offsetY = target.minY + (target.maxY - target.minY - usedHeight) / 2;
     const bounds = { minX: target.minX, minY: target.minY, maxX: target.maxX, maxY: target.maxY };
-    const gridSpec = Object.assign({ rows: 4, cols: 6, startNorth: 11, startEast: 5 }, (global.KaneMapRealBundleConfig || {}).grid || {});
+    const gridSpec = Object.assign(
+      { rows: 4, cols: 6, startNorth: 11, startEast: 5 },
+      (global.KaneMapRealBundleConfig || {}).grid || {}
+    );
     return { rawBounds, scale, offsetX, offsetY, bounds, gridSpec };
   }
 
@@ -383,8 +483,9 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  global.KaneMapChunkedBundleLoader = {
-    loadFromLocation,
-    loadBundle
-  };
+  function errorMessage(error) {
+    return error && error.message ? error.message : String(error || "");
+  }
+
+  global.KaneMapChunkedBundleLoader = { loadFromLocation, loadBundle, loadFlatPreparedLayers };
 })(window);
