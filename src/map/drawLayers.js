@@ -18,6 +18,7 @@
     drawBackground(ctx, state);
     drawCountyBoundary(ctx, data, worldToScreen);
     drawGrid(ctx, state, grid, worldToScreen);
+    drawInspectionGrid(ctx, state, worldToScreen);
 
     ctx.save();
     if (clipToActiveCells(ctx, state, grid, worldToScreen)) {
@@ -31,10 +32,7 @@
   }
 
   function clipToActiveCells(ctx, state, grid, worldToScreen) {
-    const activeCodes = new Set(Array.isArray(state.activeCellCodes) ? state.activeCellCodes : []);
-    if (!activeCodes.size || !grid || !Array.isArray(grid.cells)) return false;
-
-    const activeCells = grid.cells.filter((cell) => activeCodes.has(cell.code));
+    const activeCells = activeClipCells(state, grid);
     if (!activeCells.length) return false;
 
     ctx.beginPath();
@@ -51,6 +49,15 @@
     });
     ctx.clip();
     return true;
+  }
+
+  function activeClipCells(state, grid) {
+    const activeDetailCells = Array.isArray(state.activeDetailCells) ? state.activeDetailCells : [];
+    if (activeDetailCells.length) return activeDetailCells;
+
+    const activeCodes = new Set(Array.isArray(state.activeCellCodes) ? state.activeCellCodes : []);
+    if (!activeCodes.size || !grid || !Array.isArray(grid.cells)) return [];
+    return grid.cells.filter((cell) => activeCodes.has(cell.code));
   }
 
   function drawBackground(ctx, state) {
@@ -103,6 +110,51 @@
     });
 
     ctx.restore();
+  }
+
+  function drawInspectionGrid(ctx, state, worldToScreen) {
+    const cells = Array.isArray(state.detailGridCells) ? state.detailGridCells : [];
+    if (!cells.length) return;
+
+    const activeDetailCells = new Set(Array.isArray(state.activeDetailCellCodes) ? state.activeDetailCellCodes : []);
+    const selectedDetailCellCode = state.selectedDetailCellCode || null;
+    const drawLabels = state.zoom >= 3.4;
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 10px system-ui, sans-serif";
+
+    cells.forEach((cell) => {
+      const active = activeDetailCells.has(cell.code);
+      const selected = selectedDetailCellCode === cell.code;
+      primitives.pathPolygon(ctx, worldToScreen, cell.polygon);
+      if (active) {
+        ctx.fillStyle = "rgba(89, 168, 255, 0.12)";
+        ctx.fill();
+      }
+      ctx.strokeStyle = selected ? "rgba(255, 244, 191, 0.95)" : active ? "rgba(89, 168, 255, 0.82)" : "rgba(120, 190, 255, 0.34)";
+      ctx.lineWidth = selected ? 2 : active ? 1.4 : 0.75;
+      ctx.stroke();
+
+      if (drawLabels || selected || active) {
+        const [x, y] = worldToScreen(cell.center);
+        const label = detailCellLabel(cell);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = config.COLORS.labelHalo;
+        ctx.strokeText(label, x, y);
+        ctx.fillStyle = selected || active ? "#fff4bf" : "rgba(174, 213, 255, 0.9)";
+        ctx.fillText(label, x, y);
+      }
+    });
+
+    ctx.restore();
+  }
+
+  function detailCellLabel(cell) {
+    const row = Number.isFinite(cell.row) ? cell.row + 1 : "?";
+    const col = Number.isFinite(cell.col) ? cell.col + 1 : "?";
+    return `${row}-${col}`;
   }
 
   function drawRoads(ctx, state, data, worldToScreen) {

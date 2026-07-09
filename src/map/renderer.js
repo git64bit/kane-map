@@ -20,7 +20,11 @@
       offsetY: 18,
       selectedBuildingId: null,
       selectedCellCode: null,
+      selectedDetailCellCode: null,
       activeCellCodes: [],
+      activeDetailCellCodes: [],
+      activeDetailCells: [],
+      detailGridCells: [],
       layerVisibility: {
         roads: false,
         water: false,
@@ -56,9 +60,14 @@
       render();
     }
 
-    function setMapLayerState(layerVisibility, activeCellCodes) {
+    function setMapLayerState(layerVisibility, activeCellCodes, detailState) {
+      const detail = detailState || {};
       state.layerVisibility = Object.assign({}, state.layerVisibility, layerVisibility || {});
       state.activeCellCodes = Array.isArray(activeCellCodes) ? activeCellCodes.slice() : [];
+      state.activeDetailCells = Array.isArray(detail.activeDetailCells) ? detail.activeDetailCells.slice() : [];
+      state.activeDetailCellCodes = state.activeDetailCells.map((cell) => cell.code);
+      state.detailGridCells = Array.isArray(detail.detailGridCells) ? detail.detailGridCells.slice() : [];
+      state.selectedDetailCellCode = detail.selectedDetailCell ? detail.selectedDetailCell.code : null;
       render();
     }
 
@@ -90,9 +99,10 @@
       render();
     }
 
-    function setSelected(building, cell) {
+    function setSelected(building, cell, detailCell) {
       state.selectedBuildingId = building ? building.id : null;
       state.selectedCellCode = cell ? cell.code : null;
+      state.selectedDetailCellCode = detailCell ? detailCell.code : null;
       render();
     }
 

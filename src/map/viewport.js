@@ -2,6 +2,7 @@
   "use strict";
 
   const config = global.KaneMapRendererConfig;
+  const MAX_ZOOM = 12.0;
 
   function worldCenter(bounds) {
     return [
@@ -19,7 +20,6 @@
     const dy = point[1] - centerY;
     const rx = dx * cos - dy * sin;
     const ry = dx * sin + dy * cos;
-
     return [
       state.width / 2 + state.offsetX + rx * state.zoom,
       state.height / 2 + state.offsetY + ry * state.zoom * state.pitchScale
@@ -47,7 +47,6 @@
     ];
     const xs = points.map((point) => point[0]);
     const ys = points.map((point) => point[1]);
-
     return {
       minX: Math.min(...xs),
       minY: Math.min(...ys),
@@ -63,7 +62,7 @@
   }
 
   function zoomBy(state, factor) {
-    state.zoom = config.clamp(state.zoom * factor, 0.35, 2.4);
+    state.zoom = config.clamp(state.zoom * factor, 0.35, MAX_ZOOM);
   }
 
   function rotateBy(state, degrees) {

@@ -1,6 +1,9 @@
 (function kaneMapMapController(global) {
   "use strict";
 
+  const INSPECTION_GRID_ROWS = 16;
+  const INSPECTION_GRID_COLS = 16;
+
   const LAYER_SPECS = Object.freeze([
     { key: "roads", label: "Roads" },
     { key: "water", label: "Water" },
@@ -35,7 +38,7 @@
       canvas.addEventListener("pointercancel", () => renderer.endDrag());
       canvas.addEventListener("wheel", (event) => {
         event.preventDefault();
-        renderer.zoomBy(event.deltaY < 0 ? 1.12 : 0.88);
+        renderer.zoomBy(event.deltaY < 0 ? 1.16 : 0.86);
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       }, { passive: false });
@@ -43,8 +46,8 @@
 
     ctx.bindMapControlEvents = function bindMapControlEvents() {
       installLayerControls(ctx);
-      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.18)));
-      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.84)));
+      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.28)));
+      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.78)));
       els.rotateLeft.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(-12)));
       els.rotateRight.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(12)));
       els.prevBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(-1));
@@ -83,39 +86,60 @@
     };
 
     ctx.refreshMapData = function refreshMapData() {
-      renderer.setMapLayerState(ctx.layerVisibility, ctx.activeCellCodes);
+      ctx.detailGridCells = detailGridCellsForDisplay(ctx);
+      renderer.setMapLayerState(ctx.layerVisibility, ctx.activeCellCodes, {
+        activeDetailCells: ctx.activeDetailCells,
+        selectedDetailCell: ctx.selectedDetailCell,
+        detailGridCells: ctx.detailGridCells
+      });
       renderer.setData(ctx.buildMapData());
       ctx.updateLayerControlStatus();
     };
 
     ctx.buildMapData = function buildMapData() {
-      if (!ctx.activeCellCodes.length) return ctx.baseMapData;
+      const dataCellCodes = activeDataCellCodes(ctx);
+      if (!dataCellCodes.length) return ctx.baseMapData;
 
-      const activeCells = activeCellsForCodes(ctx.grid, ctx.activeCellCodes);
+      const activeCells = activeCellsForCodes(ctx.grid, dataCellCodes);
       if (!activeCells.length) return ctx.baseMapData;
 
-      const detailData = ctx.featureStore.buildDataForCells(ctx.activeCellCodes);
+      const clipCells = ctx.activeDetailCells.length ? ctx.activeDetailCells : activeCells;
+      const detailData = ctx.featureStore.buildDataForCells(dataCellCodes);
       return {
         meta: detailData.meta,
         countyBoundary: ctx.baseMapData.countyBoundary,
-        roads: ctx.layerVisibility.roads ? filterFeaturesByActiveCells(detailData.roads, activeCells, "path") : [],
-        water: ctx.layerVisibility.water ? filterFeaturesByActiveCells(detailData.water, activeCells, "polygon") : [],
-        forests: ctx.layerVisibility.forests ? filterFeaturesByActiveCells(detailData.forests, activeCells, "polygon") : [],
-        buildings: ctx.layerVisibility.buildings ? filterFeaturesByActiveCells(detailData.buildings, activeCells, "polygon") : [],
-        addressPoints: ctx.layerVisibility.addressPoints ? filterFeaturesByActiveCells(detailData.addressPoints, activeCells, "point") : []
+        roads: ctx.layerVisibility.roads ? filterFeaturesByActiveCells(detailData.roads, clipCells, "path") : [],
+        water: ctx.layerVisibility.water ? filterFeaturesByActiveCells(detailData.water, clipCells, "polygon") : [],
+        forests: ctx.layerVisibility.forests ? filterFeaturesByActiveCells(detailData.forests, clipCells, "polygon") : [],
+        buildings: ctx.layerVisibility.buildings ? filterFeaturesByActiveCells(detailData.buildings, clipCells, "polygon") : [],
+        addressPoints: ctx.layerVisibility.addressPoints ? filterFeaturesByActiveCells(detailData.addressPoints, clipCells, "point") : []
       };
     };
 
     ctx.activeChunkStatus = function activeChunkStatus() {
-      if (!ctx.activeCellCodes.length) {
+      const dataCellCodes = activeDataCellCodes(ctx);
+      if (!dataCellCodes.length) {
         return { selected: 0, total: ctx.totalChunkCount || 0, ids: [] };
       }
-      return ctx.featureStore.statusForCells(ctx.activeCellCodes);
+      return ctx.featureStore.statusForCells(dataCellCodes);
     };
 
     ctx.activateCell = function activateCell(cellCode) {
-      if (!cellCode || ctx.activeCellCodes.includes(cellCode)) return;
-      ctx.activeCellCodes = ctx.activeCellCodes.concat(cellCode);
+      if (!cellCode) return;
+      if (!ctx.activeCellCodes.includes(cellCode)) {
+        ctx.activeCellCodes = ctx.activeCellCodes.concat(cellCode);
+      }
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
+    ctx.activateDetailCell = function activateDetailCell(detailCell) {
+      if (!detailCell || !detailCell.parentCode) return;
+      ctx.activateCell(detailCell.parentCode);
+      if (!ctx.activeDetailCells.some((cell) => cell.code === detailCell.code)) {
+        ctx.activeDetailCells = ctx.activeDetailCells.concat(detailCell);
+      }
+      ctx.selectedDetailCell = detailCell;
       ctx.refreshMapData();
       ctx.updateViewAndChunkStatus();
     };
@@ -128,10 +152,19 @@
       ctx.updateViewAndChunkStatus();
     };
 
+    ctx.clearInspectionCells = function clearInspectionCells() {
+      ctx.activeDetailCells = [];
+      ctx.selectedDetailCell = null;
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
     ctx.clearActiveCells = function clearActiveCells() {
       ctx.activeCellCodes = [];
+      ctx.activeDetailCells = [];
+      ctx.selectedDetailCell = null;
       ctx.selected = { cell: ctx.selected.cell, building: null };
-      renderer.setSelected(null, ctx.selected.cell);
+      renderer.setSelected(null, ctx.selected.cell, null);
       ctx.refreshMapData();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
@@ -140,9 +173,18 @@
 
     ctx.selectAt = function selectAt(event) {
       const hit = renderer.hitTest(ctx.pointerPosition(event));
-      ctx.selected = { cell: hit.cell, building: hit.building };
-      if (hit.cell) ctx.activateCell(hit.cell.code);
-      renderer.setSelected(hit.building, hit.cell);
+      const cell = hit.detailCell ? ctx.cellForCode(hit.detailCell.parentCode) : hit.cell;
+      ctx.selected = { cell, building: hit.building };
+
+      if (hit.detailCell) {
+        ctx.selectedDetailCell = hit.detailCell;
+        ctx.activateDetailCell(hit.detailCell);
+      } else if (hit.cell) {
+        ctx.selectedDetailCell = null;
+        ctx.activateCell(hit.cell.code);
+      }
+
+      renderer.setSelected(hit.building, cell, ctx.selectedDetailCell);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
     };
@@ -190,12 +232,15 @@
       const building = ctx.findBuildingById(buildingId);
       if (!building) return;
       const cell = ctx.cellForCode(building.cell);
+      const detailCell = cell ? detailCellForFeature(cell, building, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS, "polygon") : null;
       ctx.selected = { cell, building };
+      ctx.selectedDetailCell = detailCell;
       if (cell) ctx.activateCell(cell.code);
+      if (detailCell) ctx.activateDetailCell(detailCell);
       ctx.layerVisibility.buildings = true;
       renderer.centerOnPolygon(building.polygon);
       ctx.refreshMapData();
-      renderer.setSelected(building, cell);
+      renderer.setSelected(building, cell, detailCell);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
       ctx.updateViewAndChunkStatus();
@@ -205,9 +250,10 @@
       const cell = ctx.cellForCode(cellCode);
       if (!cell) return;
       ctx.selected = { cell, building: null };
+      ctx.selectedDetailCell = null;
       renderer.centerOnWorldPoint(cell.center);
       ctx.activateCell(cell.code);
-      renderer.setSelected(null, cell);
+      renderer.setSelected(null, cell, null);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
       ctx.updateViewAndChunkStatus();
@@ -227,7 +273,6 @@
     };
 
     ctx.visibleNavigableBuildings = function visibleNavigableBuildings() {
-      const visible = new Set(ctx.activeCellCodes.length ? ctx.activeCellCodes : ctx.visibleCellCodes.length ? ctx.visibleCellCodes : ctx.allCellCodes);
       const coverage = ctx.coverageModel.build();
       const filterIds = global.KaneMapCoverage.filterBuildingIds(
         ctx.allBuildings,
@@ -235,8 +280,11 @@
         els.statusFilter.value
       );
       const allowed = filterIds === null ? null : new Set(filterIds);
+      const parentCodes = new Set(activeDataCellCodes(ctx).length ? activeDataCellCodes(ctx) : ctx.visibleCellCodes.length ? ctx.visibleCellCodes : ctx.allCellCodes);
+      const detailCells = ctx.activeDetailCells;
       return ctx.allBuildings
-        .filter((building) => visible.has(building.cell))
+        .filter((building) => parentCodes.has(building.cell))
+        .filter((building) => !detailCells.length || featureBelongsToActiveCells(building, detailCells, new Set(detailCells.map((cell) => cell.code)), "polygon"))
         .filter((building) => !allowed || allowed.has(building.id))
         .sort((a, b) => a.cell.localeCompare(b.cell) || a.label.localeCompare(b.label));
     };
@@ -249,6 +297,7 @@
     };
 
     ctx.selectedSummaryText = function selectedSummaryText() {
+      if (!ctx.selected.building && ctx.selectedDetailCell) return `Inspection cell: ${ctx.selectedDetailCell.code}`;
       if (!ctx.selected.building && ctx.selected.cell) return `Grid cell: ${ctx.selected.cell.code}`;
       if (!ctx.selected.building) return "";
       const summary = ctx.coverageModel.build().summaryByBuilding[ctx.selected.building.id];
@@ -259,6 +308,7 @@
       return [
         `Building: ${ctx.selected.building.label}`,
         `Grid cell: ${ctx.selected.building.cell}`,
+        ctx.selectedDetailCell ? `Inspection cell: ${ctx.selectedDetailCell.code}` : "",
         site ? `Site: ${site}` : "",
         `Stories: ${ctx.selected.building.stories}`,
         `Observed units: ${count}`,
@@ -272,11 +322,11 @@
         `Zoom ${renderer.state.zoom.toFixed(2)}`,
         `Bearing ${Math.round(renderer.state.bearing)}°`
       ].join(" / ");
-      els.chunkStatus.textContent = ctx.activeCellCodes.length
+      els.chunkStatus.textContent = activeDataCellCodes(ctx).length
         ? `Active chunks ${chunkStatus.selected}/${chunkStatus.total}`
         : `Active chunks 0/${chunkStatus.total}`;
       els.chunkStatus.title = chunkStatus.ids.join(", ");
-      els.visibleCellStatus.textContent = `Active cells ${ctx.activeCellCodes.length}/${ctx.grid.cells.length} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
+      els.visibleCellStatus.textContent = `Active cells ${ctx.activeCellCodes.length}/${ctx.grid.cells.length} · Inspection cells ${ctx.activeDetailCells.length} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
     };
 
     ctx.updateLayerControlStatus = function updateLayerControlStatus() {
@@ -288,7 +338,9 @@
       }
       if (ctx.els.activeCellSummary) {
         const cells = ctx.activeCellCodes.length ? ctx.activeCellCodes.join(", ") : "none";
-        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}`;
+        const detailCells = ctx.activeDetailCells.length ? ctx.activeDetailCells.map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
+        const selectedDetail = ctx.selectedDetailCell ? shortDetailCellCode(ctx.selectedDetailCell) : "none";
+        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}\nInspection cells: ${detailCells}\nSelected inspection: ${selectedDetail}`;
       }
     };
   }
@@ -302,9 +354,10 @@
     panel.className = "section map-layer-controls";
     panel.innerHTML = [
       `<h2>Detail layers</h2>`,
-      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell, then enable detail layers for active cells.</p>`,
+      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell to show its 16×16 inspection grid. Click an inspection cell to make it the practical active detail area.</p>`,
       `<div class="button-grid">`,
       `<button id="activateVisibleCells" type="button" class="secondary">Add visible cells</button>`,
+      `<button id="clearInspectionCells" type="button" class="secondary">Clear inspection cells</button>`,
       `<button id="clearActiveCells" type="button" class="secondary">Clear active cells</button>`,
       `</div>`,
       `<div class="layer-toggle-list">`,
@@ -321,10 +374,12 @@
     ctx.els.layerControlPanel = panel;
     ctx.els.activeCellSummary = panel.querySelector("#activeCellSummary");
     ctx.els.activateVisibleCells = panel.querySelector("#activateVisibleCells");
+    ctx.els.clearInspectionCells = panel.querySelector("#clearInspectionCells");
     ctx.els.clearActiveCells = panel.querySelector("#clearActiveCells");
     ctx.els.layerToggles = Array.from(panel.querySelectorAll("input[data-map-layer]"));
 
     ctx.els.activateVisibleCells.addEventListener("click", ctx.activateVisibleCells);
+    ctx.els.clearInspectionCells.addEventListener("click", ctx.clearInspectionCells);
     ctx.els.clearActiveCells.addEventListener("click", ctx.clearActiveCells);
     ctx.els.layerToggles.forEach((input) => {
       const key = input.getAttribute("data-map-layer");
@@ -343,6 +398,70 @@
     return grid.cells.filter((cell) => wanted.has(cell.code));
   }
 
+  function activeDataCellCodes(ctx) {
+    const codes = new Set(Array.isArray(ctx.activeCellCodes) ? ctx.activeCellCodes : []);
+    (Array.isArray(ctx.activeDetailCells) ? ctx.activeDetailCells : []).forEach((cell) => {
+      if (cell.parentCode) codes.add(cell.parentCode);
+    });
+    return Array.from(codes);
+  }
+
+  function detailGridCellsForDisplay(ctx) {
+    const parentCodes = new Set();
+    if (ctx.selected && ctx.selected.cell) parentCodes.add(ctx.selected.cell.code);
+    ctx.activeDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
+    return Array.from(parentCodes)
+      .map((code) => ctx.cellForCode(code))
+      .filter(Boolean)
+      .flatMap((cell) => makeInspectionGrid(cell, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS));
+  }
+
+  function makeInspectionGrid(parentCell, rows, cols) {
+    const cells = [];
+    const width = (parentCell.maxX - parentCell.minX) / cols;
+    const height = (parentCell.maxY - parentCell.minY) / rows;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const minX = parentCell.minX + col * width;
+        const maxX = col === cols - 1 ? parentCell.maxX : minX + width;
+        const minY = parentCell.minY + row * height;
+        const maxY = row === rows - 1 ? parentCell.maxY : minY + height;
+        cells.push({
+          code: `${parentCell.code}:r${pad2(row + 1)}c${pad2(col + 1)}`,
+          parentCode: parentCell.code,
+          row,
+          col,
+          minX,
+          minY,
+          maxX,
+          maxY,
+          center: [(minX + maxX) / 2, (minY + maxY) / 2],
+          polygon: [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]]
+        });
+      }
+    }
+    return cells;
+  }
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function shortDetailCellCode(cell) {
+    return cell && cell.code ? cell.code.replace(":r", ":").replace("c", "-") : "";
+  }
+
+  function detailCellForFeature(parentCell, feature, rows, cols, geometryKey) {
+    const points = featurePoints(feature, geometryKey);
+    if (!points.length) return null;
+    const bounds = boundsForPoints(points);
+    const target = [
+      (bounds.minX + bounds.maxX) / 2,
+      (bounds.minY + bounds.maxY) / 2
+    ];
+    return makeInspectionGrid(parentCell, rows, cols).find((cell) => pointInCell(target, cell)) || null;
+  }
+
   function filterFeaturesByActiveCells(features, activeCells, geometryKey) {
     const input = Array.isArray(features) ? features : [];
     if (!input.length || !activeCells.length) return [];
@@ -354,7 +473,7 @@
     if (!feature) return false;
 
     const declaredCells = featureCellCodes(feature);
-    if (declaredCells.length) return declaredCells.some((code) => activeCodes.has(code));
+    if (declaredCells.length && declaredCells.some((code) => activeCodes.has(code))) return true;
 
     const points = featurePoints(feature, geometryKey);
     if (!points.length) return false;
