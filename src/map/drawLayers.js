@@ -19,11 +19,38 @@
     drawCountyBoundary(ctx, data, worldToScreen);
     drawGrid(ctx, state, grid, worldToScreen);
 
-    if (layers.forests) drawForests(ctx, state, data, worldToScreen);
-    if (layers.water) drawWater(ctx, data, worldToScreen);
-    if (layers.roads) drawRoads(ctx, state, data, worldToScreen);
-    if (layers.addressPoints) drawAddressPoints(ctx, state, data, worldToScreen);
-    if (layers.buildings) drawBuildings(ctx, state, bounds, data, worldToScreen);
+    ctx.save();
+    if (clipToActiveCells(ctx, state, grid, worldToScreen)) {
+      if (layers.forests) drawForests(ctx, state, data, worldToScreen);
+      if (layers.water) drawWater(ctx, data, worldToScreen);
+      if (layers.roads) drawRoads(ctx, state, data, worldToScreen);
+      if (layers.addressPoints) drawAddressPoints(ctx, state, data, worldToScreen);
+      if (layers.buildings) drawBuildings(ctx, state, bounds, data, worldToScreen);
+    }
+    ctx.restore();
+  }
+
+  function clipToActiveCells(ctx, state, grid, worldToScreen) {
+    const activeCodes = new Set(Array.isArray(state.activeCellCodes) ? state.activeCellCodes : []);
+    if (!activeCodes.size || !grid || !Array.isArray(grid.cells)) return false;
+
+    const activeCells = grid.cells.filter((cell) => activeCodes.has(cell.code));
+    if (!activeCells.length) return false;
+
+    ctx.beginPath();
+    activeCells.forEach((cell) => {
+      const polygon = cell.polygon || [];
+      if (!polygon.length) return;
+      const first = worldToScreen(polygon[0]);
+      ctx.moveTo(first[0], first[1]);
+      for (let i = 1; i < polygon.length; i += 1) {
+        const point = worldToScreen(polygon[i]);
+        ctx.lineTo(point[0], point[1]);
+      }
+      ctx.closePath();
+    });
+    ctx.clip();
+    return true;
   }
 
   function drawBackground(ctx, state) {
