@@ -6,13 +6,14 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from kane_map_processing.config import RAW_INPUT_DIR, PREPARED_DIR, REPORTS_DIR
 
 RAW_ADDRESS_POINTS = RAW_INPUT_DIR / "kane-address-points.geojson"
 PREPARED_ADDRESS_POINTS = PREPARED_DIR / "address_points.json"
 REPORT_PATH = REPORTS_DIR / "address_points_preparation_report.json"
+PREPARED_LAYER_VERSION = 2
 
 
 def utc_now() -> str:
@@ -32,8 +33,7 @@ def normalize_text(value: Any) -> str:
 
 
 def normalize_boolish(value: Any) -> str:
-    text = normalize_text(value)
-    return text
+    return normalize_text(value)
 
 
 def safe_float(value: Any) -> Optional[float]:
@@ -44,6 +44,10 @@ def safe_float(value: Any) -> Optional[float]:
     if not math.isfinite(number):
         return None
     return number
+
+
+def round_coord(value: float, places: int) -> float:
+    return round(float(value), places)
 
 
 def find_features_array_start(text: str) -> int:
@@ -57,11 +61,7 @@ def find_features_array_start(text: str) -> int:
 
 
 def stream_geojson_features(path: Path, chunk_size: int = 1024 * 1024) -> Iterator[Dict[str, Any]]:
-    """Yield GeoJSON features one at a time without loading the full file.
-
-    This parser is intentionally narrow: it expects a normal GeoJSON
-    FeatureCollection object with a top-level `features` array.
-    """
+    """Yield GeoJSON features one at a time without loading the full file."""
 
     decoder = json.JSONDecoder()
     buffer = ""
@@ -92,9 +92,8 @@ def stream_geojson_features(path: Path, chunk_size: int = 1024 * 1024) -> Iterat
                 chunk = handle.read(chunk_size)
                 if not chunk:
                     return
-                buffer = ""
+                buffer = chunk
                 position = 0
-                buffer += chunk
 
             if buffer[position] == "]":
                 done = True
@@ -106,7 +105,6 @@ def stream_geojson_features(path: Path, chunk_size: int = 1024 * 1024) -> Iterat
                 chunk = handle.read(chunk_size)
                 if not chunk:
                     raise
-                # Keep the unparsed tail and append more content.
                 buffer = buffer[position:] + chunk
                 position = 0
                 continue
@@ -115,15 +113,23 @@ def stream_geojson_features(path: Path, chunk_size: int = 1024 * 1024) -> Iterat
                 yield feature
             position = end_position
 
-            # Avoid unbounded buffer growth.
             if position > chunk_size:
                 buffer = buffer[position:]
                 position = 0
 
 
-def prepare_feature(feature: Dict[str, Any], sequence: int) -> Optional[Dict[str, Any]]:
+def address_feature_id(sequence: int, properties: Dict[str, Any]) -> str:
+    addr_guid = normalize_text(properties.get("AddrGUID"))
+    addr_id = normalize_text(properties.get("AddrID"))
+    source_id = addr_guid or addr_id
+    if source_id:
+        return source_id
+    return f"ADDR-{sequence:06d}"
+
+
+def prepare_feature(feature: Dict[str, Any], sequence: int, places: int = 6) -> Optional[Dict[str, Any]]:
     geometry = feature.get("geometry") or {}
-    if geometry.get("type") != "Point":
+    if not isinstance(geometry, dict) or geometry.get("type") != "Point":
         return None
 
     coordinates = geometry.get("coordinates")
@@ -139,23 +145,34 @@ def prepare_feature(feature: Dict[str, Any], sequence: int) -> Optional[Dict[str
     if not isinstance(properties, dict):
         properties = {}
 
-    addr_guid = normalize_text(properties.get("AddrGUID"))
-    addr_id = normalize_text(properties.get("AddrID"))
-    source_id = addr_guid or addr_id or f"ADDR-{sequence:06d}"
+    source_id = address_feature_id(sequence, properties)
+    point = [round_coord(x, places), round_coord(y, places)]
 
-    return {
+    prepared_properties = {
         "id": f"KA-{sequence:06d}",
         "source_id": source_id,
-        "x": x,
-        "y": y,
+        "source_sequence": sequence,
+        "x": point[0],
+        "y": point[1],
         "address": normalize_text(properties.get("Address")),
+        "address_suffix": normalize_text(properties.get("AddressSuffix")),
         "common_name": normalize_text(properties.get("CommonName")),
         "addr_class": normalize_text(properties.get("AddrClass")),
         "addr_subclass": normalize_text(properties.get("AddrSubclass")),
         "condo": normalize_boolish(properties.get("Condo")),
         "complete_status": normalize_text(properties.get("CompleteStatus")),
         "fire_addr": normalize_text(properties.get("FireAddr")),
+        "fire_grid": normalize_text(properties.get("FireGrid")),
         "source": "kane-address-points",
+    }
+
+    return {
+        "type": "Feature",
+        "properties": prepared_properties,
+        "geometry": {
+            "type": "Point",
+            "coordinates": point,
+        },
     }
 
 
@@ -176,6 +193,7 @@ def prepare_address_points_layer(*, execute: bool = False, force: bool = False, 
         "skipped_features": 0,
         "bytes_written": None,
         "limit": limit,
+        "prepared_layer_version": PREPARED_LAYER_VERSION,
     }
 
     if not RAW_ADDRESS_POINTS.exists():
@@ -188,7 +206,6 @@ def prepare_address_points_layer(*, execute: bool = False, force: bool = False, 
         write_json(REPORT_PATH, report)
         return report
 
-    # Dry run still scans the source so counts reflect actual input.
     if not execute:
         for index, feature in enumerate(stream_geojson_features(RAW_ADDRESS_POINTS), start=1):
             report["raw_features_scanned"] += 1
@@ -206,13 +223,19 @@ def prepare_address_points_layer(*, execute: bool = False, force: bool = False, 
     os.close(tmp_fd)
     tmp_path = Path(tmp_name)
 
+    generated_at = utc_now()
+
     try:
         with tmp_path.open("w", encoding="utf-8") as out:
             out.write("{\n")
-            out.write('  "type": "kane-map-prepared-layer",\n')
-            out.write('  "layer": "address_points",\n')
-            out.write('  "source": "kane-address-points",\n')
-            out.write(f'  "created_at": {json.dumps(utc_now())},\n')
+            out.write('  "type": "FeatureCollection",\n')
+            out.write('  "kane_map_layer": {\n')
+            out.write('    "layer": "address_points",\n')
+            out.write(f'    "version": {PREPARED_LAYER_VERSION},\n')
+            out.write(f'    "generated_at_utc": {json.dumps(generated_at)},\n')
+            out.write('    "source_file": "input/raw/kane-address-points.geojson",\n')
+            out.write('    "coordinate_precision": 6\n')
+            out.write("  },\n")
             out.write('  "features": [\n')
 
             first = True
@@ -236,7 +259,7 @@ def prepare_address_points_layer(*, execute: bool = False, force: bool = False, 
 
         tmp_path.replace(PREPARED_ADDRESS_POINTS)
         report["bytes_written"] = PREPARED_ADDRESS_POINTS.stat().st_size
-        report.update(ok=True, status="prepared", message="prepared address-points layer written")
+        report.update(ok=True, status="prepared", message="prepared address-points layer written with Point geometry")
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
