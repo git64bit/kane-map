@@ -2,7 +2,7 @@
   "use strict";
 
   const config = global.KaneMapRendererConfig;
-  const MAX_ZOOM = 12.0;
+  const MAX_ZOOM = 48.0;
 
   function worldCenter(bounds) {
     return [

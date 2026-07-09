@@ -3,6 +3,8 @@
 
   const INSPECTION_GRID_ROWS = 16;
   const INSPECTION_GRID_COLS = 16;
+  const FINE_GRID_ROWS = 8;
+  const FINE_GRID_COLS = 8;
 
   const LAYER_SPECS = Object.freeze([
     { key: "roads", label: "Roads" },
@@ -38,7 +40,7 @@
       canvas.addEventListener("pointercancel", () => renderer.endDrag());
       canvas.addEventListener("wheel", (event) => {
         event.preventDefault();
-        renderer.zoomBy(event.deltaY < 0 ? 1.16 : 0.86);
+        renderer.zoomBy(event.deltaY < 0 ? 1.22 : 0.82);
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       }, { passive: false });
@@ -46,8 +48,8 @@
 
     ctx.bindMapControlEvents = function bindMapControlEvents() {
       installLayerControls(ctx);
-      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.28)));
-      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.78)));
+      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.42)));
+      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.70)));
       els.rotateLeft.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(-12)));
       els.rotateRight.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(12)));
       els.prevBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(-1));
@@ -87,10 +89,14 @@
 
     ctx.refreshMapData = function refreshMapData() {
       ctx.detailGridCells = detailGridCellsForDisplay(ctx);
+      ctx.fineGridCells = fineGridCellsForDisplay(ctx);
       renderer.setMapLayerState(ctx.layerVisibility, ctx.activeCellCodes, {
         activeDetailCells: ctx.activeDetailCells,
         selectedDetailCell: ctx.selectedDetailCell,
-        detailGridCells: ctx.detailGridCells
+        detailGridCells: ctx.detailGridCells,
+        activeFineCells: ctx.activeFineCells,
+        selectedFineCell: ctx.selectedFineCell,
+        fineGridCells: ctx.fineGridCells
       });
       renderer.setData(ctx.buildMapData());
       ctx.updateLayerControlStatus();
@@ -103,16 +109,17 @@
       const activeCells = activeCellsForCodes(ctx.grid, dataCellCodes);
       if (!activeCells.length) return ctx.baseMapData;
 
-      const clipCells = ctx.activeDetailCells.length ? ctx.activeDetailCells : activeCells;
+      const areaClipCells = activeAreaClipCells(ctx, activeCells);
+      const detailClipCells = activeDetailClipCells(ctx);
       const detailData = ctx.featureStore.buildDataForCells(dataCellCodes);
       return {
         meta: detailData.meta,
         countyBoundary: ctx.baseMapData.countyBoundary,
-        roads: ctx.layerVisibility.roads ? filterFeaturesByActiveCells(detailData.roads, clipCells, "path") : [],
-        water: ctx.layerVisibility.water ? filterFeaturesByActiveCells(detailData.water, clipCells, "polygon") : [],
-        forests: ctx.layerVisibility.forests ? filterFeaturesByActiveCells(detailData.forests, clipCells, "polygon") : [],
-        buildings: ctx.layerVisibility.buildings ? filterFeaturesByActiveCells(detailData.buildings, clipCells, "polygon") : [],
-        addressPoints: ctx.layerVisibility.addressPoints ? filterFeaturesByActiveCells(detailData.addressPoints, clipCells, "point") : []
+        roads: ctx.layerVisibility.roads ? filterFeaturesByActiveCells(detailData.roads, areaClipCells, "path") : [],
+        water: ctx.layerVisibility.water ? filterFeaturesByActiveCells(detailData.water, areaClipCells, "polygon") : [],
+        forests: ctx.layerVisibility.forests ? filterFeaturesByActiveCells(detailData.forests, areaClipCells, "polygon") : [],
+        buildings: ctx.layerVisibility.buildings ? filterFeaturesByActiveCells(detailData.buildings, detailClipCells, "polygon") : [],
+        addressPoints: ctx.layerVisibility.addressPoints ? filterFeaturesByActiveCells(detailData.addressPoints, detailClipCells, "point") : []
       };
     };
 
@@ -133,6 +140,15 @@
       ctx.updateViewAndChunkStatus();
     };
 
+    ctx.selectDetailCell = function selectDetailCell(detailCell) {
+      if (!detailCell || !detailCell.parentCode) return;
+      ctx.activateCell(detailCell.parentCode);
+      ctx.selectedDetailCell = detailCell;
+      ctx.selectedFineCell = null;
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
     ctx.activateDetailCell = function activateDetailCell(detailCell) {
       if (!detailCell || !detailCell.parentCode) return;
       ctx.activateCell(detailCell.parentCode);
@@ -140,6 +156,20 @@
         ctx.activeDetailCells = ctx.activeDetailCells.concat(detailCell);
       }
       ctx.selectedDetailCell = detailCell;
+      ctx.selectedFineCell = null;
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
+    ctx.activateFineCell = function activateFineCell(fineCell) {
+      if (!fineCell || !fineCell.parentCode || !fineCell.detailParentCode) return;
+      ctx.activateCell(fineCell.parentCode);
+      const detailCell = detailCellByCode(ctx, fineCell.detailParentCode);
+      if (detailCell) ctx.selectedDetailCell = detailCell;
+      if (!ctx.activeFineCells.some((cell) => cell.code === fineCell.code)) {
+        ctx.activeFineCells = ctx.activeFineCells.concat(fineCell);
+      }
+      ctx.selectedFineCell = fineCell;
       ctx.refreshMapData();
       ctx.updateViewAndChunkStatus();
     };
@@ -155,6 +185,8 @@
     ctx.clearInspectionCells = function clearInspectionCells() {
       ctx.activeDetailCells = [];
       ctx.selectedDetailCell = null;
+      ctx.activeFineCells = [];
+      ctx.selectedFineCell = null;
       ctx.refreshMapData();
       ctx.updateViewAndChunkStatus();
     };
@@ -163,8 +195,10 @@
       ctx.activeCellCodes = [];
       ctx.activeDetailCells = [];
       ctx.selectedDetailCell = null;
+      ctx.activeFineCells = [];
+      ctx.selectedFineCell = null;
       ctx.selected = { cell: ctx.selected.cell, building: null };
-      renderer.setSelected(null, ctx.selected.cell, null);
+      renderer.setSelected(null, ctx.selected.cell, null, null);
       ctx.refreshMapData();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
@@ -173,18 +207,20 @@
 
     ctx.selectAt = function selectAt(event) {
       const hit = renderer.hitTest(ctx.pointerPosition(event));
-      const cell = hit.detailCell ? ctx.cellForCode(hit.detailCell.parentCode) : hit.cell;
+      const cell = hit.fineCell ? ctx.cellForCode(hit.fineCell.parentCode) : hit.detailCell ? ctx.cellForCode(hit.detailCell.parentCode) : hit.cell;
       ctx.selected = { cell, building: hit.building };
 
-      if (hit.detailCell) {
-        ctx.selectedDetailCell = hit.detailCell;
-        ctx.activateDetailCell(hit.detailCell);
+      if (hit.fineCell) {
+        ctx.activateFineCell(hit.fineCell);
+      } else if (hit.detailCell) {
+        ctx.selectDetailCell(hit.detailCell);
       } else if (hit.cell) {
         ctx.selectedDetailCell = null;
+        ctx.selectedFineCell = null;
         ctx.activateCell(hit.cell.code);
       }
 
-      renderer.setSelected(hit.building, cell, ctx.selectedDetailCell);
+      renderer.setSelected(hit.building, cell, ctx.selectedDetailCell, ctx.selectedFineCell);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
     };
@@ -233,14 +269,17 @@
       if (!building) return;
       const cell = ctx.cellForCode(building.cell);
       const detailCell = cell ? detailCellForFeature(cell, building, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS, "polygon") : null;
+      const fineCell = detailCell ? fineCellForFeature(detailCell, building, ctx.fineGridRows || FINE_GRID_ROWS, ctx.fineGridCols || FINE_GRID_COLS, "polygon") : null;
       ctx.selected = { cell, building };
       ctx.selectedDetailCell = detailCell;
+      ctx.selectedFineCell = fineCell;
       if (cell) ctx.activateCell(cell.code);
-      if (detailCell) ctx.activateDetailCell(detailCell);
+      if (fineCell) ctx.activateFineCell(fineCell);
+      else if (detailCell) ctx.selectDetailCell(detailCell);
       ctx.layerVisibility.buildings = true;
       renderer.centerOnPolygon(building.polygon);
       ctx.refreshMapData();
-      renderer.setSelected(building, cell, detailCell);
+      renderer.setSelected(building, cell, detailCell, fineCell);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
       ctx.updateViewAndChunkStatus();
@@ -251,9 +290,10 @@
       if (!cell) return;
       ctx.selected = { cell, building: null };
       ctx.selectedDetailCell = null;
+      ctx.selectedFineCell = null;
       renderer.centerOnWorldPoint(cell.center);
       ctx.activateCell(cell.code);
-      renderer.setSelected(null, cell, null);
+      renderer.setSelected(null, cell, null, null);
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
       ctx.updateViewAndChunkStatus();
@@ -281,10 +321,12 @@
       );
       const allowed = filterIds === null ? null : new Set(filterIds);
       const parentCodes = new Set(activeDataCellCodes(ctx).length ? activeDataCellCodes(ctx) : ctx.visibleCellCodes.length ? ctx.visibleCellCodes : ctx.allCellCodes);
+      const fineCells = ctx.activeFineCells;
       const detailCells = ctx.activeDetailCells;
       return ctx.allBuildings
         .filter((building) => parentCodes.has(building.cell))
-        .filter((building) => !detailCells.length || featureBelongsToActiveCells(building, detailCells, new Set(detailCells.map((cell) => cell.code)), "polygon"))
+        .filter((building) => !fineCells.length || featureBelongsToActiveCells(building, fineCells, new Set(fineCells.map((cell) => cell.code)), "polygon"))
+        .filter((building) => fineCells.length || !detailCells.length || featureBelongsToActiveCells(building, detailCells, new Set(detailCells.map((cell) => cell.code)), "polygon"))
         .filter((building) => !allowed || allowed.has(building.id))
         .sort((a, b) => a.cell.localeCompare(b.cell) || a.label.localeCompare(b.label));
     };
@@ -297,6 +339,7 @@
     };
 
     ctx.selectedSummaryText = function selectedSummaryText() {
+      if (!ctx.selected.building && ctx.selectedFineCell) return `Practical cell: ${ctx.selectedFineCell.code}`;
       if (!ctx.selected.building && ctx.selectedDetailCell) return `Inspection cell: ${ctx.selectedDetailCell.code}`;
       if (!ctx.selected.building && ctx.selected.cell) return `Grid cell: ${ctx.selected.cell.code}`;
       if (!ctx.selected.building) return "";
@@ -309,6 +352,7 @@
         `Building: ${ctx.selected.building.label}`,
         `Grid cell: ${ctx.selected.building.cell}`,
         ctx.selectedDetailCell ? `Inspection cell: ${ctx.selectedDetailCell.code}` : "",
+        ctx.selectedFineCell ? `Practical cell: ${ctx.selectedFineCell.code}` : "",
         site ? `Site: ${site}` : "",
         `Stories: ${ctx.selected.building.stories}`,
         `Observed units: ${count}`,
@@ -326,7 +370,7 @@
         ? `Active chunks ${chunkStatus.selected}/${chunkStatus.total}`
         : `Active chunks 0/${chunkStatus.total}`;
       els.chunkStatus.title = chunkStatus.ids.join(", ");
-      els.visibleCellStatus.textContent = `Active cells ${ctx.activeCellCodes.length}/${ctx.grid.cells.length} · Inspection cells ${ctx.activeDetailCells.length} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
+      els.visibleCellStatus.textContent = `Active cells ${ctx.activeCellCodes.length}/${ctx.grid.cells.length} · Inspection cells ${ctx.activeDetailCells.length} · Practical cells ${ctx.activeFineCells.length} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
     };
 
     ctx.updateLayerControlStatus = function updateLayerControlStatus() {
@@ -339,8 +383,10 @@
       if (ctx.els.activeCellSummary) {
         const cells = ctx.activeCellCodes.length ? ctx.activeCellCodes.join(", ") : "none";
         const detailCells = ctx.activeDetailCells.length ? ctx.activeDetailCells.map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
+        const fineCells = ctx.activeFineCells.length ? ctx.activeFineCells.map((cell) => shortFineCellCode(cell)).join(", ") : "none";
         const selectedDetail = ctx.selectedDetailCell ? shortDetailCellCode(ctx.selectedDetailCell) : "none";
-        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}\nInspection cells: ${detailCells}\nSelected inspection: ${selectedDetail}`;
+        const selectedFine = ctx.selectedFineCell ? shortFineCellCode(ctx.selectedFineCell) : "none";
+        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}\nInspection cells: ${detailCells}\nPractical cells: ${fineCells}\nSelected inspection: ${selectedDetail}\nSelected practical: ${selectedFine}`;
       }
     };
   }
@@ -354,7 +400,7 @@
     panel.className = "section map-layer-controls";
     panel.innerHTML = [
       `<h2>Detail layers</h2>`,
-      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell to show its 16×16 inspection grid. Click an inspection cell to make it the practical active detail area.</p>`,
+      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell for its 16×16 area grid, then click an area cell for an 8×8 practical grid. Building shapes and address points render only inside active practical cells.</p>`,
       `<div class="button-grid">`,
       `<button id="activateVisibleCells" type="button" class="secondary">Add visible cells</button>`,
       `<button id="clearInspectionCells" type="button" class="secondary">Clear inspection cells</button>`,
@@ -403,17 +449,68 @@
     (Array.isArray(ctx.activeDetailCells) ? ctx.activeDetailCells : []).forEach((cell) => {
       if (cell.parentCode) codes.add(cell.parentCode);
     });
+    (Array.isArray(ctx.activeFineCells) ? ctx.activeFineCells : []).forEach((cell) => {
+      if (cell.parentCode) codes.add(cell.parentCode);
+    });
+    if (ctx.selectedDetailCell && ctx.selectedDetailCell.parentCode) codes.add(ctx.selectedDetailCell.parentCode);
+    if (ctx.selectedFineCell && ctx.selectedFineCell.parentCode) codes.add(ctx.selectedFineCell.parentCode);
     return Array.from(codes);
+  }
+
+  function activeAreaClipCells(ctx, activeCells) {
+    if (ctx.activeFineCells.length) return ctx.activeFineCells;
+    if (ctx.selectedFineCell) return [ctx.selectedFineCell];
+    if (ctx.activeDetailCells.length) return ctx.activeDetailCells;
+    if (ctx.selectedDetailCell) return [ctx.selectedDetailCell];
+    return activeCells;
+  }
+
+  function activeDetailClipCells(ctx) {
+    if (ctx.activeFineCells.length) return ctx.activeFineCells;
+    if (ctx.selectedFineCell) return [ctx.selectedFineCell];
+    return [];
   }
 
   function detailGridCellsForDisplay(ctx) {
     const parentCodes = new Set();
     if (ctx.selected && ctx.selected.cell) parentCodes.add(ctx.selected.cell.code);
     ctx.activeDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
+    ctx.activeFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
+    if (ctx.selectedDetailCell) parentCodes.add(ctx.selectedDetailCell.parentCode);
+    if (ctx.selectedFineCell) parentCodes.add(ctx.selectedFineCell.parentCode);
     return Array.from(parentCodes)
       .map((code) => ctx.cellForCode(code))
       .filter(Boolean)
       .flatMap((cell) => makeInspectionGrid(cell, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS));
+  }
+
+  function fineGridCellsForDisplay(ctx) {
+    const detailCodes = new Set();
+    if (ctx.selectedDetailCell) detailCodes.add(ctx.selectedDetailCell.code);
+    if (ctx.selectedFineCell && ctx.selectedFineCell.detailParentCode) detailCodes.add(ctx.selectedFineCell.detailParentCode);
+    ctx.activeFineCells.forEach((cell) => {
+      if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
+    });
+    return Array.from(detailCodes)
+      .map((code) => detailCellByCode(ctx, code))
+      .filter(Boolean)
+      .flatMap((cell) => makeFineGrid(cell, ctx.fineGridRows || FINE_GRID_ROWS, ctx.fineGridCols || FINE_GRID_COLS));
+  }
+
+  function detailCellByCode(ctx, code) {
+    if (!code || typeof code !== "string") return null;
+    const parsed = parseDetailCellCode(code);
+    if (!parsed) return null;
+    const parentCell = ctx.cellForCode(parsed.parentCode);
+    if (!parentCell) return null;
+    return makeInspectionGrid(parentCell, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS)
+      .find((cell) => cell.code === code) || null;
+  }
+
+  function parseDetailCellCode(code) {
+    const match = code.match(/^(.*):r(\d{2})c(\d{2})$/);
+    if (!match) return null;
+    return { parentCode: match[1], row: Number(match[2]) - 1, col: Number(match[3]) - 1 };
   }
 
   function makeInspectionGrid(parentCell, rows, cols) {
@@ -429,6 +526,36 @@
         cells.push({
           code: `${parentCell.code}:r${pad2(row + 1)}c${pad2(col + 1)}`,
           parentCode: parentCell.code,
+          level: "inspection",
+          row,
+          col,
+          minX,
+          minY,
+          maxX,
+          maxY,
+          center: [(minX + maxX) / 2, (minY + maxY) / 2],
+          polygon: [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]]
+        });
+      }
+    }
+    return cells;
+  }
+
+  function makeFineGrid(detailCell, rows, cols) {
+    const cells = [];
+    const width = (detailCell.maxX - detailCell.minX) / cols;
+    const height = (detailCell.maxY - detailCell.minY) / rows;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const minX = detailCell.minX + col * width;
+        const maxX = col === cols - 1 ? detailCell.maxX : minX + width;
+        const minY = detailCell.minY + row * height;
+        const maxY = row === rows - 1 ? detailCell.maxY : minY + height;
+        cells.push({
+          code: `${detailCell.code}:f${pad2(row + 1)}c${pad2(col + 1)}`,
+          parentCode: detailCell.parentCode,
+          detailParentCode: detailCell.code,
+          level: "practical",
           row,
           col,
           minX,
@@ -451,6 +578,11 @@
     return cell && cell.code ? cell.code.replace(":r", ":").replace("c", "-") : "";
   }
 
+  function shortFineCellCode(cell) {
+    if (!cell || !cell.code) return "";
+    return cell.code.replace(":r", ":").replace("c", "-").replace(":f", "→").replace("c", "-");
+  }
+
   function detailCellForFeature(parentCell, feature, rows, cols, geometryKey) {
     const points = featurePoints(feature, geometryKey);
     if (!points.length) return null;
@@ -460,6 +592,17 @@
       (bounds.minY + bounds.maxY) / 2
     ];
     return makeInspectionGrid(parentCell, rows, cols).find((cell) => pointInCell(target, cell)) || null;
+  }
+
+  function fineCellForFeature(detailCell, feature, rows, cols, geometryKey) {
+    const points = featurePoints(feature, geometryKey);
+    if (!points.length) return null;
+    const bounds = boundsForPoints(points);
+    const target = [
+      (bounds.minX + bounds.maxX) / 2,
+      (bounds.minY + bounds.maxY) / 2
+    ];
+    return makeFineGrid(detailCell, rows, cols).find((cell) => pointInCell(target, cell)) || null;
   }
 
   function filterFeaturesByActiveCells(features, activeCells, geometryKey) {

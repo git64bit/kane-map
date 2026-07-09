@@ -21,10 +21,14 @@
       selectedBuildingId: null,
       selectedCellCode: null,
       selectedDetailCellCode: null,
+      selectedFineCellCode: null,
       activeCellCodes: [],
       activeDetailCellCodes: [],
       activeDetailCells: [],
       detailGridCells: [],
+      activeFineCellCodes: [],
+      activeFineCells: [],
+      fineGridCells: [],
       layerVisibility: {
         roads: false,
         water: false,
@@ -68,6 +72,10 @@
       state.activeDetailCellCodes = state.activeDetailCells.map((cell) => cell.code);
       state.detailGridCells = Array.isArray(detail.detailGridCells) ? detail.detailGridCells.slice() : [];
       state.selectedDetailCellCode = detail.selectedDetailCell ? detail.selectedDetailCell.code : null;
+      state.activeFineCells = Array.isArray(detail.activeFineCells) ? detail.activeFineCells.slice() : [];
+      state.activeFineCellCodes = state.activeFineCells.map((cell) => cell.code);
+      state.fineGridCells = Array.isArray(detail.fineGridCells) ? detail.fineGridCells.slice() : [];
+      state.selectedFineCellCode = detail.selectedFineCell ? detail.selectedFineCell.code : null;
       render();
     }
 
@@ -99,10 +107,11 @@
       render();
     }
 
-    function setSelected(building, cell, detailCell) {
+    function setSelected(building, cell, detailCell, fineCell) {
       state.selectedBuildingId = building ? building.id : null;
       state.selectedCellCode = cell ? cell.code : null;
       state.selectedDetailCellCode = detailCell ? detailCell.code : null;
+      state.selectedFineCellCode = fineCell ? fineCell.code : null;
       render();
     }
 

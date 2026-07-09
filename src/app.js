@@ -2,7 +2,7 @@
   "use strict";
 
   const PRODUCTION_BUNDLE_ROOT = "processing/output/prepared";
-  const BATCH_LABEL = "UI: Batch 072";
+  const BATCH_LABEL = "UI: Batch 073";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);

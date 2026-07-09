@@ -6,15 +6,28 @@
   function hitTest(data, grid, state, bounds, screenPoint) {
     const worldPoint = viewport.screenToWorld(state, bounds, screenPoint);
     const cell = global.KaneMapGrid.findCell(grid, worldPoint);
-    const detailCell = findDetailCell(state, worldPoint);
+    const fineCell = findFineCell(state, worldPoint);
+    const detailCell = fineCell ? findDetailCellByCode(state, fineCell.detailParentCode) : findDetailCell(state, worldPoint);
     const building = [...data.buildings].reverse().find((candidate) => (
       global.KaneMapGrid.polygonContainsPoint(candidate.polygon, worldPoint)
     )) || null;
-    return { worldPoint, cell, detailCell, building };
+    return { worldPoint, cell, detailCell, fineCell, building };
   }
 
   function findDetailCell(state, worldPoint) {
     const cells = Array.isArray(state.detailGridCells) ? state.detailGridCells : [];
+    if (!cells.length) return null;
+    return cells.find((cell) => pointInCell(worldPoint, cell)) || null;
+  }
+
+  function findDetailCellByCode(state, code) {
+    const cells = Array.isArray(state.detailGridCells) ? state.detailGridCells : [];
+    if (!cells.length || !code) return null;
+    return cells.find((cell) => cell.code === code) || null;
+  }
+
+  function findFineCell(state, worldPoint) {
+    const cells = Array.isArray(state.fineGridCells) ? state.fineGridCells : [];
     if (!cells.length) return null;
     return cells.find((cell) => pointInCell(worldPoint, cell)) || null;
   }

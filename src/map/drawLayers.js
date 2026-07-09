@@ -7,9 +7,14 @@
   const statusMarkers = global.KaneMapStatusMarkers;
 
   const BUILDING_DETAIL_ZOOM = 2.25;
-  const BUILDING_LABEL_ZOOM = 3.25;
+  const BUILDING_LABEL_ZOOM = 5.5;
   const MAX_BUILDINGS_WITHOUT_ZOOM = 1200;
-  const MAX_LABELS_WITHOUT_HIGH_ZOOM = 250;
+  const MAX_LABELS_WITHOUT_HIGH_ZOOM = 80;
+  const FINE_GRID_LABEL_ZOOM = 8.0;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
 
   function drawMap(ctx, state, bounds, data, grid) {
     const worldToScreen = (point) => viewport.worldToScreen(state, bounds, point);
@@ -19,6 +24,7 @@
     drawCountyBoundary(ctx, data, worldToScreen);
     drawGrid(ctx, state, grid, worldToScreen);
     drawInspectionGrid(ctx, state, worldToScreen);
+    drawFineGrid(ctx, state, worldToScreen);
 
     ctx.save();
     if (clipToActiveCells(ctx, state, grid, worldToScreen)) {
@@ -52,6 +58,9 @@
   }
 
   function activeClipCells(state, grid) {
+    const activeFineCells = Array.isArray(state.activeFineCells) ? state.activeFineCells : [];
+    if (activeFineCells.length) return activeFineCells;
+
     const activeDetailCells = Array.isArray(state.activeDetailCells) ? state.activeDetailCells : [];
     if (activeDetailCells.length) return activeDetailCells;
 
@@ -118,7 +127,7 @@
 
     const activeDetailCells = new Set(Array.isArray(state.activeDetailCellCodes) ? state.activeDetailCellCodes : []);
     const selectedDetailCellCode = state.selectedDetailCellCode || null;
-    const drawLabels = state.zoom >= 3.4;
+    const drawLabels = state.zoom >= 5.8;
 
     ctx.save();
     ctx.textAlign = "center";
@@ -157,6 +166,51 @@
     return `${row}-${col}`;
   }
 
+  function drawFineGrid(ctx, state, worldToScreen) {
+    const cells = Array.isArray(state.fineGridCells) ? state.fineGridCells : [];
+    if (!cells.length) return;
+
+    const activeFineCells = new Set(Array.isArray(state.activeFineCellCodes) ? state.activeFineCellCodes : []);
+    const selectedFineCellCode = state.selectedFineCellCode || null;
+    const drawLabels = state.zoom >= FINE_GRID_LABEL_ZOOM;
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 9px system-ui, sans-serif";
+
+    cells.forEach((cell) => {
+      const active = activeFineCells.has(cell.code);
+      const selected = selectedFineCellCode === cell.code;
+      primitives.pathPolygon(ctx, worldToScreen, cell.polygon);
+      if (active) {
+        ctx.fillStyle = "rgba(255, 233, 168, 0.11)";
+        ctx.fill();
+      }
+      ctx.strokeStyle = selected ? "rgba(255, 244, 191, 0.98)" : active ? "rgba(255, 233, 168, 0.86)" : "rgba(170, 215, 255, 0.28)";
+      ctx.lineWidth = selected ? 1.7 : active ? 1.1 : 0.55;
+      ctx.stroke();
+
+      if (drawLabels || selected || active) {
+        const [x, y] = worldToScreen(cell.center);
+        const label = fineCellLabel(cell);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = config.COLORS.labelHalo;
+        ctx.strokeText(label, x, y);
+        ctx.fillStyle = selected || active ? "#fff4bf" : "rgba(190, 225, 255, 0.9)";
+        ctx.fillText(label, x, y);
+      }
+    });
+
+    ctx.restore();
+  }
+
+  function fineCellLabel(cell) {
+    const row = Number.isFinite(cell.row) ? cell.row + 1 : "?";
+    const col = Number.isFinite(cell.col) ? cell.col + 1 : "?";
+    return `${row}-${col}`;
+  }
+
   function drawRoads(ctx, state, data, worldToScreen) {
     const roads = Array.isArray(data.roads) ? data.roads : [];
     if (!roads.length) return;
@@ -164,20 +218,31 @@
     ctx.save();
 
     roads.forEach((road) => {
+      const width = roadScreenWidth(road, state);
       primitives.pathPolyline(ctx, worldToScreen, road.path);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.strokeStyle = config.COLORS.roadEdge;
-      ctx.lineWidth = road.width * state.zoom + 5;
+      ctx.lineWidth = width.edge;
       ctx.stroke();
 
       primitives.pathPolyline(ctx, worldToScreen, road.path);
       ctx.strokeStyle = config.COLORS.road;
-      ctx.lineWidth = road.width * state.zoom;
+      ctx.lineWidth = width.inner;
       ctx.stroke();
     });
 
     ctx.restore();
+  }
+
+  function roadScreenWidth(road, state) {
+    const sourceWidth = Number.isFinite(road.width) ? road.width : 2;
+    const zoomFactor = Math.sqrt(Math.max(0.5, state.zoom));
+    const inner = clamp(sourceWidth * zoomFactor * 0.34, 1.1, 5.5);
+    return {
+      inner,
+      edge: clamp(inner + 1.4, 2.1, 7.2)
+    };
   }
 
   function drawWater(ctx, data, worldToScreen) {
@@ -207,7 +272,7 @@
         if (!global.KaneMapGrid.polygonContainsPoint(polygon, [x, y])) continue;
         const [sx, sy] = worldToScreen([x, y]);
         ctx.beginPath();
-        ctx.arc(sx, sy, Math.max(1.5, state.zoom * 5), 0, Math.PI * 2);
+        ctx.arc(sx, sy, clamp(1.2 + Math.sqrt(Math.max(0, state.zoom)) * 0.35, 1.3, 3.2), 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -220,7 +285,7 @@
     if (!points.length) return;
 
     const drawLabels = state.layerVisibility && state.layerVisibility.labels && state.zoom >= BUILDING_LABEL_ZOOM;
-    const radius = Math.max(2, Math.min(6, state.zoom * 2.2));
+    const radius = clamp(1.15 + Math.sqrt(Math.max(0, state.zoom)) * 0.38, 1.4, 3.1);
 
     ctx.save();
     ctx.textAlign = "left";
@@ -280,8 +345,15 @@
     return buildings.length <= MAX_LABELS_WITHOUT_HIGH_ZOOM;
   }
 
+  function buildingHeightPx(building, state) {
+    const stories = Number.isFinite(building.stories) ? building.stories : 1;
+    const selected = building.id === state.selectedBuildingId;
+    if (!selected) return 0;
+    return clamp(stories * Math.sqrt(Math.max(1, state.zoom)) * 1.6, 3, 14);
+  }
+
   function drawBuilding(ctx, state, bounds, building, worldToScreen, options) {
-    const heightPx = building.stories * 16 * Math.max(0.75, state.zoom);
+    const heightPx = buildingHeightPx(building, state);
     const selected = building.id === state.selectedBuildingId;
     const filteredOut = state.buildingFilterIds && !state.buildingFilterIds.has(building.id);
     const drawLabel = selected || Boolean(options && (options.forceLabel || options.drawLabel));
@@ -289,7 +361,7 @@
     ctx.save();
     ctx.globalAlpha = filteredOut && !selected ? 0.18 : 1;
 
-    drawBuildingSides(ctx, building.polygon, heightPx, selected, worldToScreen);
+    if (heightPx > 1) drawBuildingSides(ctx, building.polygon, heightPx, selected, worldToScreen);
     primitives.pathPolygon(ctx, worldToScreen, building.polygon, heightPx);
     ctx.fillStyle = selected ? config.COLORS.selected : config.COLORS.buildingTop;
     ctx.fill();
