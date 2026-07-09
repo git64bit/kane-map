@@ -15,11 +15,7 @@
     padding: 35
   };
 
-  // Portable app bundles may place a generated portable_config.js beside index.html.
-  // Keep this outside src/ so copying updated source files to USB does not reset the
-  // packaged production-data default back to the source-repo demo default.
-  if (global.document && !global.KaneMapPortableConfigLoadAttempted) {
-    global.KaneMapPortableConfigLoadAttempted = true;
-    global.document.write('<script src="portable_config.js"></' + 'script>');
-  }
+  // Portable app bundles place a generated portable_config.js beside index.html.
+  // src/app.js loads that root file before app context creation so src/ can be
+  // recopied to a USB app without resetting the packaged production default.
 })(window);

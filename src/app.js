@@ -130,7 +130,41 @@
     return number.toLocaleString("en-US");
   }
 
-  Promise.resolve(global.KaneMapAppContext.createAppContext())
+  function markBootPending() {
+    const runtimeStatus = ensureRuntimeStatusSpan();
+    if (runtimeStatus) runtimeStatus.textContent = "Runtime: resolving data config";
+    const sourceStatus = ensureFooterStatusSpan("dataSourceStatus");
+    if (sourceStatus) sourceStatus.textContent = "Data: resolving";
+    const loadStatus = ensureFooterStatusSpan("dataLoadStatus");
+    if (loadStatus) loadStatus.textContent = "Load: pending";
+  }
+
+  function loadPortableConfig() {
+    if (global.KaneMapPortableConfig && global.KaneMapPortableConfig.role) {
+      return Promise.resolve("already-loaded");
+    }
+    if (!global.document || !global.document.head) {
+      return Promise.resolve("no-document");
+    }
+    const existingScript = Array.from(global.document.scripts || []).find((script) => {
+      const src = script.getAttribute("src") || "";
+      return src === "portable_config.js" || src.endsWith("/portable_config.js");
+    });
+    if (existingScript) {
+      return Promise.resolve("script-present");
+    }
+    return new Promise((resolve) => {
+      const script = global.document.createElement("script");
+      script.src = "portable_config.js";
+      script.onload = () => resolve("loaded");
+      script.onerror = () => resolve("missing");
+      global.document.head.appendChild(script);
+    });
+  }
+
+  markBootPending();
+  loadPortableConfig()
+    .then(() => global.KaneMapAppContext.createAppContext())
     .then((ctx) => {
       installControllers(ctx);
       init(ctx);
