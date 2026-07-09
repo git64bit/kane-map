@@ -1,30 +1,34 @@
-"""Chunk prepared building footprints into browser-loadable files."""
+"""Chunk the prepared buildings layer into browser-loadable static files.
+
+This module intentionally avoids loading the full buildings layer into memory.
+It streams features from processing/output/prepared/buildings.json and writes
+smaller FeatureCollection chunks under processing/output/chunks/prepared-layers.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import math
-import shutil
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Iterable
 
 from kane_map_processing.config import OUTPUT_DIR, PREPARED_DIR, REPORTS_DIR
 
-LAYER_NAME = "buildings"
 DEFAULT_MAX_FEATURES = 5000
-PREPARED_PATH = PREPARED_DIR / "buildings.json"
+LAYER_NAME = "buildings"
+SOURCE_FILE = PREPARED_DIR / "buildings.json"
 CHUNK_ROOT = OUTPUT_DIR / "chunks" / "prepared-layers"
-BUILDING_CHUNK_DIR = CHUNK_ROOT / "buildings"
-ROOT_CHUNK_MANIFEST_PATH = CHUNK_ROOT / "chunk_manifest.json"
-BUILDING_CHUNK_MANIFEST_PATH = BUILDING_CHUNK_DIR / "buildings_chunk_manifest.json"
-REPORT_PATH = REPORTS_DIR / "buildings_chunking_report.json"
+LAYER_CHUNK_DIR = CHUNK_ROOT / LAYER_NAME
+CHUNK_MANIFEST_PATH = CHUNK_ROOT / "chunk_manifest.json"
+REPORT_PATH = REPORTS_DIR / "building_chunking_report.json"
 
 
 @dataclass
-class ChunkRecord:
+class ChunkInfo:
+    index: int
     file: str
     features: int
     bytes: int
@@ -32,350 +36,268 @@ class ChunkRecord:
 
 @dataclass
 class ChunkResult:
-    mode: str
     status: str
     message: str
     source: str
     output_dir: str
-    max_features_per_chunk: int
+    max_features: int
     source_features: int
-    chunks: int
-    bytes_written: int
-    report: str
-    manifest: str
+    chunks: list[ChunkInfo]
+    total_bytes: int
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def ensure_dirs() -> None:
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    BUILDING_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _read_more(handle, buffer: str, size: int = 65536) -> str:
-    chunk = handle.read(size)
-    if not chunk:
-        return buffer
-    return buffer + chunk
-
-
-def iter_geojson_features(path: Path) -> Iterator[Dict[str, Any]]:
-    """Yield features from a GeoJSON FeatureCollection without loading the full file."""
-    decoder = json.JSONDecoder()
+def _read_until_features_array(handle: Any, chunk_size: int = 65536) -> str:
     buffer = ""
+    while True:
+        more = handle.read(chunk_size)
+        if not more:
+            raise ValueError("GeoJSON features array not found")
+        buffer += more
+        features_index = buffer.find('"features"')
+        if features_index < 0:
+            if len(buffer) > chunk_size * 4:
+                buffer = buffer[-chunk_size:]
+            continue
+        array_index = buffer.find("[", features_index)
+        if array_index < 0:
+            continue
+        return buffer[array_index + 1 :]
 
+
+def iter_geojson_features(path: Path, chunk_size: int = 65536) -> Iterable[dict[str, Any]]:
+    """Yield GeoJSON features from a FeatureCollection without json.load()."""
+    decoder = json.JSONDecoder()
     with path.open("r", encoding="utf-8") as handle:
-        while '"features"' not in buffer:
-            next_chunk = handle.read(65536)
-            if not next_chunk:
-                raise ValueError(f"No features array found in {path}")
-            buffer += next_chunk
-
-        feature_key_index = buffer.index('"features"')
-        buffer = buffer[feature_key_index + len('"features"'):]
-
-        while "[" not in buffer:
-            next_chunk = handle.read(65536)
-            if not next_chunk:
-                raise ValueError(f"No features array opening bracket found in {path}")
-            buffer += next_chunk
-
-        array_start = buffer.index("[")
-        buffer = buffer[array_start + 1:]
-
+        buffer = _read_until_features_array(handle, chunk_size)
         while True:
             buffer = buffer.lstrip()
-            if not buffer:
-                new_buffer = _read_more(handle, buffer)
-                if new_buffer == buffer:
-                    break
-                buffer = new_buffer
-                continue
-
             if buffer.startswith("]"):
-                break
-
+                return
             if buffer.startswith(","):
-                buffer = buffer[1:]
-                continue
-
+                buffer = buffer[1:].lstrip()
             while True:
                 try:
-                    feature, end_index = decoder.raw_decode(buffer)
-                    if not isinstance(feature, dict):
-                        raise ValueError("GeoJSON feature was not an object")
-                    yield feature
-                    buffer = buffer[end_index:]
+                    feature, end = decoder.raw_decode(buffer)
+                    if isinstance(feature, dict):
+                        yield feature
+                    buffer = buffer[end:]
                     break
-                except json.JSONDecodeError:
-                    new_buffer = _read_more(handle, buffer)
-                    if new_buffer == buffer:
-                        raise
-                    buffer = new_buffer
+                except JSONDecodeError:
+                    more = handle.read(chunk_size)
+                    if not more:
+                        raise ValueError("Unexpected end of GeoJSON while reading features")
+                    buffer += more
 
 
-def count_features(path: Path) -> int:
+def feature_count(path: Path) -> int:
     return sum(1 for _ in iter_geojson_features(path))
 
 
-def _chunk_file_name(index: int) -> str:
-    return f"buildings_{index:06d}.json"
-
-
-def _write_chunk_header(handle, chunk_index: int, source_path: Path, max_features: int) -> None:
-    header = {
+def make_chunk_collection(chunk_index: int, features: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
         "type": "FeatureCollection",
         "meta": {
             "layer": LAYER_NAME,
-            "version": 1,
+            "version": "chunk-v1",
             "chunk_index": chunk_index,
-            "max_features_per_chunk": max_features,
-            "source": str(source_path),
+            "feature_count": len(features),
             "generated_at": utc_now(),
         },
-        "features": [
+        "features": features,
     }
-    text = json.dumps(header, separators=(",", ":"))
-    handle.write(text[:-1])
 
 
-def _write_chunk_footer(handle) -> None:
-    handle.write("]}")
+def chunk_file_name(index: int) -> str:
+    return f"buildings_{index:06d}.json"
 
 
-def _clear_existing_chunks() -> None:
-    if BUILDING_CHUNK_DIR.exists():
-        for path in BUILDING_CHUNK_DIR.glob("buildings_*.json"):
-            path.unlink()
-        for path in [BUILDING_CHUNK_MANIFEST_PATH]:
-            if path.exists():
-                path.unlink()
+def write_chunk(index: int, features: list[dict[str, Any]]) -> ChunkInfo:
+    LAYER_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
+    name = chunk_file_name(index)
+    path = LAYER_CHUNK_DIR / name
+    collection = make_chunk_collection(index, features)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(collection, handle, ensure_ascii=False, separators=(",", ":"))
+    return ChunkInfo(
+        index=index,
+        file=f"{LAYER_NAME}/{name}",
+        features=len(features),
+        bytes=path.stat().st_size,
+    )
 
 
-def write_chunks(source_path: Path, max_features: int, force: bool) -> Tuple[List[ChunkRecord], int]:
-    ensure_dirs()
-
-    existing = list(BUILDING_CHUNK_DIR.glob("buildings_*.json"))
-    if existing and not force:
-        raise FileExistsError("building chunks already exist; use --force to replace them")
-    if existing and force:
-        _clear_existing_chunks()
-
-    chunks: List[ChunkRecord] = []
-    current_handle = None
-    current_path: Optional[Path] = None
-    current_count = 0
-    chunk_index = 0
-    total_features = 0
-    first_in_chunk = True
-
-    try:
-        for feature in iter_geojson_features(source_path):
-            if current_handle is None or current_count >= max_features:
-                if current_handle is not None and current_path is not None:
-                    _write_chunk_footer(current_handle)
-                    current_handle.close()
-                    chunks.append(
-                        ChunkRecord(
-                            file=str(current_path.relative_to(CHUNK_ROOT)),
-                            features=current_count,
-                            bytes=current_path.stat().st_size,
-                        )
-                    )
-
-                chunk_index += 1
-                current_count = 0
-                first_in_chunk = True
-                current_path = BUILDING_CHUNK_DIR / _chunk_file_name(chunk_index)
-                current_handle = current_path.open("w", encoding="utf-8")
-                _write_chunk_header(current_handle, chunk_index, source_path, max_features)
-
-            if not first_in_chunk:
-                current_handle.write(",")
-            json.dump(feature, current_handle, separators=(",", ":"))
-            first_in_chunk = False
-            current_count += 1
-            total_features += 1
-
-        if current_handle is not None and current_path is not None:
-            _write_chunk_footer(current_handle)
-            current_handle.close()
-            chunks.append(
-                ChunkRecord(
-                    file=str(current_path.relative_to(CHUNK_ROOT)),
-                    features=current_count,
-                    bytes=current_path.stat().st_size,
-                )
-            )
-    finally:
-        if current_handle is not None and not current_handle.closed:
-            current_handle.close()
-
-    return chunks, total_features
+def remove_old_building_chunks() -> None:
+    if not LAYER_CHUNK_DIR.exists():
+        return
+    for path in LAYER_CHUNK_DIR.glob("buildings_*.json"):
+        path.unlink()
 
 
-def write_building_chunk_manifest(chunks: List[ChunkRecord], total_features: int, max_features: int) -> None:
-    manifest = {
-        "schema": "kane-map-building-chunk-manifest-v1",
-        "generated_at": utc_now(),
-        "layer": LAYER_NAME,
-        "source": str(PREPARED_PATH),
-        "output_root": str(CHUNK_ROOT),
-        "max_features_per_chunk": max_features,
-        "chunks": [asdict(chunk) for chunk in chunks],
-        "total_chunks": len(chunks),
-        "total_features": total_features,
-        "total_bytes": sum(chunk.bytes for chunk in chunks),
-    }
-    BUILDING_CHUNK_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+def load_manifest() -> dict[str, Any]:
+    if not CHUNK_MANIFEST_PATH.exists():
+        return {
+            "type": "kane-map-prepared-chunk-manifest",
+            "version": 1,
+            "generated_at": utc_now(),
+            "layers": {},
+        }
+    with CHUNK_MANIFEST_PATH.open("r", encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        manifest = {}
+    manifest.setdefault("type", "kane-map-prepared-chunk-manifest")
+    manifest.setdefault("version", 1)
+    manifest.setdefault("layers", {})
+    return manifest
 
 
-def update_root_chunk_manifest(chunks: List[ChunkRecord], total_features: int, max_features: int) -> None:
+def update_manifest(chunks: list[ChunkInfo], max_features: int, source_features: int) -> None:
     CHUNK_ROOT.mkdir(parents=True, exist_ok=True)
-    if ROOT_CHUNK_MANIFEST_PATH.exists():
-        try:
-            root = json.loads(ROOT_CHUNK_MANIFEST_PATH.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            root = {"schema": "kane-map-chunk-manifest-v1", "layers": {}}
-    else:
-        root = {"schema": "kane-map-chunk-manifest-v1", "layers": {}}
+    manifest = load_manifest()
+    layers = manifest.get("layers")
 
-    entry = {
+    layer_entry = {
         "layer": LAYER_NAME,
-        "generated_at": utc_now(),
+        "source": "prepared/buildings.json",
+        "chunk_dir": LAYER_NAME,
         "max_features_per_chunk": max_features,
-        "total_chunks": len(chunks),
-        "total_features": total_features,
-        "total_bytes": sum(chunk.bytes for chunk in chunks),
-        "manifest": str(BUILDING_CHUNK_MANIFEST_PATH.relative_to(CHUNK_ROOT)),
-        "chunks": [asdict(chunk) for chunk in chunks],
+        "features": source_features,
+        "chunks": [chunk.__dict__ for chunk in chunks],
+        "chunk_count": len(chunks),
+        "bytes": sum(chunk.bytes for chunk in chunks),
+        "generated_at": utc_now(),
     }
 
-    layers = root.get("layers")
-    if isinstance(layers, dict):
-        layers[LAYER_NAME] = entry
-    elif isinstance(layers, list):
-        new_layers = []
-        for item in layers:
-            if isinstance(item, dict) and item.get("layer") == LAYER_NAME:
-                continue
-            if isinstance(item, dict) and item.get("name") == LAYER_NAME:
-                continue
-            new_layers.append(item)
-        new_layers.append(entry)
-        root["layers"] = new_layers
+    if isinstance(layers, list):
+        manifest["layers"] = [layer for layer in layers if layer.get("layer") != LAYER_NAME]
+        manifest["layers"].append(layer_entry)
+    elif isinstance(layers, dict):
+        layers[LAYER_NAME] = layer_entry
     else:
-        root["layers"] = {LAYER_NAME: entry}
+        manifest["layers"] = {LAYER_NAME: layer_entry}
 
-    root["updated_at"] = utc_now()
-    ROOT_CHUNK_MANIFEST_PATH.write_text(json.dumps(root, indent=2), encoding="utf-8")
-
-
-def write_report(result: ChunkResult) -> None:
-    ensure_dirs()
-    REPORT_PATH.write_text(json.dumps(asdict(result), indent=2), encoding="utf-8")
+    manifest["generated_at"] = utc_now()
+    with CHUNK_MANIFEST_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(manifest, handle, ensure_ascii=False, indent=2)
 
 
-def run(execute: bool, max_features: int, force: bool) -> ChunkResult:
-    ensure_dirs()
-    mode = "EXECUTE" if execute else "DRY_RUN"
+def write_report(result: ChunkResult, execute: bool) -> None:
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    report = {
+        "generated_at": utc_now(),
+        "execute": execute,
+        "status": result.status,
+        "message": result.message,
+        "source": result.source,
+        "output_dir": result.output_dir,
+        "max_features": result.max_features,
+        "source_features": result.source_features,
+        "chunk_count": len(result.chunks),
+        "total_bytes": result.total_bytes,
+        "chunks": [chunk.__dict__ for chunk in result.chunks],
+    }
+    with REPORT_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(report, handle, ensure_ascii=False, indent=2)
 
-    if not PREPARED_PATH.exists():
-        result = ChunkResult(
-            mode=mode,
+
+def chunk_buildings(max_features: int, execute: bool) -> ChunkResult:
+    if max_features <= 0:
+        raise ValueError("max_features must be greater than zero")
+    if not SOURCE_FILE.exists():
+        return ChunkResult(
             status="missing_source",
-            message="prepared buildings.json does not exist",
-            source=str(PREPARED_PATH),
-            output_dir=str(BUILDING_CHUNK_DIR),
-            max_features_per_chunk=max_features,
+            message="prepared buildings layer not found",
+            source=str(SOURCE_FILE),
+            output_dir=str(LAYER_CHUNK_DIR),
+            max_features=max_features,
             source_features=0,
-            chunks=0,
-            bytes_written=0,
-            report=str(REPORT_PATH),
-            manifest=str(BUILDING_CHUNK_MANIFEST_PATH),
+            chunks=[],
+            total_bytes=0,
         )
-        write_report(result)
-        return result
-
-    source_features = count_features(PREPARED_PATH)
-    estimated_chunks = math.ceil(source_features / max_features) if max_features else 0
 
     if not execute:
-        result = ChunkResult(
-            mode=mode,
+        count = feature_count(SOURCE_FILE)
+        chunk_count = (count + max_features - 1) // max_features
+        chunks = [
+            ChunkInfo(index=i, file=f"{LAYER_NAME}/{chunk_file_name(i)}", features=0, bytes=0)
+            for i in range(1, chunk_count + 1)
+        ]
+        return ChunkResult(
             status="dry_run",
             message="ready; no chunks written",
-            source=str(PREPARED_PATH),
-            output_dir=str(BUILDING_CHUNK_DIR),
-            max_features_per_chunk=max_features,
-            source_features=source_features,
-            chunks=estimated_chunks,
-            bytes_written=0,
-            report=str(REPORT_PATH),
-            manifest=str(BUILDING_CHUNK_MANIFEST_PATH),
+            source=str(SOURCE_FILE),
+            output_dir=str(LAYER_CHUNK_DIR),
+            max_features=max_features,
+            source_features=count,
+            chunks=chunks,
+            total_bytes=0,
         )
-        write_report(result)
-        return result
 
-    chunks, total_features = write_chunks(PREPARED_PATH, max_features, force=force)
-    write_building_chunk_manifest(chunks, total_features, max_features)
-    update_root_chunk_manifest(chunks, total_features, max_features)
+    remove_old_building_chunks()
+    chunks: list[ChunkInfo] = []
+    pending: list[dict[str, Any]] = []
+    source_count = 0
+    chunk_index = 1
 
-    result = ChunkResult(
-        mode=mode,
+    for feature in iter_geojson_features(SOURCE_FILE):
+        source_count += 1
+        pending.append(feature)
+        if len(pending) >= max_features:
+            chunks.append(write_chunk(chunk_index, pending))
+            pending = []
+            chunk_index += 1
+
+    if pending:
+        chunks.append(write_chunk(chunk_index, pending))
+
+    update_manifest(chunks, max_features=max_features, source_features=source_count)
+    return ChunkResult(
         status="chunked",
         message="building chunks written",
-        source=str(PREPARED_PATH),
-        output_dir=str(BUILDING_CHUNK_DIR),
-        max_features_per_chunk=max_features,
-        source_features=total_features,
-        chunks=len(chunks),
-        bytes_written=sum(chunk.bytes for chunk in chunks),
-        report=str(REPORT_PATH),
-        manifest=str(BUILDING_CHUNK_MANIFEST_PATH),
+        source=str(SOURCE_FILE),
+        output_dir=str(LAYER_CHUNK_DIR),
+        max_features=max_features,
+        source_features=source_count,
+        chunks=chunks,
+        total_bytes=sum(chunk.bytes for chunk in chunks),
     )
-    write_report(result)
-    return result
 
 
-def print_result(result: ChunkResult) -> None:
-    print("Kane-Map building chunking")
-    print(f"Mode: {result.mode}")
+def print_result(result: ChunkResult, execute: bool) -> None:
+    mode = "EXECUTE" if execute else "DRY_RUN"
+    print("Kane-Map building layer chunking")
+    print(f"Mode: {mode}")
     print(f"Status: {result.status}")
     print(f"Message: {result.message}")
     print(f"Source: {result.source}")
     print(f"Output dir: {result.output_dir}")
-    print(f"Max features/chunk: {result.max_features_per_chunk}")
     print(f"Source features: {result.source_features}")
-    print(f"Chunks: {result.chunks}")
-    print(f"Bytes written: {result.bytes_written}")
-    print(f"Wrote {result.report}")
-    if result.status == "dry_run":
+    print(f"Max features/chunk: {result.max_features}")
+    print(f"Chunks: {len(result.chunks)}")
+    print(f"Bytes: {result.total_bytes}")
+    print(f"Wrote {REPORT_PATH}")
+    if not execute:
         print("Dry run only. Use --execute to write building chunks.")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Chunk prepared building footprints.")
-    parser.add_argument("--execute", action="store_true", help="Write chunk files.")
-    parser.add_argument("--force", action="store_true", help="Replace existing building chunks.")
-    parser.add_argument(
-        "--max-features",
-        type=int,
-        default=DEFAULT_MAX_FEATURES,
-        help=f"Maximum features per chunk. Default: {DEFAULT_MAX_FEATURES}",
-    )
+    parser.add_argument("--execute", action="store_true", help="Write building chunk files.")
+    parser.add_argument("--max-features", type=int, default=DEFAULT_MAX_FEATURES)
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     args = parse_args()
-    if args.max_features <= 0:
-        raise SystemExit("--max-features must be greater than zero")
-    result = run(execute=args.execute, max_features=args.max_features, force=args.force)
-    print_result(result)
+    result = chunk_buildings(max_features=args.max_features, execute=args.execute)
+    write_report(result, execute=args.execute)
+    print_result(result, execute=args.execute)
+    return 0 if result.status in {"dry_run", "chunked"} else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
