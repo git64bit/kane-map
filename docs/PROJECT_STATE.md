@@ -1,93 +1,89 @@
 # Kane-Map Project State
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 ## Current phase
 
-Phase 6 preparation — real-data intake planning and data adapter skeleton.
+Kane-Map is the Kane County pilot for an offline-first browser county-map application. The source repository contains the browser app, documentation, and processing scripts. Generated county data and generated portable app folders belong on the Debian processing node and must not be committed to GitHub.
 
-The app remains an offline-first browser application using synthetic demo geometry. Batch 025 adds a data adapter layer so the renderer and controllers no longer need to care whether geometry comes from demo chunks or future prepared Kane County chunks.
+## Current verified portable app
 
-## Stable checkpoints
-
-Recent stable checkpoints:
+The latest verified USB-copy-ready generated app folder on the processing node is:
 
 ```text
-Batch 018 — tabbed workspace
-Batch 019 — keyboard and fieldwork speed
-Batch 020 — app controller refactor
-Batch 021 — renderer refactor
-Batch 022 — CSS refactor
-Batch 023 — documentation index
-Batch 024 — real data plan
-Batch 025 — data adapter skeleton
+/home/kaneproc/kane-map/processing/output/apps/kane-county-map-20260709T113306Z
 ```
 
-## Current architecture
+Verification result:
 
 ```text
-Browser app
-  ├── static HTML/CSS/JS
-  ├── Canvas renderer
-  ├── local demo geometry chunks
-  ├── data adapter skeleton
-  ├── localStorage observation ledger
-  ├── JSON backup/restore
-  ├── CSV/TXT review exports
-  └── no server/database requirement
+status: ready
+data files: 87
+layers: 5
+chunks: 85
+features: 396,005
+absolute manifest paths: 0
+USB-copy status: ready
 ```
 
-## Current active geometry source
+Layers:
 
 ```text
-Synthetic demo geometry
+county_boundary
+roads
+water
+buildings
+address_points
 ```
 
-No real Kane County geometry is bundled yet.
-
-## Data adapter decision
-
-The app now has a formal source path:
+## Browser app architecture
 
 ```text
-src/data/adapter.js
-src/data/sourceTypes.js
-src/data/preparedDataManifest.js
-src/data/realDataPlaceholder.js
+static HTML/CSS/JS
+Canvas renderer
+local browser observation records
+JSON/CSV/TXT export
+source-selecting data adapter
+demo geometry mode
+prepared production county bundle mode
 ```
 
-The renderer and controllers should receive geometry through the adapter path, not directly from a specific source implementation.
+The browser application does not process raw county source data. Python processing scripts prepare, chunk, package, and verify data on the Debian processing node.
 
-## Preferred real-data processing path
+## Data-source behavior
 
-The preferred production-data path is:
+The source repository remains safe to open in demo mode by default:
 
 ```text
-Debian 12 or 13 node
-Python venv
-source data intake
-geometry cleanup
-Kane-grid assignment
-static output generation
-copy prepared files to local drive or repo
-browser renders prepared static files offline
+index.html
 ```
 
-This is a preference, not a hard dependency.
-
-## Current next step
-
-Add the first data-processing-node skeleton:
+The source repository can request prepared production data explicitly when served through local HTTP/static serving and when the requested bundle exists:
 
 ```text
-tools/
-  processing/
-    README.md
-    requirements.txt
-    scripts/
-      inspect_source.py
-      normalize_geometry.py
-      build_manifest.py
+index.html?data=prepared&bundle=processing/output/bundles/<bundle-name>
 ```
 
-This should remain separate from the browser app and should not be required to open `index.html`.
+The generated portable app rewrites `src/data/realBundleConfig.js` so the copied app defaults to the relative production data path:
+
+```text
+data/kane-county
+```
+
+In the portable app, `?data=demo` remains an explicit override.
+
+## Production failure rule
+
+Prepared/production mode must not silently fall back to demo data. If production data is requested and cannot be loaded, the app should show a visible production-data-unavailable status.
+
+## Next architectural topic
+
+The next architectural topic after the production-data switch is the county-map / TrivialHTTP path:
+
+```text
+kane-map     = Kane County pilot
+county-map   = clean generic source-only application/package project
+TrivialHTTP  = local-only static file-serving runtime, Windows .exe first or early
+```
+
+TrivialHTTP is not part of this batch.

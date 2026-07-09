@@ -1,34 +1,70 @@
-# Browser real-data loader
+# Browser Real-Data Loader
 
-Kane-Map now has two browser data modes.
+Kane-Map has two browser data modes:
 
-## Default mode
+```text
+demo       synthetic browser-local demo geometry
+prepared   prepared production county bundle loaded from static JSON chunks
+```
 
-Opening `index.html` with no query string keeps the synthetic demo data active.
+## Source repository default
+
+Opening the source repository app with no query string keeps demo mode active:
 
 ```text
 index.html
 ```
 
-This is the safe default.
+This is the safe source-tree default.
 
-## Prepared chunked mode
+## Explicit prepared mode
 
-Prepared chunked mode is activated by URL parameter.
+Prepared mode is requested by URL parameter:
 
 ```text
 index.html?data=prepared&bundle=processing/output/bundles/kane-map-chunked-prepared-20260709T094356Z
 ```
 
-The `bundle` value points to the local packaged chunked bundle created by Batch 054.
+Recognized prepared aliases include:
 
-## Local static server requirement
+```text
+prepared
+real
+chunked
+chunked-prepared
+production
+prod
+```
 
-Browser `fetch()` usually cannot read many local files reliably from `file://` URLs.
+Recognized demo aliases include:
 
-For prepared mode, serve the repository root with a local static server, then open the URL through `http://localhost`.
+```text
+demo
+synthetic
+sample
+```
 
-Example from the repository root:
+## Portable app default
+
+The generated portable app rewrites `src/data/realBundleConfig.js` so the app can default to the copied production bundle:
+
+```text
+data/kane-county
+```
+
+That means the generated portable app should load the Kane County production bundle with no query string once it is opened through a local static file-serving mechanism.
+
+The portable app still accepts an explicit demo override:
+
+```text
+index.html?data=demo
+```
+
+## Local static serving requirement
+
+Browser `fetch()` usually cannot read many local JSON files reliably from `file://` URLs. Prepared mode should be opened through local HTTP/static serving.
+
+Developer fallback example from the repository root:
 
 ```bash
 python3 -m http.server 8787
@@ -40,9 +76,17 @@ Then open:
 http://localhost:8787/index.html?data=prepared&bundle=processing/output/bundles/kane-map-chunked-prepared-20260709T094356Z
 ```
 
+This Python example is a developer fallback only. It is not the final Windows/USB runtime assumption.
+
 ## What the loader does
 
-The loader reads `chunk_manifest.json`, loads each listed chunk file, and converts prepared GeoJSON into the existing canvas data shape.
+The loader reads:
+
+```text
+chunk_manifest.json
+```
+
+Then it loads each listed chunk file and converts prepared GeoJSON into the existing browser canvas data shape.
 
 Converted browser layers:
 
@@ -54,16 +98,12 @@ buildings
 addressPoints
 ```
 
-The current renderer displays roads, water, forests, and buildings. Address points and county boundary are loaded into the data model for later display and selection work.
+## Failure behavior
 
-## Fallback
+If demo mode is requested, the app uses demo data.
 
-If prepared mode is not requested, the app uses demo data.
-
-If prepared mode is requested but the bundle cannot be loaded, the app falls back to demo data and writes the error to the browser console.
+If prepared/production mode is requested and the production bundle cannot be loaded, the app must not silently fall back to demo data. The failure should be visible as production data unavailable.
 
 ## Current limitation
 
-This first loader is intentionally direct: it loads all chunk files at boot.
-
-Later work should add viewport-based or grid-cell-based lazy loading so the browser does not need to parse all building and address-point chunks at startup.
+The current loader is direct: it loads all chunk files at boot. Later work may add viewport-based or grid-cell-based lazy loading.

@@ -2,35 +2,45 @@
 
 ## Current checkpoint
 
-The processing pipeline has produced a validated prepared data bundle with five layers and 396,005 total features.
+Batch 059 clarifies the runtime data-source boundary for the Kane County pilot.
 
-The next work is browser integration planning and then a cautious local bundle-loader implementation.
-
-## Immediate next batch
+The source repository default is demo mode. The generated portable app default is production/prepared mode after packaging rewrites `src/data/realBundleConfig.js` to point at the relative bundle path:
 
 ```text
-Batch 049 — bundle manifest loader
+data/kane-county
 ```
 
-Purpose:
+## Immediate verification after Batch 059
+
+After this batch is applied and pulled to the Debian processing node, verify that the source tree still opens in demo mode and that the generated portable app can still be packaged and verified.
+
+Expected browser behavior:
 
 ```text
-select local bundle_manifest.json
-validate it
-show available layers
-load no layer geometry yet
+index.html                         -> demo mode
+index.html?data=demo               -> demo mode
+index.html?data=prepared&bundle=... -> production/prepared mode when served locally and bundle exists
 ```
 
-## After Batch 049
+Expected portable behavior after packaging:
 
 ```text
-Batch 050 — load county boundary preview
-Batch 051 — load water preview
-Batch 052 — load roads preview
+portable app with no query string  -> Kane County production bundle
+portable app with ?data=demo       -> demo mode override
 ```
-
-Only after those work should buildings and address points be considered.
 
 ## Do not do next
 
-Do not load the complete 173MB prepared bundle into the browser in one step.
+Do not add generated county data to GitHub.
+
+Do not introduce TrivialHTTP inside Batch 059.
+
+Do not duplicate the oversized Kane-Map repository into county-map. The generic county-map project should be created cleanly after the package-format boundary is documented.
+
+## Recommended next batches
+
+```text
+Batch 060 — county package format specification
+Batch 061 — clean county-map source skeleton
+Batch 062 — TrivialHTTP project/runtime specification
+```
