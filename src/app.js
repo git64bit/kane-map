@@ -2,7 +2,7 @@
   "use strict";
 
   const PRODUCTION_BUNDLE_ROOT = "processing/output/prepared";
-  const BATCH_LABEL = "UI: Batch 078";
+  const BATCH_LABEL = "UI: Batch 080";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -238,12 +238,14 @@
 
   markBootPending();
   Promise.all([
-    loadScriptOnce("src/controllers/mapSectorSupport.js", "KaneMapMapSectorSupport"),
+    loadScriptOnce("src/controllers/mapSectorControls.js", "KaneMapMapSectorControls"),
+    loadScriptOnce("src/controllers/mapGeometrySupport.js", "KaneMapMapGeometrySupport"),
     loadScriptOnce("src/controllers/mapNavigationSupport.js", "KaneMapMapNavigationSupport"),
     loadScriptOnce("src/map/drawLayerSupport.js", "KaneMapDrawLayerSupport"),
     loadScriptOnce("src/map/drawGridLayers.js", "KaneMapDrawGridLayers"),
     loadScriptOnce("src/map/drawFeatureLayers.js", "KaneMapDrawFeatureLayers")
   ])
+    .then(() => loadScriptOnce("src/controllers/mapSectorSupport.js", "KaneMapMapSectorSupport"))
     .then(() => global.KaneMapAppContext.createAppContext())
     .then((ctx) => {
       installControllers(ctx);
