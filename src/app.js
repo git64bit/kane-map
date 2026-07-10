@@ -1,7 +1,7 @@
 (function bootKaneMap(global) {
   "use strict";
 
-  const BATCH_LABEL = "UI: Batch 089";
+  const BATCH_LABEL = "UI: Batch 090";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -68,6 +68,7 @@
       runtimeStatus = global.KaneMapRuntimeStatus.createRuntimeStatus(BATCH_LABEL);
       runtimeStatus.markBootPending();
       return Promise.all([
+        loadScriptOnce("src/app/sectorDomain.js", "KaneMapSectorDomain"),
         loadScriptOnce("src/controllers/mapSectorControls.js", "KaneMapMapSectorControls"),
         loadScriptOnce("src/controllers/mapGeometrySupport.js", "KaneMapMapGeometrySupport"),
         loadScriptOnce("src/controllers/mapSectorState.js", "KaneMapMapSectorState"),

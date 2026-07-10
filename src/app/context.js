@@ -24,15 +24,18 @@
       preparedManifest: global.KaneMapPreparedDataManifest
     });
     const catalog = dataAdapter.getCatalog();
-    const grid = global.KaneMapGrid.makeKaneGrid(dataAdapter.getBounds(), {
-      rows: 4,
-      cols: 6,
-      startNorth: 11,
-      startEast: 5
-    });
+    const sectorDomain = global.KaneMapSectorDomain;
+    if (!sectorDomain) throw new Error("Kane-Map sector domain is unavailable.");
+    const referenceGrid = global.KaneMapGrid.makeKaneGrid(
+      dataAdapter.getBounds(),
+      sectorDomain.referenceGrid
+    );
+    const grid = sectorDomain.restrictGrid(referenceGrid);
     const featureStore = dataAdapter.createFeatureStore();
-    const allCellCodes = grid.cells.map((cell) => cell.code);
-    const fullInitialData = featureStore.buildDataForCells(allCellCodes);
+    const allCellCodes = sectorDomain.sectorCodes();
+    const fullInitialData = sectorDomain.restrictAssignedFeatures(
+      featureStore.buildDataForCells(allCellCodes)
+    );
     const baseMapData = baseMapOnlyData(fullInitialData);
     const allBuildings = fullInitialData.buildings;
     const store = global.KaneMapLocalStore.createLocalObservationStore();
