@@ -102,8 +102,14 @@
       centerOnWorldPoint(primitives.centroid(polygon));
     }
 
-    function zoomBy(factor) {
+    function fitPolygon(polygon, padding) {
+      viewport.fitPolygon(state, bounds, polygon, padding);
+      render();
+    }
+
+    function zoomBy(factor, anchorPoint) {
       viewport.zoomBy(state, factor);
+      if (Array.isArray(anchorPoint)) viewport.centerOnWorldPoint(state, bounds, anchorPoint);
       render();
     }
 
@@ -174,6 +180,7 @@
       setBuildingFilter,
       centerOnWorldPoint,
       centerOnPolygon,
+      fitPolygon,
       hitTest,
       beginDrag,
       dragTo,

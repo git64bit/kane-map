@@ -40,7 +40,7 @@
       canvas.addEventListener("pointercancel", () => renderer.endDrag());
       canvas.addEventListener("wheel", (event) => {
         event.preventDefault();
-        renderer.zoomBy(event.deltaY < 0 ? 1.22 : 0.82);
+        renderer.zoomBy(event.deltaY < 0 ? 1.22 : 0.82, ctx.selectedFocusPoint());
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       }, { passive: false });
@@ -48,8 +48,8 @@
 
     ctx.bindMapControlEvents = function bindMapControlEvents() {
       installLayerControls(ctx);
-      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.42)));
-      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.70)));
+      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.42, ctx.selectedFocusPoint())));
+      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.70, ctx.selectedFocusPoint())));
       els.rotateLeft.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(-12)));
       els.rotateRight.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(12)));
       els.prevBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(-1));
@@ -76,6 +76,28 @@
       action();
       ctx.updateActiveChunks();
       ctx.updateViewAndChunkStatus();
+    };
+
+    ctx.selectedFocusPoint = function selectedFocusPoint() {
+      if (ctx.selectedFineCell && Array.isArray(ctx.selectedFineCell.polygon)) {
+        return polygonCenter(ctx.selectedFineCell.polygon);
+      }
+      if (ctx.selectedDetailCell && Array.isArray(ctx.selectedDetailCell.polygon)) {
+        return polygonCenter(ctx.selectedDetailCell.polygon);
+      }
+      if (ctx.selected.cell) return ctx.selected.cell.center;
+      return null;
+    };
+
+    ctx.fitSelectedSector = function fitSelectedSector() {
+      const polygon = ctx.selectedFineCell && ctx.selectedFineCell.polygon
+        ? ctx.selectedFineCell.polygon
+        : ctx.selectedDetailCell && ctx.selectedDetailCell.polygon
+          ? ctx.selectedDetailCell.polygon
+          : ctx.selected.cell && ctx.selected.cell.polygon
+            ? ctx.selected.cell.polygon
+            : null;
+      if (polygon) renderer.fitPolygon(polygon, 72);
     };
 
     ctx.updateActiveChunks = function updateActiveChunks() {
@@ -271,6 +293,7 @@
       }
 
       renderer.setSelected(hit.building, cell, ctx.selectedDetailCell, ctx.selectedFineCell);
+      if (hit.fineCell || hit.detailCell || hit.cell) ctx.fitSelectedSector();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
     };
@@ -341,7 +364,7 @@
       ctx.selected = { cell, building: null };
       ctx.selectedDetailCell = null;
       ctx.selectedFineCell = null;
-      renderer.centerOnWorldPoint(cell.center);
+      renderer.fitPolygon(cell.polygon, 72);
       ctx.activateCell(cell.code);
       renderer.setSelected(null, cell, null, null);
       ctx.updateSelectedPanel();
@@ -851,6 +874,16 @@ Selected practical: ${selectedFine}`;
 
   function boundsIntersect(a, b) {
     return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+  }
+
+  function polygonCenter(polygon) {
+    if (!Array.isArray(polygon) || !polygon.length) return null;
+    const xs = polygon.map((point) => point[0]);
+    const ys = polygon.map((point) => point[1]);
+    return [
+      (Math.min(...xs) + Math.max(...xs)) / 2,
+      (Math.min(...ys) + Math.max(...ys)) / 2
+    ];
   }
 
   global.KaneMapMapController = { installMapController };

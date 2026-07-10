@@ -65,6 +65,39 @@
     state.zoom = config.clamp(state.zoom * factor, 0.35, MAX_ZOOM);
   }
 
+  function fitPolygon(state, bounds, polygon, padding) {
+    if (!Array.isArray(polygon) || polygon.length < 2) return;
+
+    const margin = Math.max(24, Number.isFinite(padding) ? padding : 72);
+    const xs = polygon.map((point) => point[0]);
+    const ys = polygon.map((point) => point[1]);
+    const center = [
+      (Math.min(...xs) + Math.max(...xs)) / 2,
+      (Math.min(...ys) + Math.max(...ys)) / 2
+    ];
+    const angle = (state.bearing * Math.PI) / 180;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    let maxRx = 0;
+    let maxRy = 0;
+
+    polygon.forEach((point) => {
+      const dx = point[0] - center[0];
+      const dy = point[1] - center[1];
+      const rx = dx * cos - dy * sin;
+      const ry = dx * sin + dy * cos;
+      maxRx = Math.max(maxRx, Math.abs(rx));
+      maxRy = Math.max(maxRy, Math.abs(ry));
+    });
+
+    const availableWidth = Math.max(1, state.width - margin * 2);
+    const availableHeight = Math.max(1, state.height - margin * 2);
+    const zoomX = maxRx > 0 ? availableWidth / (maxRx * 2) : MAX_ZOOM;
+    const zoomY = maxRy > 0 ? availableHeight / (maxRy * 2 * state.pitchScale) : MAX_ZOOM;
+    state.zoom = config.clamp(Math.min(zoomX, zoomY), 0.35, MAX_ZOOM);
+    centerOnWorldPoint(state, bounds, center);
+  }
+
   function rotateBy(state, degrees) {
     state.bearing = config.normalizeBearing(state.bearing + degrees);
   }
@@ -82,6 +115,7 @@
     screenToWorld,
     visibleWorldBounds,
     centerOnWorldPoint,
+    fitPolygon,
     zoomBy,
     rotateBy,
     resetView
