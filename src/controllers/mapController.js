@@ -63,8 +63,6 @@
       installLayerControls(ctx);
       els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.42, ctx.selectedFocusPoint())));
       els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.70, ctx.selectedFocusPoint())));
-      els.rotateLeft.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(-12)));
-      els.rotateRight.addEventListener("click", () => ctx.changeView(() => renderer.rotateBy(12)));
       els.prevBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(-1));
       els.nextBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(1));
       els.resetView.addEventListener("click", () => ctx.changeView(() => renderer.resetView()));

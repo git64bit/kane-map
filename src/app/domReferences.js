@@ -41,8 +41,6 @@
       visitStatusSummary: document.getElementById("visitStatusSummary"),
       zoomIn: document.getElementById("zoomIn"),
       zoomOut: document.getElementById("zoomOut"),
-      rotateLeft: document.getElementById("rotateLeft"),
-      rotateRight: document.getElementById("rotateRight"),
       prevBuilding: document.getElementById("prevBuilding"),
       nextBuilding: document.getElementById("nextBuilding"),
       resetView: document.getElementById("resetView"),

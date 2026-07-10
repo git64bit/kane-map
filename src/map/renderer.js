@@ -112,11 +112,6 @@
       render();
     }
 
-    function rotateBy(degrees) {
-      viewport.rotateBy(state, degrees);
-      render();
-    }
-
     function resetView() {
       viewport.resetView(state);
       render();
@@ -172,7 +167,6 @@
       setMapLayerState,
       visibleWorldBounds,
       zoomBy,
-      rotateBy,
       resetView,
       setSelected,
       setBuildingRecordSummary,

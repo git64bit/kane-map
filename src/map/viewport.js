@@ -67,7 +67,6 @@
 
   function fitPolygon(state, bounds, polygon, padding) {
     if (!Array.isArray(polygon) || polygon.length < 2) return;
-
     const margin = Math.max(24, Number.isFinite(padding) ? padding : 72);
     const xs = polygon.map((point) => point[0]);
     const ys = polygon.map((point) => point[1]);
@@ -98,10 +97,6 @@
     centerOnWorldPoint(state, bounds, center);
   }
 
-  function rotateBy(state, degrees) {
-    state.bearing = config.normalizeBearing(state.bearing + degrees);
-  }
-
   function resetView(state) {
     state.zoom = 0.72;
     state.bearing = -18;
@@ -117,7 +112,6 @@
     centerOnWorldPoint,
     fitPolygon,
     zoomBy,
-    rotateBy,
     resetView
   };
 })(window);

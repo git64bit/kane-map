@@ -28,13 +28,6 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  function normalizeBearing(value) {
-    let next = value % 360;
-    if (next > 180) next -= 360;
-    if (next < -180) next += 360;
-    return next;
-  }
-
   function practicalFeaturesVisible(state) {
     return Boolean(
       state &&
@@ -49,7 +42,6 @@
     COLORS,
     PRACTICAL_FEATURE_MIN_ZOOM,
     clamp,
-    normalizeBearing,
     practicalFeaturesVisible
   };
 })(window);

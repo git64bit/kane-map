@@ -1,7 +1,7 @@
 (function bootKaneMap(global) {
   "use strict";
 
-  const BATCH_LABEL = "UI: Batch 086";
+  const BATCH_LABEL = "UI: Batch 087";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
