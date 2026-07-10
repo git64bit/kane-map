@@ -23,11 +23,16 @@
       selectedDetailCellCode: null,
       selectedFineCellCode: null,
       activeCellCodes: [],
+      mutedCellCodes: [],
       activeDetailCellCodes: [],
       activeDetailCells: [],
+      mutedDetailCellCodes: [],
+      mutedDetailCells: [],
       detailGridCells: [],
       activeFineCellCodes: [],
       activeFineCells: [],
+      mutedFineCellCodes: [],
+      mutedFineCells: [],
       fineGridCells: [],
       layerVisibility: {
         roads: false,
@@ -68,12 +73,17 @@
       const detail = detailState || {};
       state.layerVisibility = Object.assign({}, state.layerVisibility, layerVisibility || {});
       state.activeCellCodes = Array.isArray(activeCellCodes) ? activeCellCodes.slice() : [];
+      state.mutedCellCodes = Array.isArray(detail.mutedCellCodes) ? detail.mutedCellCodes.slice() : [];
       state.activeDetailCells = Array.isArray(detail.activeDetailCells) ? detail.activeDetailCells.slice() : [];
       state.activeDetailCellCodes = state.activeDetailCells.map((cell) => cell.code);
+      state.mutedDetailCells = Array.isArray(detail.mutedDetailCells) ? detail.mutedDetailCells.slice() : [];
+      state.mutedDetailCellCodes = state.mutedDetailCells.map((cell) => cell.code);
       state.detailGridCells = Array.isArray(detail.detailGridCells) ? detail.detailGridCells.slice() : [];
       state.selectedDetailCellCode = detail.selectedDetailCell ? detail.selectedDetailCell.code : null;
       state.activeFineCells = Array.isArray(detail.activeFineCells) ? detail.activeFineCells.slice() : [];
       state.activeFineCellCodes = state.activeFineCells.map((cell) => cell.code);
+      state.mutedFineCells = Array.isArray(detail.mutedFineCells) ? detail.mutedFineCells.slice() : [];
+      state.mutedFineCellCodes = state.mutedFineCells.map((cell) => cell.code);
       state.fineGridCells = Array.isArray(detail.fineGridCells) ? detail.fineGridCells.slice() : [];
       state.selectedFineCellCode = detail.selectedFineCell ? detail.selectedFineCell.code : null;
       render();

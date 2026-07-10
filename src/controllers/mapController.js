@@ -90,11 +90,14 @@
     ctx.refreshMapData = function refreshMapData() {
       ctx.detailGridCells = detailGridCellsForDisplay(ctx);
       ctx.fineGridCells = fineGridCellsForDisplay(ctx);
-      renderer.setMapLayerState(ctx.layerVisibility, ctx.activeCellCodes, {
-        activeDetailCells: ctx.activeDetailCells,
+      renderer.setMapLayerState(ctx.layerVisibility, effectiveMainCellCodes(ctx), {
+        mutedCellCodes: ctx.mutedCellCodes,
+        activeDetailCells: effectiveDetailCells(ctx),
+        mutedDetailCells: ctx.mutedDetailCells,
         selectedDetailCell: ctx.selectedDetailCell,
         detailGridCells: ctx.detailGridCells,
-        activeFineCells: ctx.activeFineCells,
+        activeFineCells: effectiveFineCells(ctx),
+        mutedFineCells: ctx.mutedFineCells,
         selectedFineCell: ctx.selectedFineCell,
         fineGridCells: ctx.fineGridCells
       });
@@ -205,10 +208,57 @@
       ctx.updateViewAndChunkStatus();
     };
 
+    ctx.toggleMutedAtHit = function toggleMutedAtHit(hit) {
+      if (hit && hit.fineCell) {
+        ctx.selectedFineCell = hit.fineCell;
+        const detailCell = detailCellByCode(ctx, hit.fineCell.detailParentCode);
+        if (detailCell) ctx.selectedDetailCell = detailCell;
+        toggleFineMute(ctx, hit.fineCell);
+      } else if (hit && hit.detailCell) {
+        ctx.selectedDetailCell = hit.detailCell;
+        ctx.selectedFineCell = null;
+        toggleDetailMute(ctx, hit.detailCell);
+      } else if (hit && hit.cell) {
+        ctx.selectedDetailCell = null;
+        ctx.selectedFineCell = null;
+        toggleMainMute(ctx, hit.cell);
+      }
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
+    ctx.toggleSelectedSectorMuted = function toggleSelectedSectorMuted() {
+      if (ctx.selectedFineCell) {
+        toggleFineMute(ctx, ctx.selectedFineCell);
+      } else if (ctx.selectedDetailCell) {
+        toggleDetailMute(ctx, ctx.selectedDetailCell);
+      } else if (ctx.selected.cell) {
+        toggleMainMute(ctx, ctx.selected.cell);
+      }
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
+    ctx.clearMutedSectors = function clearMutedSectors() {
+      ctx.mutedCellCodes = [];
+      ctx.mutedDetailCells = [];
+      ctx.mutedFineCells = [];
+      ctx.refreshMapData();
+      ctx.updateViewAndChunkStatus();
+    };
+
     ctx.selectAt = function selectAt(event) {
       const hit = renderer.hitTest(ctx.pointerPosition(event));
       const cell = hit.fineCell ? ctx.cellForCode(hit.fineCell.parentCode) : hit.detailCell ? ctx.cellForCode(hit.detailCell.parentCode) : hit.cell;
       ctx.selected = { cell, building: hit.building };
+
+      if (event.shiftKey || event.altKey) {
+        ctx.toggleMutedAtHit(hit);
+        renderer.setSelected(hit.building, cell, ctx.selectedDetailCell, ctx.selectedFineCell);
+        ctx.updateSelectedPanel();
+        ctx.updateRecordPanel();
+        return;
+      }
 
       if (hit.fineCell) {
         ctx.activateFineCell(hit.fineCell);
@@ -321,8 +371,8 @@
       );
       const allowed = filterIds === null ? null : new Set(filterIds);
       const parentCodes = new Set(activeDataCellCodes(ctx).length ? activeDataCellCodes(ctx) : ctx.visibleCellCodes.length ? ctx.visibleCellCodes : ctx.allCellCodes);
-      const fineCells = ctx.activeFineCells;
-      const detailCells = ctx.activeDetailCells;
+      const fineCells = effectiveFineCells(ctx);
+      const detailCells = effectiveDetailCells(ctx);
       return ctx.allBuildings
         .filter((building) => parentCodes.has(building.cell))
         .filter((building) => !fineCells.length || featureBelongsToActiveCells(building, fineCells, new Set(fineCells.map((cell) => cell.code)), "polygon"))
@@ -370,7 +420,7 @@
         ? `Active chunks ${chunkStatus.selected}/${chunkStatus.total}`
         : `Active chunks 0/${chunkStatus.total}`;
       els.chunkStatus.title = chunkStatus.ids.join(", ");
-      els.visibleCellStatus.textContent = `Active cells ${ctx.activeCellCodes.length}/${ctx.grid.cells.length} · Inspection cells ${ctx.activeDetailCells.length} · Practical cells ${ctx.activeFineCells.length} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
+      els.visibleCellStatus.textContent = `Active cells ${effectiveMainCellCodes(ctx).length}/${ctx.grid.cells.length} · Inspection cells ${effectiveDetailCells(ctx).length} · Practical cells ${effectiveFineCells(ctx).length} · Muted sectors ${mutedSectorCount(ctx)} · Visible cells ${ctx.visibleCellCodes.length}/${ctx.grid.cells.length}`;
     };
 
     ctx.updateLayerControlStatus = function updateLayerControlStatus() {
@@ -381,12 +431,26 @@
         });
       }
       if (ctx.els.activeCellSummary) {
-        const cells = ctx.activeCellCodes.length ? ctx.activeCellCodes.join(", ") : "none";
-        const detailCells = ctx.activeDetailCells.length ? ctx.activeDetailCells.map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
-        const fineCells = ctx.activeFineCells.length ? ctx.activeFineCells.map((cell) => shortFineCellCode(cell)).join(", ") : "none";
+        const cells = effectiveMainCellCodes(ctx).length ? effectiveMainCellCodes(ctx).join(", ") : "none";
+        const detailCells = effectiveDetailCells(ctx).length ? effectiveDetailCells(ctx).map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
+        const fineCells = effectiveFineCells(ctx).length ? effectiveFineCells(ctx).map((cell) => shortFineCellCode(cell)).join(", ") : "none";
+        const mutedMain = ctx.mutedCellCodes.length ? ctx.mutedCellCodes.join(", ") : "none";
+        const mutedDetail = ctx.mutedDetailCells.length ? ctx.mutedDetailCells.map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
+        const mutedFine = ctx.mutedFineCells.length ? ctx.mutedFineCells.map((cell) => shortFineCellCode(cell)).join(", ") : "none";
         const selectedDetail = ctx.selectedDetailCell ? shortDetailCellCode(ctx.selectedDetailCell) : "none";
         const selectedFine = ctx.selectedFineCell ? shortFineCellCode(ctx.selectedFineCell) : "none";
-        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}\nInspection cells: ${detailCells}\nPractical cells: ${fineCells}\nSelected inspection: ${selectedDetail}\nSelected practical: ${selectedFine}`;
+        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}
+Inspection cells: ${detailCells}
+Practical cells: ${fineCells}
+Muted cells: ${mutedMain}
+Muted inspection: ${mutedDetail}
+Muted practical: ${mutedFine}
+Selected inspection: ${selectedDetail}
+Selected practical: ${selectedFine}`;
+      }
+      if (ctx.els.muteSelectedSector) {
+        ctx.els.muteSelectedSector.textContent = selectedSectorIsMuted(ctx) ? "Restore selected sector" : "Mute selected sector";
+        ctx.els.muteSelectedSector.disabled = !(ctx.selectedFineCell || ctx.selectedDetailCell || ctx.selected.cell);
       }
     };
   }
@@ -400,11 +464,13 @@
     panel.className = "section map-layer-controls";
     panel.innerHTML = [
       `<h2>Detail layers</h2>`,
-      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell for its 16×16 area grid, then click an area cell for an 8×8 practical grid. Building shapes and address points render only inside active practical cells.</p>`,
+      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell for its 16×16 area grid, then click an area cell for an 8×8 practical grid. Shift-click or use Mute selected sector to turn irrelevant sectors off.</p>`,
       `<div class="button-grid">`,
       `<button id="activateVisibleCells" type="button" class="secondary">Add visible cells</button>`,
       `<button id="clearInspectionCells" type="button" class="secondary">Clear inspection cells</button>`,
       `<button id="clearActiveCells" type="button" class="secondary">Clear active cells</button>`,
+      `<button id="muteSelectedSector" type="button" class="secondary">Mute selected sector</button>`,
+      `<button id="clearMutedSectors" type="button" class="secondary">Clear muted sectors</button>`,
       `</div>`,
       `<div class="layer-toggle-list">`,
       LAYER_SPECS.map((spec) => `
@@ -422,11 +488,15 @@
     ctx.els.activateVisibleCells = panel.querySelector("#activateVisibleCells");
     ctx.els.clearInspectionCells = panel.querySelector("#clearInspectionCells");
     ctx.els.clearActiveCells = panel.querySelector("#clearActiveCells");
+    ctx.els.muteSelectedSector = panel.querySelector("#muteSelectedSector");
+    ctx.els.clearMutedSectors = panel.querySelector("#clearMutedSectors");
     ctx.els.layerToggles = Array.from(panel.querySelectorAll("input[data-map-layer]"));
 
     ctx.els.activateVisibleCells.addEventListener("click", ctx.activateVisibleCells);
     ctx.els.clearInspectionCells.addEventListener("click", ctx.clearInspectionCells);
     ctx.els.clearActiveCells.addEventListener("click", ctx.clearActiveCells);
+    ctx.els.muteSelectedSector.addEventListener("click", ctx.toggleSelectedSectorMuted);
+    ctx.els.clearMutedSectors.addEventListener("click", ctx.clearMutedSectors);
     ctx.els.layerToggles.forEach((input) => {
       const key = input.getAttribute("data-map-layer");
       input.checked = Boolean(ctx.layerVisibility[key]);
@@ -438,6 +508,53 @@
     });
   }
 
+  function toggleMainMute(ctx, cell) {
+    if (!cell || !cell.code) return;
+    if (mainCellMuted(ctx, cell.code)) {
+      ctx.mutedCellCodes = ctx.mutedCellCodes.filter((code) => code !== cell.code);
+      return;
+    }
+    ctx.mutedCellCodes = uniqueStrings(ctx.mutedCellCodes.concat(cell.code));
+    ctx.activeCellCodes = ctx.activeCellCodes.filter((code) => code !== cell.code);
+    ctx.activeDetailCells = ctx.activeDetailCells.filter((candidate) => candidate.parentCode !== cell.code);
+    ctx.activeFineCells = ctx.activeFineCells.filter((candidate) => candidate.parentCode !== cell.code);
+  }
+
+  function toggleDetailMute(ctx, cell) {
+    if (!cell || !cell.code) return;
+    if (cellListHasCode(ctx.mutedDetailCells, cell.code)) {
+      ctx.mutedDetailCells = removeCellByCode(ctx.mutedDetailCells, cell.code);
+      return;
+    }
+    ctx.mutedDetailCells = addUniqueCell(ctx.mutedDetailCells, cell);
+    ctx.activeDetailCells = removeCellByCode(ctx.activeDetailCells, cell.code);
+    ctx.activeFineCells = ctx.activeFineCells.filter((candidate) => candidate.detailParentCode !== cell.code);
+  }
+
+  function toggleFineMute(ctx, cell) {
+    if (!cell || !cell.code) return;
+    if (cellListHasCode(ctx.mutedFineCells, cell.code)) {
+      ctx.mutedFineCells = removeCellByCode(ctx.mutedFineCells, cell.code);
+      return;
+    }
+    ctx.mutedFineCells = addUniqueCell(ctx.mutedFineCells, cell);
+    ctx.activeFineCells = removeCellByCode(ctx.activeFineCells, cell.code);
+  }
+
+  function addUniqueCell(cells, cell) {
+    const output = removeCellByCode(cells, cell.code);
+    output.push(cell);
+    return output;
+  }
+
+  function removeCellByCode(cells, code) {
+    return (Array.isArray(cells) ? cells : []).filter((cell) => cell && cell.code !== code);
+  }
+
+  function uniqueStrings(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : []).filter((value) => typeof value === "string" && value)));
+  }
+
   function activeCellsForCodes(grid, cellCodes) {
     const wanted = new Set(Array.isArray(cellCodes) ? cellCodes : []);
     if (!wanted.size || !grid || !Array.isArray(grid.cells)) return [];
@@ -445,37 +562,104 @@
   }
 
   function activeDataCellCodes(ctx) {
-    const codes = new Set(Array.isArray(ctx.activeCellCodes) ? ctx.activeCellCodes : []);
-    (Array.isArray(ctx.activeDetailCells) ? ctx.activeDetailCells : []).forEach((cell) => {
+    const codes = new Set(effectiveMainCellCodes(ctx));
+    effectiveDetailCells(ctx).forEach((cell) => {
       if (cell.parentCode) codes.add(cell.parentCode);
     });
-    (Array.isArray(ctx.activeFineCells) ? ctx.activeFineCells : []).forEach((cell) => {
+    effectiveFineCells(ctx).forEach((cell) => {
       if (cell.parentCode) codes.add(cell.parentCode);
     });
-    if (ctx.selectedDetailCell && ctx.selectedDetailCell.parentCode) codes.add(ctx.selectedDetailCell.parentCode);
-    if (ctx.selectedFineCell && ctx.selectedFineCell.parentCode) codes.add(ctx.selectedFineCell.parentCode);
+    if (ctx.selectedDetailCell && !detailCellMuted(ctx, ctx.selectedDetailCell)) codes.add(ctx.selectedDetailCell.parentCode);
+    if (ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell)) codes.add(ctx.selectedFineCell.parentCode);
     return Array.from(codes);
   }
 
+  function effectiveMainCellCodes(ctx) {
+    const muted = new Set(Array.isArray(ctx.mutedCellCodes) ? ctx.mutedCellCodes : []);
+    return (Array.isArray(ctx.activeCellCodes) ? ctx.activeCellCodes : []).filter((code) => !muted.has(code));
+  }
+
+  function effectiveDetailCells(ctx) {
+    return (Array.isArray(ctx.activeDetailCells) ? ctx.activeDetailCells : []).filter((cell) => !detailCellMuted(ctx, cell));
+  }
+
+  function effectiveFineCells(ctx) {
+    return (Array.isArray(ctx.activeFineCells) ? ctx.activeFineCells : []).filter((cell) => !fineCellMuted(ctx, cell));
+  }
+
   function activeAreaClipCells(ctx, activeCells) {
-    if (ctx.activeFineCells.length) return ctx.activeFineCells;
-    if (ctx.selectedFineCell) return [ctx.selectedFineCell];
-    if (ctx.activeDetailCells.length) return ctx.activeDetailCells;
-    if (ctx.selectedDetailCell) return [ctx.selectedDetailCell];
-    return activeCells;
+    const fineCells = effectiveFineCells(ctx);
+    const selectedFine = ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell) ? ctx.selectedFineCell : null;
+    if (fineCells.length) return fineCells;
+    if (selectedFine) return [selectedFine];
+    if (fineModeActive(ctx)) return [];
+
+    const detailCells = effectiveDetailCells(ctx);
+    const selectedDetail = ctx.selectedDetailCell && !detailCellMuted(ctx, ctx.selectedDetailCell) ? ctx.selectedDetailCell : null;
+    if (detailCells.length) return detailCells;
+    if (selectedDetail) return [selectedDetail];
+    if (detailModeActive(ctx)) return [];
+
+    return activeCells.filter((cell) => !mainCellMuted(ctx, cell.code));
   }
 
   function activeDetailClipCells(ctx) {
-    if (ctx.activeFineCells.length) return ctx.activeFineCells;
-    if (ctx.selectedFineCell) return [ctx.selectedFineCell];
+    const fineCells = effectiveFineCells(ctx);
+    const selectedFine = ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell) ? ctx.selectedFineCell : null;
+    if (fineCells.length) return fineCells;
+    if (selectedFine) return [selectedFine];
     return [];
+  }
+
+  function fineModeActive(ctx) {
+    return Boolean((ctx.activeFineCells && ctx.activeFineCells.length) || (ctx.mutedFineCells && ctx.mutedFineCells.length) || ctx.selectedFineCell);
+  }
+
+  function detailModeActive(ctx) {
+    return Boolean((ctx.activeDetailCells && ctx.activeDetailCells.length) || (ctx.mutedDetailCells && ctx.mutedDetailCells.length) || ctx.selectedDetailCell);
+  }
+
+  function mainCellMuted(ctx, code) {
+    return Boolean(code && Array.isArray(ctx.mutedCellCodes) && ctx.mutedCellCodes.includes(code));
+  }
+
+  function detailCellMuted(ctx, cell) {
+    if (!cell) return false;
+    if (mainCellMuted(ctx, cell.parentCode)) return true;
+    return cellListHasCode(ctx.mutedDetailCells, cell.code);
+  }
+
+  function fineCellMuted(ctx, cell) {
+    if (!cell) return false;
+    if (mainCellMuted(ctx, cell.parentCode)) return true;
+    if (cell.detailParentCode && cellListHasCode(ctx.mutedDetailCells, cell.detailParentCode)) return true;
+    return cellListHasCode(ctx.mutedFineCells, cell.code);
+  }
+
+  function cellListHasCode(cells, code) {
+    return Boolean(code && Array.isArray(cells) && cells.some((cell) => cell && cell.code === code));
+  }
+
+  function mutedSectorCount(ctx) {
+    return (ctx.mutedCellCodes ? ctx.mutedCellCodes.length : 0) +
+      (ctx.mutedDetailCells ? ctx.mutedDetailCells.length : 0) +
+      (ctx.mutedFineCells ? ctx.mutedFineCells.length : 0);
+  }
+
+  function selectedSectorIsMuted(ctx) {
+    if (ctx.selectedFineCell) return fineCellMuted(ctx, ctx.selectedFineCell);
+    if (ctx.selectedDetailCell) return detailCellMuted(ctx, ctx.selectedDetailCell);
+    if (ctx.selected.cell) return mainCellMuted(ctx, ctx.selected.cell.code);
+    return false;
   }
 
   function detailGridCellsForDisplay(ctx) {
     const parentCodes = new Set();
     if (ctx.selected && ctx.selected.cell) parentCodes.add(ctx.selected.cell.code);
     ctx.activeDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
+    ctx.mutedDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
     ctx.activeFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
+    ctx.mutedFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
     if (ctx.selectedDetailCell) parentCodes.add(ctx.selectedDetailCell.parentCode);
     if (ctx.selectedFineCell) parentCodes.add(ctx.selectedFineCell.parentCode);
     return Array.from(parentCodes)
@@ -489,6 +673,9 @@
     if (ctx.selectedDetailCell) detailCodes.add(ctx.selectedDetailCell.code);
     if (ctx.selectedFineCell && ctx.selectedFineCell.detailParentCode) detailCodes.add(ctx.selectedFineCell.detailParentCode);
     ctx.activeFineCells.forEach((cell) => {
+      if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
+    });
+    ctx.mutedFineCells.forEach((cell) => {
       if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
     });
     return Array.from(detailCodes)
