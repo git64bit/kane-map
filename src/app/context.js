@@ -10,85 +10,9 @@
     labels: false
   });
 
-  function createDomReferences() {
-    return {
-      selectedCell: document.getElementById("selectedCell"),
-      selectedBuilding: document.getElementById("selectedBuilding"),
-      selectedStories: document.getElementById("selectedStories"),
-      buildingSummary: document.getElementById("buildingSummary"),
-      identitySummary: document.getElementById("identitySummary"),
-      observationForm: document.getElementById("observationForm"),
-      observationFormTitle: document.getElementById("observationFormTitle"),
-      editModeNotice: document.getElementById("editModeNotice"),
-      saveObservation: document.getElementById("saveObservation"),
-      cancelEdit: document.getElementById("cancelEdit"),
-      clearObservationFormButton: document.getElementById("clearObservationFormButton"),
-      visitDate: document.getElementById("visitDate"),
-      fieldSessionId: document.getElementById("fieldSessionId"),
-      planPriority: document.getElementById("planPriority"),
-      planAction: document.getElementById("planAction"),
-      siteLabel: document.getElementById("siteLabel"),
-      buildingAlias: document.getElementById("buildingAlias"),
-      entranceId: document.getElementById("entranceId"),
-      mailboxBankId: document.getElementById("mailboxBankId"),
-      visibleDesignators: document.getElementById("visibleDesignators"),
-      designatorPreview: document.getElementById("designatorPreview"),
-      unitCount: document.getElementById("unitCount"),
-      designatorPattern: document.getElementById("designatorPattern"),
-      confidence: document.getElementById("confidence"),
-      visitStatus: document.getElementById("visitStatus"),
-      accessContext: document.getElementById("accessContext"),
-      observationNotes: document.getElementById("observationNotes"),
-      showSelectedOnly: document.getElementById("showSelectedOnly"),
-      recordCount: document.getElementById("recordCount"),
-      recordList: document.getElementById("recordList"),
-      storageStatus: document.getElementById("storageStatus"),
-      viewStatus: document.getElementById("viewStatus"),
-      chunkStatus: document.getElementById("chunkStatus"),
-      visibleCellStatus: document.getElementById("visibleCellStatus"),
-      reviewFilterStatus: document.getElementById("reviewFilterStatus"),
-      visitStatusSummary: document.getElementById("visitStatusSummary"),
-      zoomIn: document.getElementById("zoomIn"),
-      zoomOut: document.getElementById("zoomOut"),
-      rotateLeft: document.getElementById("rotateLeft"),
-      rotateRight: document.getElementById("rotateRight"),
-      prevBuilding: document.getElementById("prevBuilding"),
-      nextBuilding: document.getElementById("nextBuilding"),
-      resetView: document.getElementById("resetView"),
-      copySelection: document.getElementById("copySelection"),
-      navSearch: document.getElementById("navSearch"),
-      clearSearch: document.getElementById("clearSearch"),
-      searchResults: document.getElementById("searchResults"),
-      coverageSummary: document.getElementById("coverageSummary"),
-      statusFilter: document.getElementById("statusFilter"),
-      coverageByCell: document.getElementById("coverageByCell"),
-      visitSessionSummary: document.getElementById("visitSessionSummary"),
-      fieldPlanSummary: document.getElementById("fieldPlanSummary"),
-      planFilter: document.getElementById("planFilter"),
-      fieldPlanRows: document.getElementById("fieldPlanRows"),
-      planStatusSummary: document.getElementById("planStatusSummary"),
-      shortcutStatus: document.getElementById("shortcutStatus"),
-      visitSessionRows: document.getElementById("visitSessionRows"),
-      exportRecords: document.getElementById("exportRecords"),
-      exportObservationCsv: document.getElementById("exportObservationCsv"),
-      exportBuildingCsv: document.getElementById("exportBuildingCsv"),
-      exportFieldReport: document.getElementById("exportFieldReport"),
-      exportVisitCsv: document.getElementById("exportVisitCsv"),
-      exportPlanCsv: document.getElementById("exportPlanCsv"),
-      importRecords: document.getElementById("importRecords"),
-      importPreview: document.getElementById("importPreview"),
-      importActions: document.getElementById("importActions"),
-      confirmImport: document.getElementById("confirmImport"),
-      cancelImport: document.getElementById("cancelImport"),
-      downloadBackupBeforeImport: document.getElementById("downloadBackupBeforeImport"),
-      clearRecords: document.getElementById("clearRecords"),
-      workspaceTabs: Array.from(document.querySelectorAll(".workspace-tab")),
-      workspacePanels: Array.from(document.querySelectorAll("[data-tab-panel]")),
-      selectedWorkspaceHeader: document.getElementById("selectedWorkspaceHeader")
-    };
-  }
-
   async function createAppContext() {
+    await ensureDomReferences();
+
     const sourcePreference = global.KaneMapSourceTypes.sourceFromLocation
       ? global.KaneMapSourceTypes.sourceFromLocation(global.location)
       : global.KaneMapSourceTypes.SOURCES.DEMO;
@@ -148,13 +72,14 @@
       canvas,
       renderer,
       designators: global.KaneMapDesignators,
-      els: createDomReferences(),
+      els: global.KaneMapDomReferences.createDomReferences(),
       selected: { cell: null, building: null },
       visibleCellCodes: [],
       editingRecordId: null,
       pendingImport: null,
       shortcutController: null
     };
+
     ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
     ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
     ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({ getRecords: () => store.snapshot() });
@@ -168,6 +93,25 @@
     ctx.dateStamp = global.KaneMapDomUtils.dateStamp;
     ctx.copyText = global.KaneMapDomUtils.copyText;
     return ctx;
+  }
+
+  function ensureDomReferences() {
+    if (global.KaneMapDomReferences) return Promise.resolve();
+    const src = "src/app/domReferences.js";
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-kane-runtime="${src}"]`);
+      if (existing) {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.kaneRuntime = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Unable to load ${src}`));
+      document.head.appendChild(script);
+    });
   }
 
   function baseMapOnlyData(sourceData) {
