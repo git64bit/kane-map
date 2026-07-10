@@ -2,9 +2,7 @@
   "use strict";
 
   const BUILDING_DETAIL_ZOOM = 2.25;
-  const BUILDING_LABEL_ZOOM = 5.5;
   const MAX_BUILDINGS_WITHOUT_ZOOM = 1200;
-  const MAX_LABELS_WITHOUT_HIGH_ZOOM = 80;
 
   function drawRoads(ctx, state, data, worldToScreen) {
     const config = global.KaneMapRendererConfig;
@@ -21,7 +19,6 @@
       ctx.strokeStyle = config.COLORS.roadEdge;
       ctx.lineWidth = width.edge;
       ctx.stroke();
-
       primitives.pathPolyline(ctx, worldToScreen, road.path);
       ctx.strokeStyle = config.COLORS.road;
       ctx.lineWidth = width.inner;
@@ -43,7 +40,14 @@
     const primitives = global.KaneMapDrawPrimitives;
     const water = Array.isArray(data.water) ? data.water : [];
     water.forEach((feature) => {
-      primitives.fillPolygon(ctx, worldToScreen, feature.polygon, config.COLORS.water, config.COLORS.waterEdge, 1.2);
+      primitives.fillPolygon(
+        ctx,
+        worldToScreen,
+        feature.polygon,
+        config.COLORS.water,
+        config.COLORS.waterEdge,
+        1.2
+      );
     });
   }
 
@@ -52,7 +56,14 @@
     const primitives = global.KaneMapDrawPrimitives;
     const forests = Array.isArray(data.forests) ? data.forests : [];
     forests.forEach((feature) => {
-      primitives.fillPolygon(ctx, worldToScreen, feature.polygon, config.COLORS.forest, config.COLORS.forestEdge, 1);
+      primitives.fillPolygon(
+        ctx,
+        worldToScreen,
+        feature.polygon,
+        config.COLORS.forest,
+        config.COLORS.forestEdge,
+        1
+      );
       drawTreeDots(ctx, state, feature.polygon, worldToScreen);
     });
   }
@@ -70,7 +81,13 @@
         if (!global.KaneMapGrid.polygonContainsPoint(polygon, [x, y])) continue;
         const [sx, sy] = worldToScreen([x, y]);
         ctx.beginPath();
-        ctx.arc(sx, sy, clamp(1.2 + Math.sqrt(Math.max(0, state.zoom)) * 0.35, 1.3, 3.2), 0, Math.PI * 2);
+        ctx.arc(
+          sx,
+          sy,
+          clamp(1.2 + Math.sqrt(Math.max(0, state.zoom)) * 0.35, 1.3, 3.2),
+          0,
+          Math.PI * 2
+        );
         ctx.fill();
       }
     }
@@ -79,17 +96,11 @@
 
   function drawAddressPoints(ctx, state, data, worldToScreen) {
     const clamp = global.KaneMapDrawLayerSupport.clamp;
-    const config = global.KaneMapRendererConfig;
     const points = Array.isArray(data.addressPoints) ? data.addressPoints : [];
     if (!points.length) return;
 
-    const drawLabels = state.layerVisibility && state.layerVisibility.labels && state.zoom >= BUILDING_LABEL_ZOOM;
     const radius = clamp(1.15 + Math.sqrt(Math.max(0, state.zoom)) * 0.38, 1.4, 3.1);
-
     ctx.save();
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.font = "600 10px system-ui, sans-serif";
     points.forEach((item) => {
       const [x, y] = worldToScreen(item.point);
       ctx.beginPath();
@@ -99,14 +110,6 @@
       ctx.strokeStyle = "rgba(20, 24, 26, 0.7)";
       ctx.lineWidth = 1;
       ctx.stroke();
-
-      if (drawLabels && item.address) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = config.COLORS.labelHalo;
-        ctx.strokeText(item.address, x + radius + 4, y);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(item.address, x + radius + 4, y);
-      }
     });
     ctx.restore();
   }
@@ -118,13 +121,16 @@
 
     const selectedBuilding = selectedBuildingFrom(buildings, state.selectedBuildingId);
     if (!shouldDrawBuildingDetail(state, buildings)) {
-      if (selectedBuilding) drawBuilding(ctx, state, bounds, selectedBuilding, worldToScreen, { forceLabel: true });
+      if (selectedBuilding) {
+        drawBuilding(ctx, state, bounds, selectedBuilding, worldToScreen, { forceLabel: true });
+      }
       return;
     }
 
-    const sorted = [...buildings].sort((a, b) => primitives.centroid(a.polygon)[1] - primitives.centroid(b.polygon)[1]);
-    const drawLabels = shouldDrawBuildingLabels(state, sorted);
-    sorted.forEach((building) => drawBuilding(ctx, state, bounds, building, worldToScreen, { drawLabel: drawLabels }));
+    const sorted = [...buildings].sort(
+      (a, b) => primitives.centroid(a.polygon)[1] - primitives.centroid(b.polygon)[1]
+    );
+    sorted.forEach((building) => drawBuilding(ctx, state, bounds, building, worldToScreen));
   }
 
   function selectedBuildingFrom(buildings, selectedBuildingId) {
@@ -135,12 +141,6 @@
   function shouldDrawBuildingDetail(state, buildings) {
     if (state.zoom >= BUILDING_DETAIL_ZOOM) return true;
     return buildings.length <= MAX_BUILDINGS_WITHOUT_ZOOM;
-  }
-
-  function shouldDrawBuildingLabels(state, buildings) {
-    if (!(state.layerVisibility && state.layerVisibility.labels)) return false;
-    if (state.zoom >= BUILDING_LABEL_ZOOM) return true;
-    return buildings.length <= MAX_LABELS_WITHOUT_HIGH_ZOOM;
   }
 
   function buildingHeightPx(building, state) {
@@ -158,7 +158,7 @@
     const heightPx = buildingHeightPx(building, state);
     const selected = building.id === state.selectedBuildingId;
     const filteredOut = state.buildingFilterIds && !state.buildingFilterIds.has(building.id);
-    const drawLabel = selected || Boolean(options && (options.forceLabel || options.drawLabel));
+    const drawLabel = selected || Boolean(options && options.forceLabel);
 
     ctx.save();
     ctx.globalAlpha = filteredOut && !selected ? 0.18 : 1;
@@ -183,7 +183,6 @@
       const aTop = [a[0], a[1] - heightPx];
       const bTop = [b[0], b[1] - heightPx];
       const shade = i % 2 === 0 ? config.COLORS.buildingSide : config.COLORS.buildingSideDark;
-
       ctx.beginPath();
       ctx.moveTo(a[0], a[1]);
       ctx.lineTo(b[0], b[1]);
@@ -202,7 +201,6 @@
     const config = global.KaneMapRendererConfig;
     const primitives = global.KaneMapDrawPrimitives;
     const [x, y] = worldToScreen(primitives.centroid(building.polygon));
-
     ctx.save();
     ctx.font = "700 11px system-ui, sans-serif";
     ctx.textAlign = "center";

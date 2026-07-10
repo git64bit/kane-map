@@ -6,8 +6,7 @@
     water: false,
     forests: false,
     buildings: false,
-    addressPoints: false,
-    labels: false
+    addressPoints: false
   });
 
   async function createAppContext() {
@@ -16,7 +15,8 @@
     const sourcePreference = global.KaneMapSourceTypes.sourceFromLocation
       ? global.KaneMapSourceTypes.sourceFromLocation(global.location)
       : global.KaneMapSourceTypes.SOURCES.DEMO;
-    const dataAdapterFactory = global.KaneMapDataAdapter.createDataAdapterAsync || global.KaneMapDataAdapter.createDataAdapter;
+    const dataAdapterFactory = global.KaneMapDataAdapter.createDataAdapterAsync
+      || global.KaneMapDataAdapter.createDataAdapter;
     const dataAdapter = await dataAdapterFactory({
       sourcePreference,
       demoCatalog: global.KaneMapDemoCatalog,
@@ -41,6 +41,7 @@
     const renderer = global.KaneMapRenderer.createRenderer(canvas, baseMapData, grid);
     renderer.setMapLayerState(layerVisibility, []);
     const totalChunkCount = featureStore.statusForCells(allCellCodes).total;
+
     const ctx = {
       global,
       dataAdapter,
@@ -80,9 +81,19 @@
       shortcutController: null
     };
 
-    ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
-    ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({ grid, buildings: allBuildings, getRecords: () => store.snapshot() });
-    ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({ getRecords: () => store.snapshot() });
+    ctx.searchIndex = global.KaneMapSearchIndex.createSearchIndex({
+      grid,
+      buildings: allBuildings,
+      getRecords: () => store.snapshot()
+    });
+    ctx.coverageModel = global.KaneMapCoverage.createCoverageModel({
+      grid,
+      buildings: allBuildings,
+      getRecords: () => store.snapshot()
+    });
+    ctx.siteIdentityModel = global.KaneMapSiteIdentity.createSiteIdentityModel({
+      getRecords: () => store.snapshot()
+    });
     ctx.findBuildingById = (buildingId) => allBuildings.find((building) => building.id === buildingId) || null;
     ctx.cellForCode = (code) => grid.cells.find((cell) => cell.code === code) || null;
     ctx.pointerPosition = (event) => {
@@ -92,11 +103,13 @@
     ctx.escapeHtml = global.KaneMapDomUtils.escapeHtml;
     ctx.dateStamp = global.KaneMapDomUtils.dateStamp;
     ctx.copyText = global.KaneMapDomUtils.copyText;
+
     return ctx;
   }
 
   function ensureDomReferences() {
     if (global.KaneMapDomReferences) return Promise.resolve();
+
     const src = "src/app/domReferences.js";
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-kane-runtime="${src}"]`);
@@ -105,6 +118,7 @@
         existing.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
         return;
       }
+
       const script = document.createElement("script");
       script.src = src;
       script.dataset.kaneRuntime = src;

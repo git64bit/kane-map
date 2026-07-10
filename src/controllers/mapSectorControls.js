@@ -5,8 +5,7 @@
     { key: "roads", label: "Roads" },
     { key: "water", label: "Water" },
     { key: "buildings", label: "Building shapes" },
-    { key: "addressPoints", label: "Address points" },
-    { key: "labels", label: "Labels" }
+    { key: "addressPoints", label: "Address points" }
   ]);
 
   function installLayerControls(ctx) {
@@ -18,8 +17,6 @@
     const panel = document.createElement("div");
     panel.className = "section map-layer-controls";
     panel.innerHTML = [
-      `<h2>Detail layers</h2>`,
-      `<p class="muted">Base view always shows county outline and Kane grid. Click a grid cell for its 16×16 area grid, then click an area cell for an 8×8 practical grid. Shift-click or use Mute selected sector to turn irrelevant sectors off.</p>`,
       `<div class="button-grid">`,
       `<button id="muteSelectedSector" type="button" class="secondary">Mute selected sector</button>`,
       `<button id="clearMutedSectors" type="button" class="secondary">Clear muted sectors</button>`,

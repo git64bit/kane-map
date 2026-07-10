@@ -39,8 +39,7 @@
         water: false,
         forests: false,
         buildings: false,
-        addressPoints: false,
-        labels: false
+        addressPoints: false
       },
       recordSummaryByBuilding: {},
       buildingFilterIds: null,
