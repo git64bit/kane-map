@@ -80,7 +80,6 @@
       selected: { cell: null, building: null },
       visibleCellCodes: [],
       editingRecordId: null,
-      pendingImport: null,
       shortcutController: null
     };
 

@@ -2,132 +2,495 @@
   "use strict";
 
   function installImportExportController(ctx) {
-    const { els } = ctx;
+    const storeFactory = global.KaneMapSectorStateStore;
+    if (!storeFactory || typeof storeFactory.createSectorStateStore !== "function") {
+      installUnavailableSectorStorage(ctx, "Sector-state storage module could not be loaded.");
+      return;
+    }
+    let store;
+    try {
+      store = storeFactory.createSectorStateStore({ sectorCodes: ctx.allCellCodes });
+    } catch (error) {
+      const reason = error && error.message
+        ? `Sector-state storage could not start: ${error.message}`
+        : "Sector-state storage could not start.";
+      installUnavailableSectorStorage(ctx, reason);
+      return;
+    }
+    const state = {
+      store,
+      documents: {},
+      signatures: {},
+      dirtySectors: new Set(),
+      pendingChanges: 0,
+      autosaveThreshold: 10,
+      lastLocalSaveAt: null,
+      lastWriteAt: null,
+      previousSector: null,
+      observationQueued: false,
+      writeQueue: Promise.resolve(),
+      message: "",
+      messageType: "",
+      busy: false,
+      suppressObservation: false,
+      journalError: ""
+    };
+
+    ctx.sectorPersistence = state;
+    loadBrowserJournal(ctx, state);
+    wrapMapRefresh(ctx, state);
 
     ctx.bindImportExportEvents = function bindImportExportEvents() {
-      els.exportRecords.addEventListener("click", () => {
-        ctx.store.download(`kane-map-observations-${ctx.dateStamp()}.json`, ctx.store.exportJson());
-      });
-
-      els.exportObservationCsv.addEventListener("click", () => {
-        const csv = global.KaneMapExporters.observationCsv(ctx.store.snapshot());
-        ctx.store.download(`kane-map-observations-${ctx.dateStamp()}.csv`, csv, "text/csv");
-      });
-
-      els.exportBuildingCsv.addEventListener("click", () => {
-        const csv = global.KaneMapExporters.buildingSummaryCsv(ctx.allBuildings, ctx.coverageModel.build());
-        ctx.store.download(`kane-map-building-summary-${ctx.dateStamp()}.csv`, csv, "text/csv");
-      });
-
-      els.exportFieldReport.addEventListener("click", () => {
-        const report = global.KaneMapExporters.fieldReport(ctx.coverageModel.build());
-        ctx.store.download(`kane-map-field-report-${ctx.dateStamp()}.txt`, report, "text/plain");
-      });
-
-      els.exportVisitCsv.addEventListener("click", () => {
-        const csv = global.KaneMapExporters.visitSessionCsv(global.KaneMapVisitSessions.summarize(ctx.store.snapshot(), ctx.allBuildings));
-        ctx.store.download(`kane-map-visit-sessions-${ctx.dateStamp()}.csv`, csv, "text/csv");
-      });
-
-      els.exportPlanCsv.addEventListener("click", () => {
-        const csv = global.KaneMapExporters.fieldPlanCsv(ctx.currentFieldPlan());
-        ctx.store.download(`kane-map-field-plan-${ctx.dateStamp()}.csv`, csv, "text/csv");
-      });
-
-      els.importRecords.addEventListener("change", ctx.handleImportRecords);
-      els.confirmImport.addEventListener("click", ctx.confirmPendingImport);
-      els.cancelImport.addEventListener("click", ctx.clearImportPreview);
-      els.downloadBackupBeforeImport.addEventListener("click", () => {
-        ctx.store.download(`kane-map-before-import-${ctx.dateStamp()}.json`, ctx.store.exportJson());
-      });
-
-      els.clearRecords.addEventListener("click", () => {
-        if (!ctx.store.snapshot().length) return;
-        const ok = confirm("Clear locally saved Kane-Map observation records from this browser?");
-        if (!ok) return;
-        ctx.stopEditing();
-        ctx.clearImportPreview();
-        ctx.store.clear();
-        ctx.refreshRecordUi();
-      });
+      const { els } = ctx;
+      els.chooseSectorFolder.addEventListener("click", () => chooseProjectFolder(ctx, state));
+      els.saveSectorStateNow.addEventListener("click", () => ctx.saveSectorStateNow());
+      els.autosaveThreshold.addEventListener("change", () => changeThreshold(ctx, state));
+      if (els.clearRecords) els.clearRecords.addEventListener("click", () => clearObservationRecords(ctx));
+      ctx.updateSectorStorageUi();
+    };
+    ctx.saveSectorStateNow = function saveSectorStateNow() {
+      observeState(ctx, state);
+      if (!state.store.hasDirectory()) {
+        setMessage(state, "Choose a project folder before saving sector files.", "warning");
+        ctx.updateSectorStorageUi();
+        return Promise.resolve(false);
+      }
+      if (!state.dirtySectors.size) {
+        setMessage(state, "No sector changes are waiting to be saved.", "neutral");
+        ctx.updateSectorStorageUi();
+        return Promise.resolve(true);
+      }
+      return queueWrite(ctx, state, Array.from(state.dirtySectors), "Manual save complete.");
     };
 
-    ctx.handleImportRecords = function handleImportRecords(event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const knownBuildingIds = ctx.allBuildings.map((building) => building.id);
-        const knownCellCodes = ctx.grid.cells.map((cell) => cell.code);
-        const preview = global.KaneMapImportValidator.previewObservationImport(
-          String(reader.result || ""),
-          ctx.store.snapshot(),
-          { knownBuildingIds, knownCellCodes }
-        );
-
-        ctx.pendingImport = preview.ok ? preview : null;
-        ctx.renderImportPreview(preview, file.name);
-        event.target.value = "";
-      };
-      reader.readAsText(file);
-    };
-
-    ctx.confirmPendingImport = function confirmPendingImport() {
-      if (!ctx.pendingImport || !ctx.pendingImport.ok) return;
-
-      const count = ctx.pendingImport.records.length;
-      const ok = confirm(`Replace all local observation records with ${count} imported records? Export a backup first if needed.`);
-      if (!ok) return;
-
-      ctx.stopEditing();
-      ctx.store.replaceAll(ctx.pendingImport.records);
-      ctx.clearImportPreview();
-      ctx.refreshRecordUi();
-    };
-
-    ctx.renderImportPreview = function renderImportPreview(preview, filename) {
-      const summary = preview.summary;
-      const status = preview.ok ? "Import can be applied." : "Import blocked.";
-      const warnings = preview.warnings.length
-        ? `<ul>${preview.warnings.map((item) => `<li>${ctx.escapeHtml(item)}</li>`).join("")}</ul>`
-        : `<p class="muted">No warnings.</p>`;
-      const errors = preview.errors.length
-        ? `<ul>${preview.errors.map((item) => `<li>${ctx.escapeHtml(item)}</li>`).join("")}</ul>`
-        : `<p class="muted">No errors.</p>`;
-
-      els.importPreview.hidden = false;
-      els.importActions.hidden = false;
-      els.confirmImport.disabled = !preview.ok;
-      els.importPreview.innerHTML = [
-        `<strong>${ctx.escapeHtml(status)}</strong>`,
-        `<br><span class="muted">File: ${ctx.escapeHtml(filename)}</span>`,
-        `<div class="import-compare">`,
-        `<span>Current: ${summary.currentCount} records · ${summary.currentBuildings} buildings · ${summary.currentUnits} units</span>`,
-        `<span>Incoming: ${summary.incomingCount} records · ${summary.incomingBuildings} buildings · ${summary.incomingUnits} units</span>`,
-        `<span>Verified: ${summary.currentVerified} → ${summary.incomingVerified}</span>`,
-        `<span>Conflicts: ${summary.currentConflicts} → ${summary.incomingConflicts}</span>`,
-        `</div>`,
-        `<details ${preview.errors.length ? "open" : ""}><summary>Errors</summary>${errors}</details>`,
-        `<details ${preview.warnings.length ? "open" : ""}><summary>Warnings</summary>${warnings}</details>`,
-        `<p class="fine-print">Import uses replace mode. JSON backup remains the full-fidelity restore format.</p>`
-      ].join("");
-    };
-
-    ctx.clearImportPreview = function clearImportPreview() {
-      ctx.pendingImport = null;
-      els.importPreview.hidden = true;
-      els.importActions.hidden = true;
-      els.importPreview.innerHTML = "";
-      els.confirmImport.disabled = false;
-      els.importRecords.value = "";
+    ctx.updateSectorStorageUi = function updateSectorStorageUi() {
+      updateUi(ctx, state);
     };
 
     ctx.updateStorageStatus = function updateStorageStatus() {
       const status = ctx.store.storageStatus();
-      els.storageStatus.textContent = status.label;
-      els.storageStatus.title = status.detail;
+      ctx.els.storageStatus.textContent = status.label;
+      ctx.els.storageStatus.title = status.detail;
     };
+  }
+
+  function installUnavailableSectorStorage(ctx, reason) {
+    const message = reason || "Sector-state storage is unavailable.";
+    console.error(`Kane-Map sector persistence disabled: ${message}`);
+    ctx.sectorPersistence = null;
+    ctx.bindImportExportEvents = function bindUnavailableSectorStorageEvents() {
+      const { els } = ctx;
+      if (els.clearRecords) {
+        els.clearRecords.addEventListener("click", () => clearObservationRecords(ctx));
+      }
+      if (els.chooseSectorFolder) els.chooseSectorFolder.disabled = true;
+      if (els.saveSectorStateNow) els.saveSectorStateNow.disabled = true;
+      if (els.autosaveThreshold) els.autosaveThreshold.disabled = true;
+      ctx.updateSectorStorageUi();
+    };
+    ctx.saveSectorStateNow = function saveUnavailableSectorStateNow() {
+      ctx.updateSectorStorageUi();
+      return Promise.resolve(false);
+    };
+    ctx.updateSectorStorageUi = function updateUnavailableSectorStorageUi() {
+      const { els } = ctx;
+      if (els.sectorCurrentStatus) els.sectorCurrentStatus.textContent = currentSectorCode(ctx) || "None selected";
+      if (els.sectorFolderStatus) els.sectorFolderStatus.textContent = "Unavailable";
+      if (els.sectorJournalStatus) els.sectorJournalStatus.textContent = "Disabled; map remains operational";
+      if (els.sectorPendingStatus) els.sectorPendingStatus.textContent = "Not available";
+      if (els.sectorLastWriteStatus) els.sectorLastWriteStatus.textContent = "No write attempted";
+      if (els.sectorStorageMessage) {
+        els.sectorStorageMessage.textContent = `${message} Kane-Map can still be used, but sector changes will not persist.`;
+        els.sectorStorageMessage.dataset.status = "error";
+      }
+    };
+    ctx.updateStorageStatus = function updateStorageStatus() {
+      const status = ctx.store.storageStatus();
+      ctx.els.storageStatus.textContent = status.label;
+      ctx.els.storageStatus.title = `${status.detail} Sector-state persistence is disabled.`;
+    };
+  }
+
+  function loadBrowserJournal(ctx, state) {
+    const journal = state.store.loadJournal();
+    state.documents = journal.sectors;
+    state.autosaveThreshold = journal.autosaveThreshold;
+    state.pendingChanges = journal.pendingChanges;
+    state.dirtySectors = new Set(journal.dirtySectors);
+    state.lastLocalSaveAt = journal.lastLocalSaveAt;
+    applyDocuments(ctx, state.documents);
+    state.documents = captureDocuments(ctx, state.documents, state.store);
+    state.signatures = signaturesFor(state.documents, state.store);
+    state.previousSector = currentSectorCode(ctx);
+    ctx.refreshMapData();
+  }
+
+  function wrapMapRefresh(ctx, state) {
+    const refreshMapData = ctx.refreshMapData;
+    ctx.refreshMapData = function refreshMapDataWithPersistence() {
+      const result = refreshMapData.apply(ctx, arguments);
+      if (!state.suppressObservation) scheduleObservation(ctx, state);
+      return result;
+    };
+  }
+
+  function scheduleObservation(ctx, state) {
+    if (state.observationQueued) return;
+    state.observationQueued = true;
+    const run = () => {
+      state.observationQueued = false;
+      observeState(ctx, state);
+    };
+    if (typeof global.queueMicrotask === "function") global.queueMicrotask(run);
+    else Promise.resolve().then(run);
+  }
+
+  function observeState(ctx, state) {
+    if (state.suppressObservation) return;
+    const nextDocuments = captureDocuments(ctx, state.documents, state.store);
+    const changed = [];
+    const now = new Date().toISOString();
+    state.store.sectorCodes().forEach((sector) => {
+      const signature = state.store.stateSignature(nextDocuments[sector]);
+      if (signature !== state.signatures[sector]) {
+        nextDocuments[sector].updatedAt = now;
+        changed.push(sector);
+        state.dirtySectors.add(sector);
+      }
+    });
+    if (changed.length) {
+      state.pendingChanges += 1;
+      state.documents = nextDocuments;
+      state.signatures = signaturesFor(nextDocuments, state.store);
+      const journalSaved = persistJournal(state);
+      setMessage(
+        state,
+        journalSaved ? "Sector change saved to the browser journal." : state.journalError,
+        journalSaved ? "success" : "error"
+      );
+    }
+
+    const selectedSector = currentSectorCode(ctx);
+    if (
+      selectedSector !== state.previousSector &&
+      state.previousSector &&
+      state.dirtySectors.has(state.previousSector) &&
+      state.store.hasDirectory()
+    ) {
+      queueWrite(ctx, state, [state.previousSector], `${state.previousSector} saved before sector change.`);
+    }
+    state.previousSector = selectedSector;
+
+    if (
+      changed.length &&
+      state.pendingChanges >= state.autosaveThreshold &&
+      state.store.hasDirectory()
+    ) {
+      queueWrite(ctx, state, Array.from(state.dirtySectors), "Autosave complete.");
+    }
+    if (ctx.updateSectorStorageUi) ctx.updateSectorStorageUi();
+  }
+
+  async function chooseProjectFolder(ctx, state) {
+    if (state.busy) return;
+    observeState(ctx, state);
+    const startingDocuments = cloneDocuments(state.documents, state.store);
+    const startingSignatures = signaturesFor(startingDocuments, state.store);
+    const pendingAtStart = state.pendingChanges;
+    state.busy = true;
+    setMessage(state, "Connecting project folder and synchronizing 16 sector files…", "neutral");
+    ctx.updateSectorStorageUi();
+    try {
+      const result = await state.store.chooseDirectory(startingDocuments);
+      const currentDocuments = captureDocuments(ctx, state.documents, state.store);
+      const currentSignatures = signaturesFor(currentDocuments, state.store);
+      const changedDuringSync = state.store.sectorCodes().filter(
+        (sector) => currentSignatures[sector] !== startingSignatures[sector]
+      );
+      const mergedDocuments = Object.assign({}, result.documents);
+      changedDuringSync.forEach((sector) => { mergedDocuments[sector] = currentDocuments[sector]; });
+
+      state.suppressObservation = true;
+      state.documents = mergedDocuments;
+      applyDocuments(ctx, mergedDocuments);
+      state.signatures = signaturesFor(mergedDocuments, state.store);
+      state.dirtySectors = new Set(changedDuringSync);
+      state.pendingChanges = changedDuringSync.length
+        ? Math.max(1, state.pendingChanges - pendingAtStart)
+        : 0;
+      state.lastWriteAt = result.lastWriteAt;
+      const journalSaved = persistJournal(state);
+      ctx.refreshMapData();
+      const folderMessage = changedDuringSync.length
+        ? `Project folder connected. All 16 files synchronized; ${changedDuringSync.length} sector change remains pending.`
+        : `Project folder connected. ${result.existingCount} existing files read; all 16 sector files synchronized.`;
+      setMessage(
+        state,
+        journalSaved ? folderMessage : `${folderMessage} ${state.journalError}`,
+        !journalSaved || changedDuringSync.length ? "warning" : "success"
+      );
+    } catch (error) {
+      setMessage(state, error && error.message ? error.message : "Project folder could not be connected.", "error");
+    } finally {
+      state.suppressObservation = false;
+      state.busy = false;
+      ctx.updateSectorStorageUi();
+    }
+  }
+
+  function changeThreshold(ctx, state) {
+    state.autosaveThreshold = Number(ctx.els.autosaveThreshold.value) || 10;
+    const journalSaved = persistJournal(state);
+    setMessage(
+      state,
+      journalSaved
+        ? `Autosave threshold set to ${state.autosaveThreshold} changes.`
+        : state.journalError,
+      journalSaved ? "success" : "error"
+    );
+    ctx.updateSectorStorageUi();
+    if (
+      state.pendingChanges >= state.autosaveThreshold &&
+      state.dirtySectors.size &&
+      state.store.hasDirectory()
+    ) {
+      queueWrite(ctx, state, Array.from(state.dirtySectors), "Autosave complete.");
+    }
+  }
+
+  function queueWrite(ctx, state, sectors, successMessage) {
+    const requested = Array.from(new Set(sectors)).filter((code) => state.dirtySectors.has(code));
+    if (!requested.length) return Promise.resolve(true);
+    state.busy = true;
+    setMessage(state, `Saving ${requested.length} sector file${requested.length === 1 ? "" : "s"}…`, "neutral");
+    ctx.updateSectorStorageUi();
+    let savedSignatures = {};
+    state.writeQueue = state.writeQueue
+      .then(() => {
+        const documents = {};
+        requested.forEach((sector) => {
+          documents[sector] = state.store.normalizeDocument(state.documents[sector], sector);
+          savedSignatures[sector] = state.store.stateSignature(documents[sector]);
+        });
+        return state.store.writeDocuments(documents, requested);
+      })
+      .then((result) => {
+        requested.forEach((sector) => {
+          const currentSignature = state.store.stateSignature(state.documents[sector]);
+          if (currentSignature === savedSignatures[sector]) state.dirtySectors.delete(sector);
+        });
+        if (!state.dirtySectors.size) state.pendingChanges = 0;
+        state.lastWriteAt = result.lastWriteAt;
+        const journalSaved = persistJournal(state);
+        const writeMessage = state.dirtySectors.size
+          ? "New changes remain pending after the write."
+          : successMessage;
+        setMessage(
+          state,
+          journalSaved ? writeMessage : `${writeMessage} ${state.journalError}`,
+          !journalSaved || state.dirtySectors.size ? "warning" : "success"
+        );
+        return true;
+      })
+      .catch((error) => {
+        setMessage(state, error && error.message ? error.message : "Sector files could not be saved.", "error");
+        return false;
+      })
+      .finally(() => {
+        state.busy = false;
+        ctx.updateSectorStorageUi();
+      });
+    return state.writeQueue;
+  }
+
+  function captureDocuments(ctx, previousDocuments, store) {
+    const documents = {};
+    store.sectorCodes().forEach((sector) => {
+      const previous = previousDocuments && previousDocuments[sector];
+      const mainState = ctx.mutedCellCodes.includes(sector)
+        ? "muted"
+        : ctx.activeCellCodes.includes(sector) ? "active" : "undiscovered";
+      documents[sector] = store.normalizeDocument({
+        sector,
+        updatedAt: previous && previous.updatedAt,
+        state: {
+          sector: mainState,
+          inspection: {
+            active: codesForSector(ctx.activeDetailCells, sector),
+            muted: codesForSector(ctx.mutedDetailCells, sector)
+          },
+          practical: {
+            active: codesForSector(ctx.activeFineCells, sector),
+            muted: codesForSector(ctx.mutedFineCells, sector)
+          }
+        }
+      }, sector);
+    });
+    return documents;
+  }
+
+  function applyDocuments(ctx, documents) {
+    const activeMain = [];
+    const mutedMain = [];
+    const activeDetail = [];
+    const mutedDetail = [];
+    const activeFine = [];
+    const mutedFine = [];
+    Object.values(documents || {}).forEach((document) => {
+      if (!document || !document.state) return;
+      if (document.state.sector === "active") activeMain.push(document.sector);
+      if (document.state.sector === "muted") mutedMain.push(document.sector);
+      document.state.inspection.active.forEach((code) => addCell(activeDetail, detailCellByCode(ctx, code)));
+      document.state.inspection.muted.forEach((code) => addCell(mutedDetail, detailCellByCode(ctx, code)));
+      document.state.practical.active.forEach((code) => addCell(activeFine, fineCellByCode(ctx, code)));
+      document.state.practical.muted.forEach((code) => addCell(mutedFine, fineCellByCode(ctx, code)));
+    });
+    ctx.activeCellCodes = activeMain;
+    ctx.mutedCellCodes = mutedMain;
+    ctx.activeDetailCells = activeDetail;
+    ctx.mutedDetailCells = mutedDetail;
+    ctx.activeFineCells = activeFine;
+    ctx.mutedFineCells = mutedFine;
+  }
+
+  function detailCellByCode(ctx, code) {
+    return global.KaneMapMapGridHierarchy.detailCellByCode(ctx, code);
+  }
+
+  function fineCellByCode(ctx, code) {
+    const match = String(code || "").match(/^(.*):f(\d{2})c(\d{2})$/);
+    if (!match) return null;
+    const detailCell = detailCellByCode(ctx, match[1]);
+    if (!detailCell) return null;
+    const row = Number(match[2]) - 1;
+    const col = Number(match[3]) - 1;
+    if (row < 0 || row >= ctx.fineGridRows || col < 0 || col >= ctx.fineGridCols) return null;
+    const width = (detailCell.maxX - detailCell.minX) / ctx.fineGridCols;
+    const height = (detailCell.maxY - detailCell.minY) / ctx.fineGridRows;
+    const minX = detailCell.minX + col * width;
+    const minY = detailCell.minY + row * height;
+    const maxX = col === ctx.fineGridCols - 1 ? detailCell.maxX : minX + width;
+    const maxY = row === ctx.fineGridRows - 1 ? detailCell.maxY : minY + height;
+    return {
+      code,
+      parentCode: detailCell.parentCode,
+      detailParentCode: detailCell.code,
+      level: "practical",
+      row,
+      col,
+      minX,
+      minY,
+      maxX,
+      maxY,
+      center: [(minX + maxX) / 2, (minY + maxY) / 2],
+      polygon: [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]]
+    };
+  }
+
+  function persistJournal(state) {
+    if (!state.store.storageAvailable()) {
+      state.journalError = "Browser journal is unavailable; connect the USB project folder before fieldwork.";
+      return false;
+    }
+    try {
+      const journal = state.store.saveJournal({
+        autosaveThreshold: state.autosaveThreshold,
+        pendingChanges: state.pendingChanges,
+        dirtySectors: Array.from(state.dirtySectors),
+        sectors: state.documents
+      });
+      state.autosaveThreshold = journal.autosaveThreshold;
+      state.lastLocalSaveAt = journal.lastLocalSaveAt;
+      state.journalError = "";
+      return true;
+    } catch (error) {
+      state.journalError = error && error.message
+        ? `Browser journal error: ${error.message}`
+        : "Browser journal could not be saved.";
+      return false;
+    }
+  }
+
+  function cloneDocuments(documents, store) {
+    const clone = {};
+    store.sectorCodes().forEach((sector) => {
+      clone[sector] = store.normalizeDocument(documents && documents[sector], sector);
+    });
+    return clone;
+  }
+
+  function updateUi(ctx, state) {
+    const { els } = ctx;
+    els.autosaveThreshold.value = String(state.autosaveThreshold);
+    els.sectorCurrentStatus.textContent = currentSectorCode(ctx) || "None selected";
+    els.sectorFolderStatus.textContent = state.store.directoryName() || "Not selected for this session";
+    els.sectorJournalStatus.textContent = state.journalError
+      ? state.journalError
+      : state.store.storageAvailable()
+        ? state.lastLocalSaveAt
+          ? `Saved locally · ${formatTime(state.lastLocalSaveAt)}`
+          : "Ready; no sector changes yet"
+        : "Browser storage unavailable";
+    els.sectorPendingStatus.textContent = `${state.pendingChanges} / ${state.autosaveThreshold} changes`;
+    els.sectorLastWriteStatus.textContent = state.lastWriteAt
+      ? `Successful · ${formatTime(state.lastWriteAt)}`
+      : "No USB write this session";
+    els.sectorStorageMessage.textContent = state.message || defaultMessage(state);
+    els.sectorStorageMessage.dataset.status = state.messageType || "neutral";
+    els.chooseSectorFolder.disabled = state.busy || !state.store.fileAccessSupported();
+    els.saveSectorStateNow.disabled = state.busy || !state.store.hasDirectory() || !state.dirtySectors.size;
+  }
+
+  function defaultMessage(state) {
+    if (!state.store.fileAccessSupported()) {
+      return "Direct folder access requires a Chromium browser opened through TrivialHTTP.";
+    }
+    if (!state.store.hasDirectory()) {
+      return "Choose the USB project folder once per browser session. Browser journaling is already active.";
+    }
+    return "Sector autosave is ready.";
+  }
+
+  function clearObservationRecords(ctx) {
+    if (!ctx.store.snapshot().length) return;
+    const ok = confirm("Clear locally saved Kane-Map observation records from this browser?");
+    if (!ok) return;
+    ctx.stopEditing();
+    ctx.store.clear();
+    ctx.refreshRecordUi();
+  }
+
+  function signaturesFor(documents, store) {
+    const signatures = {};
+    store.sectorCodes().forEach((sector) => {
+      signatures[sector] = store.stateSignature(documents[sector]);
+    });
+    return signatures;
+  }
+
+  function codesForSector(cells, sector) {
+    return (Array.isArray(cells) ? cells : [])
+      .filter((cell) => cell && cell.parentCode === sector && cell.code)
+      .map((cell) => cell.code);
+  }
+
+  function addCell(target, cell) {
+    if (cell && !target.some((candidate) => candidate.code === cell.code)) target.push(cell);
+  }
+
+  function currentSectorCode(ctx) {
+    const code = ctx.selected && ctx.selected.cell && ctx.selected.cell.code;
+    return ctx.allCellCodes.includes(code) ? code : null;
+  }
+
+  function setMessage(state, message, type) {
+    state.message = message;
+    state.messageType = type;
+  }
+
+  function formatTime(value) {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : "unknown time";
   }
 
   global.KaneMapImportExportController = { installImportExportController };

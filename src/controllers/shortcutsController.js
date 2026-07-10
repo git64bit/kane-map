@@ -51,8 +51,9 @@
     };
 
     ctx.exportJsonShortcut = function exportJsonShortcut() {
-      ctx.store.download(`kane-map-observations-${ctx.dateStamp()}.json`, ctx.store.exportJson());
-      return "JSON export started";
+      ctx.switchWorkspaceTab("export");
+      ctx.saveSectorStateNow();
+      return "Sector save requested";
     };
 
     ctx.clearFormShortcut = function clearFormShortcut() {

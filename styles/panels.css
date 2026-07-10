@@ -41,31 +41,6 @@
   background: rgba(116, 184, 255, 0.1);
 }
 
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0.45rem 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.swatch {
-  width: 22px;
-  height: 12px;
-  border-radius: 2px;
-  display: inline-block;
-}
-
-.swatch-red { background: var(--red); }
-.swatch-road { background: var(--road); }
-.swatch-water { background: var(--water); }
-.swatch-forest { background: var(--forest); }
-.swatch-grid {
-  border: 1px solid var(--grid);
-  background: transparent;
-}
-
 .selected-list {
   display: grid;
   grid-template-columns: 5.75rem 1fr;

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kane-Map Offline Prototype</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="styles/base.css" />
   <link rel="stylesheet" href="styles/layout.css" />
   <link rel="stylesheet" href="styles/panels.css" />
@@ -43,15 +44,6 @@
         <div id="selectedWorkspaceHeader" class="selected-workspace-header">Selected: none</div>
 
         <section class="workspace-screen" data-tab-panel="map">
-          <div class="section first-section">
-            <h2>Legend</h2>
-            <div class="legend-row"><span class="swatch swatch-red"></span>1–3 story residential</div>
-            <div class="legend-row"><span class="swatch swatch-road"></span>Roads</div>
-            <div class="legend-row"><span class="swatch swatch-water"></span>Ponds / lakes</div>
-            <div class="legend-row"><span class="swatch swatch-forest"></span>Forests / wooded areas</div>
-            <div class="legend-row"><span class="swatch swatch-grid"></span>Kane local grid</div>
-          </div>
-
           <div class="section">
             <h2>Selected object</h2>
             <dl class="selected-list">
@@ -394,6 +386,7 @@
   <script src="src/map/grid.js"></script>
   <script src="src/storage/recordSchema.js"></script>
   <script src="src/storage/localStore.js"></script>
+  <script src="src/storage/sectorStateStore.js"></script>
   <script src="src/field/designators.js"></script>
   <script src="src/field/visitSessions.js"></script>
   <script src="src/field/fieldPlan.js"></script>

@@ -11,10 +11,11 @@
   function installLayerControls(ctx) {
     if (ctx.els.layerControlPanel) return;
     const section = ctx.els.zoomIn ? ctx.els.zoomIn.closest(".section") : null;
-    if (!section) return;
+    const mapPanel = section ? section.closest('[data-tab-panel="map"]') : null;
+    if (!mapPanel) return;
 
     const panel = document.createElement("div");
-    panel.className = "section map-layer-controls";
+    panel.className = "section first-section map-layer-controls";
     panel.innerHTML = [
       `<div class="button-grid">`,
       `<button id="muteSelectedSector" type="button" class="secondary">Mute selected sector</button>`,
@@ -28,7 +29,7 @@
       `</div>`
     ].join("");
 
-    section.insertAdjacentElement("afterend", panel);
+    mapPanel.insertBefore(panel, mapPanel.firstElementChild);
     ctx.els.layerControlPanel = panel;
     ctx.els.muteSelectedSector = panel.querySelector("#muteSelectedSector");
     ctx.els.layerToggles = Array.from(panel.querySelectorAll("input[data-map-layer]"));
