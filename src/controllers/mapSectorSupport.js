@@ -23,8 +23,6 @@
     detailGridCellsForDisplay: gridHierarchy.detailGridCellsForDisplay,
     fineGridCellsForDisplay: gridHierarchy.fineGridCellsForDisplay,
     detailCellByCode: gridHierarchy.detailCellByCode,
-    shortDetailCellCode: gridHierarchy.shortDetailCellCode,
-    shortFineCellCode: gridHierarchy.shortFineCellCode,
     detailCellForFeature: gridHierarchy.detailCellForFeature,
     fineCellForFeature: gridHierarchy.fineCellForFeature,
     filterFeaturesByActiveCells: geometry.filterFeaturesByActiveCells,

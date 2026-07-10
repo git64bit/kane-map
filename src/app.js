@@ -1,7 +1,7 @@
 (function bootKaneMap(global) {
   "use strict";
 
-  const BATCH_LABEL = "UI: Batch 088";
+  const BATCH_LABEL = "UI: Batch 089";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -22,9 +22,7 @@
     ctx.bindImportExportEvents();
     ctx.bindKeyboardShortcuts();
     ctx.bindObservationEvents();
-
     window.addEventListener("resize", ctx.handleResize);
-
     ctx.handleResize();
     ctx.updateSelectedPanel();
     ctx.updateDesignatorPreview();
@@ -44,15 +42,17 @@
 
   function loadScriptOnce(src, globalName) {
     if (globalName && global[globalName]) return Promise.resolve();
-
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-kane-runtime="${src}"]`);
       if (existing) {
         existing.addEventListener("load", resolve, { once: true });
-        existing.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
+        existing.addEventListener(
+          "error",
+          () => reject(new Error(`Unable to load ${src}`)),
+          { once: true }
+        );
         return;
       }
-
       const script = document.createElement("script");
       script.src = src;
       script.dataset.kaneRuntime = src;
@@ -63,7 +63,6 @@
   }
 
   let runtimeStatus = null;
-
   loadScriptOnce("src/app/runtimeStatus.js", "KaneMapRuntimeStatus")
     .then(() => {
       runtimeStatus = global.KaneMapRuntimeStatus.createRuntimeStatus(BATCH_LABEL);
@@ -91,7 +90,6 @@
         runtimeStatus.showBootError(error);
         return;
       }
-
       console.error("Kane-Map boot failed before runtime status initialization", error);
     });
 })(window);

@@ -12,18 +12,13 @@
       ctx.activeFineCells = removeCellByCode(ctx.activeFineCells, fineCell.code);
       ctx.mutedFineCells = removeCellByCode(ctx.mutedFineCells, fineCell.code);
       ctx.selectedFineCell = null;
-      ctx.selected = {
-        cell: ctx.selected.cell,
-        building: null
-      };
-
+      ctx.selected = { cell: ctx.selected.cell, building: null };
       ctx.renderer.setSelected(
         null,
         ctx.selected.cell,
         ctx.selectedDetailCell,
         null
       );
-
       ctx.refreshMapData();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
@@ -44,7 +39,6 @@
 
   function installRecoveryControl(ctx) {
     if (ctx.els.returnSelectedFineCell) return;
-
     const muteButton = ctx.els.muteSelectedSector;
     const buttonGrid = muteButton ? muteButton.parentElement : null;
     if (!buttonGrid) return;
@@ -53,10 +47,9 @@
     button.id = "returnSelectedFineCell";
     button.type = "button";
     button.className = "secondary";
-    button.textContent = "Return practical cell to undiscovered";
+    button.textContent = "Return to undiscovered";
     button.title = "Remove the selected 8×8 practical cell from both Active and Muted state.";
     button.addEventListener("click", ctx.returnSelectedFineCellToUndiscovered);
-
     muteButton.insertAdjacentElement("afterend", button);
     ctx.els.returnSelectedFineCell = button;
   }
@@ -64,13 +57,11 @@
   function updateRecoveryControl(ctx) {
     const button = ctx.els.returnSelectedFineCell;
     if (!button) return;
-
     const selectedCode = ctx.selectedFineCell && ctx.selectedFineCell.code;
     const classified = selectedCode && (
       cellListHasCode(ctx.activeFineCells, selectedCode) ||
       cellListHasCode(ctx.mutedFineCells, selectedCode)
     );
-
     button.disabled = !classified;
   }
 
@@ -87,7 +78,5 @@
     );
   }
 
-  global.KaneMapMapSectorRecovery = {
-    installMapSectorRecovery
-  };
+  global.KaneMapMapSectorRecovery = { installMapSectorRecovery };
 })(window);

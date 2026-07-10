@@ -24,13 +24,11 @@
 
     ctx.bindCanvasEvents = function bindCanvasEvents() {
       let moved = false;
-
       canvas.addEventListener("pointerdown", (event) => {
         moved = false;
         canvas.setPointerCapture(event.pointerId);
         renderer.beginDrag(ctx.pointerPosition(event));
       });
-
       canvas.addEventListener("pointermove", (event) => {
         if (!renderer.state.dragging) return;
         moved = true;
@@ -38,14 +36,12 @@
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       });
-
       canvas.addEventListener("pointerup", (event) => {
         renderer.endDrag();
         if (!moved) ctx.selectAt(event);
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       });
-
       canvas.addEventListener("pointercancel", () => renderer.endDrag());
       canvas.addEventListener(
         "wheel",
@@ -61,11 +57,17 @@
 
     ctx.bindMapControlEvents = function bindMapControlEvents() {
       installLayerControls(ctx);
-      els.zoomIn.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(1.42, ctx.selectedFocusPoint())));
-      els.zoomOut.addEventListener("click", () => ctx.changeView(() => renderer.zoomBy(0.70, ctx.selectedFocusPoint())));
+      els.zoomIn.addEventListener("click", () =>
+        ctx.changeView(() => renderer.zoomBy(1.42, ctx.selectedFocusPoint()))
+      );
+      els.zoomOut.addEventListener("click", () =>
+        ctx.changeView(() => renderer.zoomBy(0.70, ctx.selectedFocusPoint()))
+      );
       els.prevBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(-1));
       els.nextBuilding.addEventListener("click", () => ctx.goToAdjacentBuilding(1));
-      els.resetView.addEventListener("click", () => ctx.changeView(() => renderer.resetView()));
+      els.resetView.addEventListener("click", () =>
+        ctx.changeView(() => renderer.resetView())
+      );
       els.copySelection.addEventListener("click", () => ctx.copySelectedSummary());
       els.navSearch.addEventListener("input", ctx.handleNavigationSearch);
       els.clearSearch.addEventListener("click", () => {
@@ -112,8 +114,14 @@
     };
 
     ctx.updateActiveChunks = function updateActiveChunks() {
-      const visibleBounds = global.KaneMapGrid.expandBounds(renderer.visibleWorldBounds(), 90);
-      const visibleCells = global.KaneMapGrid.findCellsIntersectingBounds(ctx.grid, visibleBounds);
+      const visibleBounds = global.KaneMapGrid.expandBounds(
+        renderer.visibleWorldBounds(),
+        90
+      );
+      const visibleCells = global.KaneMapGrid.findCellsIntersectingBounds(
+        ctx.grid,
+        visibleBounds
+      );
       ctx.visibleCellCodes = visibleCells.map((cell) => cell.code);
       ctx.refreshMapData();
       ctx.updateCoverageByCell(ctx.coverageModel.build());
@@ -249,14 +257,6 @@
       ctx.updateViewAndChunkStatus();
     };
 
-    ctx.clearMutedSectors = function clearMutedSectors() {
-      ctx.mutedCellCodes = [];
-      ctx.mutedDetailCells = [];
-      ctx.mutedFineCells = [];
-      ctx.refreshMapData();
-      ctx.updateViewAndChunkStatus();
-    };
-
     ctx.selectAt = function selectAt(event) {
       const hit = renderer.hitTest(ctx.pointerPosition(event));
       const cell = hit.fineCell
@@ -268,7 +268,12 @@
 
       if (event.shiftKey || event.altKey) {
         ctx.toggleMutedAtHit(hit);
-        renderer.setSelected(hit.building, cell, ctx.selectedDetailCell, ctx.selectedFineCell);
+        renderer.setSelected(
+          hit.building,
+          cell,
+          ctx.selectedDetailCell,
+          ctx.selectedFineCell
+        );
         ctx.updateSelectedPanel();
         ctx.updateRecordPanel();
         return;
@@ -284,7 +289,12 @@
         ctx.activateCell(hit.cell.code);
       }
 
-      renderer.setSelected(hit.building, cell, ctx.selectedDetailCell, ctx.selectedFineCell);
+      renderer.setSelected(
+        hit.building,
+        cell,
+        ctx.selectedDetailCell,
+        ctx.selectedFineCell
+      );
       if (hit.fineCell || hit.detailCell || hit.cell) ctx.fitSelectedSector();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();

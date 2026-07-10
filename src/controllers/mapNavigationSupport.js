@@ -14,14 +14,12 @@
       effectiveFineCells,
       mutedSectorCount,
       selectedSectorIsMuted,
-      shortDetailCellCode,
-      shortFineCellCode,
       detailCellForFeature,
       fineCellForFeature,
       featureBelongsToActiveCells
     } = global.KaneMapMapSectorSupport;
-
     const { els, renderer } = ctx;
+
     ctx.handleNavigationSearch = function handleNavigationSearch() {
       ctx.renderSearchResults(ctx.searchIndex.search(els.navSearch.value));
     };
@@ -65,8 +63,24 @@
       const building = ctx.findBuildingById(buildingId);
       if (!building) return;
       const cell = ctx.cellForCode(building.cell);
-      const detailCell = cell ? detailCellForFeature(cell, building, ctx.detailGridRows || INSPECTION_GRID_ROWS, ctx.detailGridCols || INSPECTION_GRID_COLS, "polygon") : null;
-      const fineCell = detailCell ? fineCellForFeature(detailCell, building, ctx.fineGridRows || FINE_GRID_ROWS, ctx.fineGridCols || FINE_GRID_COLS, "polygon") : null;
+      const detailCell = cell
+        ? detailCellForFeature(
+            cell,
+            building,
+            ctx.detailGridRows || INSPECTION_GRID_ROWS,
+            ctx.detailGridCols || INSPECTION_GRID_COLS,
+            "polygon"
+          )
+        : null;
+      const fineCell = detailCell
+        ? fineCellForFeature(
+            detailCell,
+            building,
+            ctx.fineGridRows || FINE_GRID_ROWS,
+            ctx.fineGridCols || FINE_GRID_COLS,
+            "polygon"
+          )
+        : null;
       ctx.selected = { cell, building };
       ctx.selectedDetailCell = detailCell;
       ctx.selectedFineCell = fineCell;
@@ -99,7 +113,9 @@
     ctx.goToAdjacentBuilding = function goToAdjacentBuilding(direction) {
       const buildings = ctx.visibleNavigableBuildings();
       if (!buildings.length) return "No visible buildings";
-      const currentIndex = ctx.selected.building ? buildings.findIndex((building) => building.id === ctx.selected.building.id) : -1;
+      const currentIndex = ctx.selected.building
+        ? buildings.findIndex((building) => building.id === ctx.selected.building.id)
+        : -1;
       let nextIndex = currentIndex + direction;
       if (currentIndex === -1) nextIndex = direction > 0 ? 0 : buildings.length - 1;
       if (nextIndex < 0) nextIndex = buildings.length - 1;
@@ -117,13 +133,38 @@
         els.statusFilter.value
       );
       const allowed = filterIds === null ? null : new Set(filterIds);
-      const parentCodes = new Set(activeDataCellCodes(ctx).length ? activeDataCellCodes(ctx) : ctx.visibleCellCodes.length ? ctx.visibleCellCodes : ctx.allCellCodes);
+      const parentCodes = new Set(
+        activeDataCellCodes(ctx).length
+          ? activeDataCellCodes(ctx)
+          : ctx.visibleCellCodes.length
+            ? ctx.visibleCellCodes
+            : ctx.allCellCodes
+      );
       const fineCells = effectiveFineCells(ctx);
       const detailCells = effectiveDetailCells(ctx);
       return ctx.allBuildings
         .filter((building) => parentCodes.has(building.cell))
-        .filter((building) => !fineCells.length || featureBelongsToActiveCells(building, fineCells, new Set(fineCells.map((cell) => cell.code)), "polygon"))
-        .filter((building) => fineCells.length || !detailCells.length || featureBelongsToActiveCells(building, detailCells, new Set(detailCells.map((cell) => cell.code)), "polygon"))
+        .filter(
+          (building) =>
+            !fineCells.length ||
+            featureBelongsToActiveCells(
+              building,
+              fineCells,
+              new Set(fineCells.map((cell) => cell.code)),
+              "polygon"
+            )
+        )
+        .filter(
+          (building) =>
+            fineCells.length ||
+            !detailCells.length ||
+            featureBelongsToActiveCells(
+              building,
+              detailCells,
+              new Set(detailCells.map((cell) => cell.code)),
+              "polygon"
+            )
+        )
         .filter((building) => !allowed || allowed.has(building.id))
         .sort((a, b) => a.cell.localeCompare(b.cell) || a.label.localeCompare(b.label));
     };
@@ -136,14 +177,22 @@
     };
 
     ctx.selectedSummaryText = function selectedSummaryText() {
-      if (!ctx.selected.building && ctx.selectedFineCell) return `Practical cell: ${ctx.selectedFineCell.code}`;
-      if (!ctx.selected.building && ctx.selectedDetailCell) return `Inspection cell: ${ctx.selectedDetailCell.code}`;
-      if (!ctx.selected.building && ctx.selected.cell) return `Grid cell: ${ctx.selected.cell.code}`;
+      if (!ctx.selected.building && ctx.selectedFineCell) {
+        return `Practical cell: ${ctx.selectedFineCell.code}`;
+      }
+      if (!ctx.selected.building && ctx.selectedDetailCell) {
+        return `Inspection cell: ${ctx.selectedDetailCell.code}`;
+      }
+      if (!ctx.selected.building && ctx.selected.cell) {
+        return `Grid cell: ${ctx.selected.cell.code}`;
+      }
       if (!ctx.selected.building) return "";
       const summary = ctx.coverageModel.build().summaryByBuilding[ctx.selected.building.id];
       const identity = ctx.siteIdentityModel.analyzeBuilding(ctx.selected.building.id);
       const site = identity.labels[0] || ctx.selected.building.name || "";
-      const count = summary && summary.observedUnitCount !== null ? `${summary.observedUnitCount}` : "unknown";
+      const count = summary && summary.observedUnitCount !== null
+        ? `${summary.observedUnitCount}`
+        : "unknown";
       const status = summary ? summary.status : "unrecorded";
       return [
         `Building: ${ctx.selected.building.label}`,
@@ -177,27 +226,15 @@
           input.checked = Boolean(ctx.layerVisibility[key]);
         });
       }
-      if (ctx.els.activeCellSummary) {
-        const cells = effectiveMainCellCodes(ctx).length ? effectiveMainCellCodes(ctx).join(", ") : "none";
-        const detailCells = effectiveDetailCells(ctx).length ? effectiveDetailCells(ctx).map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
-        const fineCells = effectiveFineCells(ctx).length ? effectiveFineCells(ctx).map((cell) => shortFineCellCode(cell)).join(", ") : "none";
-        const mutedMain = ctx.mutedCellCodes.length ? ctx.mutedCellCodes.join(", ") : "none";
-        const mutedDetail = ctx.mutedDetailCells.length ? ctx.mutedDetailCells.map((cell) => shortDetailCellCode(cell)).join(", ") : "none";
-        const mutedFine = ctx.mutedFineCells.length ? ctx.mutedFineCells.map((cell) => shortFineCellCode(cell)).join(", ") : "none";
-        const selectedDetail = ctx.selectedDetailCell ? shortDetailCellCode(ctx.selectedDetailCell) : "none";
-        const selectedFine = ctx.selectedFineCell ? shortFineCellCode(ctx.selectedFineCell) : "none";
-        ctx.els.activeCellSummary.textContent = `Active cells: ${cells}
-Inspection cells: ${detailCells}
-Practical cells: ${fineCells}
-Muted cells: ${mutedMain}
-Muted inspection: ${mutedDetail}
-Muted practical: ${mutedFine}
-Selected inspection: ${selectedDetail}
-Selected practical: ${selectedFine}`;
-      }
       if (ctx.els.muteSelectedSector) {
-        ctx.els.muteSelectedSector.textContent = selectedSectorIsMuted(ctx) ? "Restore selected sector" : "Mute selected sector";
-        ctx.els.muteSelectedSector.disabled = !(ctx.selectedFineCell || ctx.selectedDetailCell || ctx.selected.cell);
+        ctx.els.muteSelectedSector.textContent = selectedSectorIsMuted(ctx)
+          ? "Restore selected sector"
+          : "Mute selected sector";
+        ctx.els.muteSelectedSector.disabled = !(
+          ctx.selectedFineCell ||
+          ctx.selectedDetailCell ||
+          ctx.selected.cell
+        );
       }
     };
   }

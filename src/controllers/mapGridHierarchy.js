@@ -5,7 +5,6 @@
   const INSPECTION_GRID_COLS = 16;
   const FINE_GRID_ROWS = 8;
   const FINE_GRID_COLS = 8;
-
   const geometry = global.KaneMapMapGeometrySupport;
 
   function detailGridCellsForDisplay(ctx) {
@@ -17,6 +16,7 @@
     ctx.mutedFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
     if (ctx.selectedDetailCell) parentCodes.add(ctx.selectedDetailCell.parentCode);
     if (ctx.selectedFineCell) parentCodes.add(ctx.selectedFineCell.parentCode);
+
     return Array.from(parentCodes)
       .map((code) => ctx.cellForCode(code))
       .filter(Boolean)
@@ -39,6 +39,7 @@
     ctx.mutedFineCells.forEach((cell) => {
       if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
     });
+
     return Array.from(detailCodes)
       .map((code) => detailCellByCode(ctx, code))
       .filter(Boolean)
@@ -99,7 +100,6 @@
     const cells = [];
     const width = (parentCell.maxX - parentCell.minX) / cols;
     const height = (parentCell.maxY - parentCell.minY) / rows;
-
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
         const minX = parentCell.minX + col * width;
@@ -112,7 +112,12 @@
           maxX,
           maxY,
           center: [(minX + maxX) / 2, (minY + maxY) / 2],
-          polygon: [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]]
+          polygon: [
+            [minX, minY],
+            [maxX, minY],
+            [maxX, maxY],
+            [minX, maxY]
+          ]
         };
         cells.push(createCell(row, col, bounds));
       }
@@ -122,15 +127,6 @@
 
   function pad2(value) {
     return String(value).padStart(2, "0");
-  }
-
-  function shortDetailCellCode(cell) {
-    return cell && cell.code ? cell.code.replace(":r", ":").replace("c", "-") : "";
-  }
-
-  function shortFineCellCode(cell) {
-    if (!cell || !cell.code) return "";
-    return cell.code.replace(":r", ":").replace("c", "-").replace(":f", "→").replace("c", "-");
   }
 
   function detailCellForFeature(parentCell, feature, rows, cols, geometryKey) {
@@ -161,8 +157,6 @@
     detailGridCellsForDisplay,
     fineGridCellsForDisplay,
     detailCellByCode,
-    shortDetailCellCode,
-    shortFineCellCode,
     detailCellForFeature,
     fineCellForFeature
   };
