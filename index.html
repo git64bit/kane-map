@@ -72,8 +72,6 @@
             <div class="button-grid">
               <button id="zoomIn" type="button">Zoom +</button>
               <button id="zoomOut" type="button">Zoom −</button>
-              <button id="rotateLeft" type="button">Rotate ⟲</button>
-              <button id="rotateRight" type="button">Rotate ⟳</button>
               <button id="prevBuilding" type="button">Prev building</button>
               <button id="nextBuilding" type="button">Next building</button>
               <button id="resetView" type="button" class="wide">Reset view</button>
@@ -97,6 +95,7 @@
           <form id="observationForm" class="section first-section observation-form">
             <h2 id="observationFormTitle">Offline observation</h2>
             <p id="editModeNotice" class="edit-mode-notice" hidden>Editing saved local record.</p>
+
             <div class="form-grid-two">
               <label>
                 Visit date
@@ -107,6 +106,7 @@
                 <input id="fieldSessionId" type="text" placeholder="Example: 2026-07-07-AM" />
               </label>
             </div>
+
             <div class="form-grid-two">
               <label>
                 Plan priority
@@ -123,14 +123,17 @@
                 <input id="planAction" type="text" placeholder="Example: revisit lobby / verify south bank" />
               </label>
             </div>
+
             <label>
               Site label / address note
               <input id="siteLabel" type="text" placeholder="Example: King's Row Condos / 1420 Example Dr" />
             </label>
+
             <label>
               Building alias
               <input id="buildingAlias" type="text" placeholder="Example: North building / Building 2" />
             </label>
+
             <div class="form-grid-two">
               <label>
                 Entrance
@@ -141,19 +144,23 @@
                 <input id="mailboxBankId" type="text" placeholder="Example: M01" />
               </label>
             </div>
+
             <label>
               Visible designators
               <textarea id="visibleDesignators" rows="4" placeholder="Example: 100A, 100B, 100C, 100D"></textarea>
             </label>
             <p id="designatorPreview" class="inline-status">No visible designators entered</p>
+
             <label>
               Observed unit count
               <input id="unitCount" type="number" min="0" step="1" placeholder="Auto-filled from designators if blank" />
             </label>
+
             <label>
               Visible designator pattern
               <input id="designatorPattern" type="text" placeholder="Example: number+letter / 100A–100D" />
             </label>
+
             <div class="form-grid-two">
               <label>
                 Confidence
@@ -176,14 +183,17 @@
                 </select>
               </label>
             </div>
+
             <label>
               Access context
               <input id="accessContext" type="text" placeholder="Example: visible from open common area" />
             </label>
+
             <label>
               Notes
               <textarea id="observationNotes" rows="3" placeholder="Visible mailbox designators only. No resident names."></textarea>
             </label>
+
             <div class="boundary-box">No mailbox touched · No mailbox opened · No mail read · No resident names recorded</div>
             <div class="form-actions">
               <button id="saveObservation" type="submit">Add field observation</button>
@@ -237,6 +247,7 @@
             <div id="visitSessionSummary" class="summary-box">Visit session summary pending.</div>
             <div id="visitSessionRows" class="coverage-table">No visit sessions yet.</div>
           </div>
+
           <div class="section">
             <h2>Field plan</h2>
             <div id="fieldPlanSummary" class="summary-box">Field plan pending.</div>
@@ -289,6 +300,7 @@
             </div>
             <p class="fine-print">Current record schema is managed in <code>src/storage/recordSchema.js</code>. Read <code>docs/PROJECT_STATE.md</code> first when resuming after a pause.</p>
           </div>
+
           <div class="section">
             <h2>Keyboard shortcuts</h2>
             <div class="shortcut-grid">
@@ -305,6 +317,7 @@
             </div>
             <p class="fine-print">Shortcuts are ignored while typing in normal text fields, except Escape and Ctrl/⌘+Enter.</p>
           </div>
+
           <div class="section">
             <h2>Danger zone</h2>
             <div class="button-stack">
