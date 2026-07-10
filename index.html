@@ -44,6 +44,15 @@
 
         <section class="workspace-screen" data-tab-panel="map">
           <div class="section first-section">
+            <h2>Legend</h2>
+            <div class="legend-row"><span class="swatch swatch-red"></span>1–3 story residential</div>
+            <div class="legend-row"><span class="swatch swatch-road"></span>Roads</div>
+            <div class="legend-row"><span class="swatch swatch-water"></span>Ponds / lakes</div>
+            <div class="legend-row"><span class="swatch swatch-forest"></span>Forests / wooded areas</div>
+            <div class="legend-row"><span class="swatch swatch-grid"></span>Kane local grid</div>
+          </div>
+
+          <div class="section">
             <h2>Selected object</h2>
             <dl class="selected-list">
               <dt>Grid cell</dt><dd id="selectedCell">None</dd>
@@ -260,25 +269,59 @@
 
         <section class="workspace-screen" data-tab-panel="export" hidden>
           <div class="section first-section">
-            <h2>Export / import</h2>
-            <div class="button-stack">
-              <button id="exportRecords" type="button">Export JSON</button>
-              <button id="exportObservationCsv" type="button">Export observation CSV</button>
-              <button id="exportBuildingCsv" type="button">Export building CSV</button>
-              <button id="exportFieldReport" type="button">Export field report</button>
-              <button id="exportVisitCsv" type="button">Export visit CSV</button>
-              <button id="exportPlanCsv" type="button">Export plan CSV</button>
-              <label class="file-button">
-                Preview JSON import
-                <input id="importRecords" type="file" accept="application/json,.json" />
-              </label>
-              <div id="importPreview" class="import-preview" hidden></div>
-              <div id="importActions" class="button-grid" hidden>
-                <button id="downloadBackupBeforeImport" type="button" class="secondary">Download backup</button>
-                <button id="confirmImport" type="button">Replace local records</button>
-                <button id="cancelImport" type="button" class="secondary wide">Cancel import</button>
+            <h2>Sector autosave</h2>
+            <div class="sector-storage-summary" aria-live="polite">
+              <div class="sector-storage-row">
+                <span>Current sector</span>
+                <strong id="sectorCurrentStatus">None selected</strong>
+              </div>
+              <div class="sector-storage-row">
+                <span>Project folder</span>
+                <output id="sectorFolderStatus">Not selected for this session</output>
+              </div>
+              <div class="sector-storage-row">
+                <span>Browser journal</span>
+                <output id="sectorJournalStatus">Checking</output>
+              </div>
+              <div class="sector-storage-row">
+                <span>Pending changes</span>
+                <output id="sectorPendingStatus">0 / 10 changes</output>
+              </div>
+              <div class="sector-storage-row">
+                <span>Last USB write</span>
+                <output id="sectorLastWriteStatus">No USB write this session</output>
               </div>
             </div>
+
+            <div class="sector-storage-controls">
+              <label>
+                Autosave after
+                <select id="autosaveThreshold">
+                  <option value="10">10 changes</option>
+                  <option value="20">20 changes</option>
+                  <option value="30">30 changes</option>
+                  <option value="40">40 changes</option>
+                  <option value="50">50 changes</option>
+                  <option value="60">60 changes</option>
+                  <option value="70">70 changes</option>
+                  <option value="80">80 changes</option>
+                  <option value="90">90 changes</option>
+                  <option value="100">100 changes</option>
+                </select>
+              </label>
+              <div class="button-grid">
+                <button id="chooseSectorFolder" type="button">Choose project folder</button>
+                <button id="saveSectorStateNow" type="button" class="secondary">Save now</button>
+              </div>
+            </div>
+
+            <p id="sectorStorageMessage" class="sector-storage-message" data-status="neutral">
+              Browser journaling starts automatically. Choose the USB project folder to write sector files.
+            </p>
+            <p class="fine-print">
+              Kane-Map maintains one JSON file for each of the 16 sectors. Undiscovered is the default.
+              Roads, buildings, water, forests, and address data are never written to these files.
+            </p>
           </div>
         </section>
 
@@ -287,7 +330,7 @@
             <h2>Project status</h2>
             <div class="summary-box">
               <strong>Offline-first mode</strong><br />
-              No CDN · No server · No database · Browser-local records · JSON backup/restore
+              No CDN · No database · Browser-local observation records · sector-state journal · 16 sector JSON files
             </div>
             <p class="fine-print">Current record schema is managed in <code>src/storage/recordSchema.js</code>. Read <code>docs/PROJECT_STATE.md</code> first when resuming after a pause.</p>
           </div>
@@ -302,7 +345,7 @@
               <span><kbd>S</kbd> save observation</span>
               <span><kbd>X</kbd> clear form</span>
               <span><kbd>C</kbd> copy selected</span>
-              <span><kbd>E</kbd> export JSON</span>
+              <span><kbd>E</kbd> save sectors</span>
               <span><kbd>R</kbd> reset view</span>
               <span><kbd>Esc</kbd> cancel / clear</span>
             </div>
@@ -314,7 +357,7 @@
             <div class="button-stack">
               <button id="clearRecords" type="button" class="danger">Clear saved records</button>
             </div>
-            <p class="fine-print">Export a JSON backup before clearing local browser records.</p>
+            <p class="fine-print">This clears browser-local observation records only. Sector classification files are not affected.</p>
           </div>
         </section>
       </aside>
@@ -358,8 +401,6 @@
   <script src="src/navigation/shortcuts.js"></script>
   <script src="src/records/coverage.js"></script>
   <script src="src/records/siteIdentity.js"></script>
-  <script src="src/export/exporters.js"></script>
-  <script src="src/import/importValidator.js"></script>
   <script src="src/map/rendererConfig.js"></script>
   <script src="src/map/viewport.js"></script>
   <script src="src/map/drawPrimitives.js"></script>
