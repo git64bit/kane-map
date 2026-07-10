@@ -1,16 +1,22 @@
 (function attachHitTest(global) {
   "use strict";
 
+  const config = global.KaneMapRendererConfig;
   const viewport = global.KaneMapViewport;
 
   function hitTest(data, grid, state, bounds, screenPoint) {
     const worldPoint = viewport.screenToWorld(state, bounds, screenPoint);
     const cell = global.KaneMapGrid.findCell(grid, worldPoint);
     const fineCell = findFineCell(state, worldPoint);
-    const detailCell = fineCell ? findDetailCellByCode(state, fineCell.detailParentCode) : findDetailCell(state, worldPoint);
-    const building = [...data.buildings].reverse().find((candidate) => (
-      global.KaneMapGrid.polygonContainsPoint(candidate.polygon, worldPoint)
-    )) || null;
+    const detailCell = fineCell
+      ? findDetailCellByCode(state, fineCell.detailParentCode)
+      : findDetailCell(state, worldPoint);
+    const building = config.practicalFeaturesVisible(state)
+      ? [...data.buildings].reverse().find((candidate) => (
+          global.KaneMapGrid.polygonContainsPoint(candidate.polygon, worldPoint)
+        )) || null
+      : null;
+
     return { worldPoint, cell, detailCell, fineCell, building };
   }
 

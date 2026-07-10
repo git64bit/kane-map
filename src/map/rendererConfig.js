@@ -1,6 +1,8 @@
 (function attachRendererConfig(global) {
   "use strict";
 
+  const PRACTICAL_FEATURE_MIN_ZOOM = 8.0;
+
   const COLORS = {
     background: "#202426",
     grid: "rgba(210, 220, 228, 0.42)",
@@ -33,9 +35,21 @@
     return next;
   }
 
+  function practicalFeaturesVisible(state) {
+    return Boolean(
+      state &&
+      state.selectedDetailCellCode &&
+      Array.isArray(state.fineGridCells) &&
+      state.fineGridCells.length &&
+      state.zoom >= PRACTICAL_FEATURE_MIN_ZOOM
+    );
+  }
+
   global.KaneMapRendererConfig = {
     COLORS,
+    PRACTICAL_FEATURE_MIN_ZOOM,
     clamp,
-    normalizeBearing
+    normalizeBearing,
+    practicalFeaturesVisible
   };
 })(window);

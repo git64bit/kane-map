@@ -2,6 +2,7 @@
   "use strict";
 
   function drawMap(ctx, state, bounds, data, grid) {
+    const config = global.KaneMapRendererConfig;
     const viewport = global.KaneMapViewport;
     const gridLayers = global.KaneMapDrawGridLayers;
     const featureLayers = global.KaneMapDrawFeatureLayers;
@@ -14,6 +15,8 @@
     gridLayers.drawGrid(ctx, state, grid, worldToScreen);
     gridLayers.drawInspectionGrid(ctx, state, worldToScreen);
     gridLayers.drawFineGrid(ctx, state, worldToScreen);
+
+    if (!config.practicalFeaturesVisible(state)) return;
 
     ctx.save();
     if (support.clipToActiveCells(ctx, state, grid, worldToScreen)) {
