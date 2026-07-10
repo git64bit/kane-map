@@ -1,11 +1,12 @@
 (function bootKaneMap(global) {
   "use strict";
 
-  const BATCH_LABEL = "UI: Batch 083";
+  const BATCH_LABEL = "UI: Batch 084";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
     global.KaneMapMapController.installMapController(ctx);
+    global.KaneMapMapSectorRecovery.installMapSectorRecovery(ctx);
     global.KaneMapObservationController.installObservationController(ctx);
     global.KaneMapReviewController.installReviewController(ctx);
     global.KaneMapImportExportController.installImportExportController(ctx);
@@ -73,6 +74,7 @@
         loadScriptOnce("src/controllers/mapSectorState.js", "KaneMapMapSectorState"),
         loadScriptOnce("src/controllers/mapGridHierarchy.js", "KaneMapMapGridHierarchy"),
         loadScriptOnce("src/controllers/mapNavigationSupport.js", "KaneMapMapNavigationSupport"),
+        loadScriptOnce("src/controllers/mapSectorRecovery.js", "KaneMapMapSectorRecovery"),
         loadScriptOnce("src/map/drawLayerSupport.js", "KaneMapDrawLayerSupport"),
         loadScriptOnce("src/map/drawGridLayers.js", "KaneMapDrawGridLayers"),
         loadScriptOnce("src/map/drawFeatureLayers.js", "KaneMapDrawFeatureLayers")
