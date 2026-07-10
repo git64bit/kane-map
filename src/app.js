@@ -2,7 +2,7 @@
   "use strict";
 
   const PRODUCTION_BUNDLE_ROOT = "processing/output/prepared";
-  const BATCH_LABEL = "UI: Batch 075";
+  const BATCH_LABEL = "UI: Batch 076";
 
   function installControllers(ctx) {
     global.KaneMapWorkspaceController.installWorkspaceController(ctx);
@@ -218,8 +218,27 @@
     updateUiBatchStatus();
   }
 
+  function loadScriptOnce(src, globalName) {
+    if (globalName && global[globalName]) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-kane-runtime="${src}"]`);
+      if (existing) {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", () => reject(new Error(`Unable to load ${src}`)), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.kaneRuntime = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Unable to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
   markBootPending();
-  global.KaneMapAppContext.createAppContext()
+  loadScriptOnce("src/controllers/mapSectorSupport.js", "KaneMapMapSectorSupport")
+    .then(() => global.KaneMapAppContext.createAppContext())
     .then((ctx) => {
       installControllers(ctx);
       init(ctx);
