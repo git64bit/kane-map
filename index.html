@@ -54,32 +54,11 @@
           </div>
 
           <div class="section">
-            <h2>Building summary</h2>
-            <div id="buildingSummary" class="summary-box">Select a building to view saved observations.</div>
-            <div id="identitySummary" class="identity-box">Identity checks pending.</div>
-          </div>
-
-          <div class="section">
             <h2>View controls</h2>
             <div class="button-grid">
               <button id="zoomIn" type="button">Zoom +</button>
               <button id="zoomOut" type="button">Zoom −</button>
-              <button id="prevBuilding" type="button">Prev building</button>
-              <button id="nextBuilding" type="button">Next building</button>
-              <button id="resetView" type="button" class="wide">Reset view</button>
-              <button id="copySelection" type="button" class="wide secondary">Copy selected summary</button>
             </div>
-          </div>
-
-          <div class="section">
-            <h2>Navigation search</h2>
-            <div class="search-row">
-              <input id="navSearch" type="search" placeholder="Search B20, N14-E08, King's Row, verified" />
-              <button id="clearSearch" type="button" class="secondary">Clear</button>
-            </div>
-            <ol id="searchResults" class="search-results">
-              <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
-            </ol>
           </div>
         </section>
 
@@ -198,6 +177,33 @@
 
         <section class="workspace-screen" data-tab-panel="records" hidden>
           <div class="section first-section">
+            <h2>Building summary</h2>
+            <div id="buildingSummary" class="summary-box">Select a building to view saved observations.</div>
+            <div id="identitySummary" class="identity-box">Identity checks pending.</div>
+          </div>
+
+          <div class="section">
+            <h2>Navigation search</h2>
+            <div class="search-row">
+              <input id="navSearch" type="search" placeholder="Search B20, N14-E08, King's Row, verified" />
+              <button id="clearSearch" type="button" class="secondary">Clear</button>
+            </div>
+            <ol id="searchResults" class="search-results">
+              <li class="muted">Search grid cells, buildings, sites, statuses, or unit designators.</li>
+            </ol>
+          </div>
+
+          <div class="section">
+            <h2>View controls</h2>
+            <div class="button-grid">
+              <button id="prevBuilding" type="button">Prev building</button>
+              <button id="nextBuilding" type="button">Next building</button>
+              <button id="resetView" type="button" class="wide">Reset view</button>
+              <button id="copySelection" type="button" class="wide secondary">Copy selected summary</button>
+            </div>
+          </div>
+
+          <div class="section">
             <h2>Offline records</h2>
             <p><strong id="recordCount">0</strong> local observation records</p>
             <div class="record-toolbar">

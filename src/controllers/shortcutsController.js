@@ -24,7 +24,7 @@
     };
 
     ctx.focusSearch = function focusSearch() {
-      ctx.switchWorkspaceTab("map");
+      ctx.switchWorkspaceTab("records");
       els.navSearch.focus();
       els.navSearch.select();
       return "Search focused";
