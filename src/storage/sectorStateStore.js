@@ -6,18 +6,20 @@
   const VERSION = 1;
   const DEFAULT_STORAGE_KEY = "kane-map.sector-state.v1";
   const COUNTY = "Kane County, Illinois";
+  const API_ROOT = "/__kane_map/sector-state";
+  const STORAGE_NAME = "project-data/sectors";
   const VALID_STATES = new Set(["undiscovered", "active", "muted"]);
 
   function createSectorStateStore(options = {}) {
     const sectorCodes = uniqueStrings(options.sectorCodes || []);
     const sectorSet = new Set(sectorCodes);
     const storageKey = options.storageKey || DEFAULT_STORAGE_KEY;
-    let directoryHandle = null;
-    let lastWriteAt = null;
     const storageAvailable = testLocalStorage();
+    let connected = false;
+    let lastWriteAt = null;
 
     function emptyDocument(sector) {
-      if (!sectorSet.has(sector)) throw new Error(`Invalid Kane-Map sector: ${sector || "unknown"}`);
+      requireSector(sectorSet, sector);
       return {
         format: FORMAT,
         version: VERSION,
@@ -34,7 +36,7 @@
 
     function normalizeDocument(input, expectedSector) {
       const sector = String(expectedSector || (input && input.sector) || "");
-      if (!sectorSet.has(sector)) throw new Error(`Invalid Kane-Map sector: ${sector || "unknown"}`);
+      requireSector(sectorSet, sector);
       const source = input && typeof input === "object" ? input : {};
       const state = source.state && typeof source.state === "object" ? source.state : {};
       const inspection = state.inspection && typeof state.inspection === "object" ? state.inspection : {};
@@ -43,7 +45,6 @@
       const mutedPractical = validCodes(practical.muted, sector, "practical");
       const mutedInspectionSet = new Set(mutedInspection);
       const mutedPracticalSet = new Set(mutedPractical);
-      const sectorState = VALID_STATES.has(state.sector) ? state.sector : "undiscovered";
       return {
         format: FORMAT,
         version: VERSION,
@@ -51,7 +52,7 @@
         sector,
         updatedAt: validTimestamp(source.updatedAt),
         state: {
-          sector: sectorState,
+          sector: VALID_STATES.has(state.sector) ? state.sector : "undiscovered",
           inspection: {
             active: validCodes(inspection.active, sector, "inspection")
               .filter((code) => !mutedInspectionSet.has(code)),
@@ -67,129 +68,7 @@
     }
 
     function stateSignature(document) {
-      const normalized = normalizeDocument(document, document && document.sector);
-      return JSON.stringify(normalized.state);
-    }
-
-    function loadJournal() {
-      const fallback = defaultJournal();
-      if (!storageAvailable) return fallback;
-      try {
-        const raw = global.localStorage.getItem(storageKey);
-        if (!raw) return fallback;
-        const parsed = JSON.parse(raw);
-        if (!parsed || parsed.format !== JOURNAL_FORMAT || parsed.version !== VERSION) return fallback;
-        const documents = {};
-        sectorCodes.forEach((sector) => {
-          documents[sector] = normalizeDocument(parsed.sectors && parsed.sectors[sector], sector);
-        });
-        return {
-          format: JOURNAL_FORMAT,
-          version: VERSION,
-          autosaveThreshold: normalizeThreshold(parsed.autosaveThreshold),
-          pendingChanges: nonNegativeInteger(parsed.pendingChanges),
-          dirtySectors: uniqueStrings(parsed.dirtySectors).filter((code) => sectorSet.has(code)),
-          lastLocalSaveAt: validTimestamp(parsed.lastLocalSaveAt),
-          sectors: documents
-        };
-      } catch (error) {
-        console.warn("Kane-Map sector journal could not be loaded.", error);
-        return fallback;
-      }
-    }
-
-    function saveJournal(input) {
-      const journal = input && typeof input === "object" ? input : {};
-      const documents = {};
-      sectorCodes.forEach((sector) => {
-        documents[sector] = normalizeDocument(journal.sectors && journal.sectors[sector], sector);
-      });
-      const payload = {
-        format: JOURNAL_FORMAT,
-        version: VERSION,
-        autosaveThreshold: normalizeThreshold(journal.autosaveThreshold),
-        pendingChanges: nonNegativeInteger(journal.pendingChanges),
-        dirtySectors: uniqueStrings(journal.dirtySectors).filter((code) => sectorSet.has(code)),
-        lastLocalSaveAt: new Date().toISOString(),
-        sectors: documents
-      };
-      if (storageAvailable) global.localStorage.setItem(storageKey, JSON.stringify(payload));
-      return payload;
-    }
-
-    async function chooseDirectory(localDocuments) {
-      if (typeof global.showDirectoryPicker !== "function") {
-        throw new Error("Direct folder access is unavailable. Open Kane-Map in a Chromium browser through TrivialHTTP.");
-      }
-      const handle = await global.showDirectoryPicker({ mode: "readwrite" });
-      await requireWritePermission(handle);
-      const synchronized = await synchronizeDirectory(handle, localDocuments);
-      directoryHandle = handle;
-      return synchronized;
-    }
-
-    async function synchronizeDirectory(handle, localDocuments) {
-      const merged = {};
-      const existing = {};
-      for (const sector of sectorCodes) {
-        const fileDocument = await readOptionalDocument(handle, sector);
-        existing[sector] = fileDocument;
-        const localDocument = normalizeDocument(localDocuments && localDocuments[sector], sector);
-        merged[sector] = newerDocument(localDocument, fileDocument);
-      }
-      for (const sector of sectorCodes) {
-        await writeDocument(handle, merged[sector]);
-      }
-      lastWriteAt = new Date().toISOString();
-      return {
-        documents: merged,
-        directoryName: handle.name || "Selected folder",
-        lastWriteAt,
-        existingCount: sectorCodes.filter((sector) => Boolean(existing[sector])).length
-      };
-    }
-
-    async function writeDocuments(documents, requestedCodes) {
-      if (!directoryHandle) throw new Error("Choose a project folder before saving sector files.");
-      await requireWritePermission(directoryHandle);
-      const codes = uniqueStrings(requestedCodes).filter((code) => sectorSet.has(code));
-      for (const sector of codes) {
-        await writeDocument(directoryHandle, normalizeDocument(documents && documents[sector], sector));
-      }
-      lastWriteAt = new Date().toISOString();
-      return { written: codes.length, lastWriteAt };
-    }
-
-    async function readOptionalDocument(handle, sector) {
-      let fileHandle;
-      try {
-        fileHandle = await handle.getFileHandle(fileName(sector));
-      } catch (error) {
-        if (error && error.name === "NotFoundError") return null;
-        throw error;
-      }
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      let parsed;
-      try {
-        parsed = JSON.parse(text);
-      } catch (error) {
-        throw new Error(`${fileName(sector)} is not valid JSON.`);
-      }
-      if (!parsed || parsed.format !== FORMAT || parsed.version !== VERSION || parsed.sector !== sector) {
-        throw new Error(`${fileName(sector)} is not a Kane-Map sector-state file for ${sector}.`);
-      }
-      return normalizeDocument(parsed, sector);
-    }
-
-    async function writeDocument(handle, document) {
-      const fileHandle = await handle.getFileHandle(fileName(document.sector), { create: true });
-      const writable = await fileHandle.createWritable();
-      try {
-        await writable.write(`${JSON.stringify(document, null, 2)}\n`);
-      } finally {
-        await writable.close();
-      }
+      return JSON.stringify(normalizeDocument(document, document && document.sector).state);
     }
 
     function defaultJournal() {
@@ -206,6 +85,113 @@
       };
     }
 
+    function loadJournal() {
+      const fallback = defaultJournal();
+      if (!storageAvailable) return fallback;
+      try {
+        const raw = global.localStorage.getItem(storageKey);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        if (!parsed || parsed.format !== JOURNAL_FORMAT || parsed.version !== VERSION) return fallback;
+        const sectors = {};
+        sectorCodes.forEach((sector) => {
+          sectors[sector] = normalizeDocument(parsed.sectors && parsed.sectors[sector], sector);
+        });
+        return {
+          format: JOURNAL_FORMAT,
+          version: VERSION,
+          autosaveThreshold: normalizeThreshold(parsed.autosaveThreshold),
+          pendingChanges: nonNegativeInteger(parsed.pendingChanges),
+          dirtySectors: uniqueStrings(parsed.dirtySectors).filter((code) => sectorSet.has(code)),
+          lastLocalSaveAt: validTimestamp(parsed.lastLocalSaveAt),
+          sectors
+        };
+      } catch (error) {
+        console.warn("Kane-Map sector journal could not be loaded.", error);
+        return fallback;
+      }
+    }
+
+    function saveJournal(input) {
+      const journal = input && typeof input === "object" ? input : {};
+      const sectors = {};
+      sectorCodes.forEach((sector) => {
+        sectors[sector] = normalizeDocument(journal.sectors && journal.sectors[sector], sector);
+      });
+      const payload = {
+        format: JOURNAL_FORMAT,
+        version: VERSION,
+        autosaveThreshold: normalizeThreshold(journal.autosaveThreshold),
+        pendingChanges: nonNegativeInteger(journal.pendingChanges),
+        dirtySectors: uniqueStrings(journal.dirtySectors).filter((code) => sectorSet.has(code)),
+        lastLocalSaveAt: new Date().toISOString(),
+        sectors
+      };
+      if (storageAvailable) global.localStorage.setItem(storageKey, JSON.stringify(payload));
+      return payload;
+    }
+
+    async function connectServer(localDocuments) {
+      connected = false;
+      const health = await fetchJson(API_ROOT);
+      if (!health || health.ok !== true || health.storage !== STORAGE_NAME || health.sectorCount !== sectorCodes.length) {
+        throw new Error("The running TrivialHTTP server does not support Kane-Map sector storage.");
+      }
+      const merged = {};
+      const existing = {};
+      for (const sector of sectorCodes) {
+        const fileDocument = await readOptionalDocument(sector);
+        existing[sector] = fileDocument;
+        const localDocument = normalizeDocument(localDocuments && localDocuments[sector], sector);
+        merged[sector] = newerDocument(localDocument, fileDocument);
+      }
+      for (const sector of sectorCodes) await writeDocument(merged[sector]);
+      connected = true;
+      lastWriteAt = new Date().toISOString();
+      return {
+        documents: merged,
+        storageName: STORAGE_NAME,
+        lastWriteAt,
+        existingCount: sectorCodes.filter((sector) => Boolean(existing[sector])).length
+      };
+    }
+
+    async function writeDocuments(documents, requestedCodes) {
+      if (!connected) throw new Error("TrivialHTTP sector storage is not connected.");
+      const codes = uniqueStrings(requestedCodes).filter((code) => sectorSet.has(code));
+      for (const sector of codes) {
+        await writeDocument(normalizeDocument(documents && documents[sector], sector));
+      }
+      lastWriteAt = new Date().toISOString();
+      return { written: codes.length, lastWriteAt };
+    }
+
+    async function readOptionalDocument(sector) {
+      const response = await fetch(`${API_ROOT}/${fileName(sector)}`, { cache: "no-store" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw await responseError(response, `${fileName(sector)} could not be read.`);
+      let parsed;
+      try {
+        parsed = JSON.parse(await response.text());
+      } catch (error) {
+        throw new Error(`${fileName(sector)} is not valid JSON.`);
+      }
+      if (!parsed || parsed.format !== FORMAT || parsed.version !== VERSION || parsed.sector !== sector) {
+        throw new Error(`${fileName(sector)} is not a Kane-Map sector-state file for ${sector}.`);
+      }
+      return normalizeDocument(parsed, sector);
+    }
+
+    async function writeDocument(document) {
+      const response = await fetch(`${API_ROOT}/${fileName(document.sector)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: `${JSON.stringify(document, null, 2)}\n`,
+        cache: "no-store"
+      });
+      if (!response.ok) throw await responseError(response, `${fileName(document.sector)} could not be written.`);
+    }
+
     return {
       sectorCodes: () => sectorCodes.slice(),
       emptyDocument,
@@ -213,35 +199,52 @@
       stateSignature,
       loadJournal,
       saveJournal,
-      chooseDirectory,
+      connectServer,
       writeDocuments,
       storageAvailable: () => storageAvailable,
-      fileAccessSupported: () => typeof global.showDirectoryPicker === "function",
-      hasDirectory: () => Boolean(directoryHandle),
-      directoryName: () => directoryHandle ? (directoryHandle.name || "Selected folder") : null,
+      isConnected: () => connected,
+      storageName: () => STORAGE_NAME,
       lastWriteAt: () => lastWriteAt
     };
   }
 
-  async function requireWritePermission(handle) {
-    if (!handle) throw new Error("Project folder access was not granted.");
-    const options = { mode: "readwrite" };
-    if (handle.queryPermission && await handle.queryPermission(options) === "granted") return;
-    if (handle.requestPermission && await handle.requestPermission(options) === "granted") return;
-    throw new Error("Write permission for the project folder was not granted.");
+  async function fetchJson(url) {
+    let response;
+    try {
+      response = await fetch(url, { cache: "no-store" });
+    } catch (error) {
+      throw new Error("TrivialHTTP sector storage is unavailable. Start Kane-Map through the updated TrivialHTTP executable.");
+    }
+    if (!response.ok) throw await responseError(response, "TrivialHTTP sector storage is unavailable.");
+    try {
+      return await response.json();
+    } catch (error) {
+      throw new Error("TrivialHTTP returned an invalid sector-storage response.");
+    }
+  }
+
+  async function responseError(response, fallback) {
+    try {
+      const payload = await response.json();
+      return new Error(payload && payload.error ? payload.error : fallback);
+    } catch (error) {
+      return new Error(fallback);
+    }
+  }
+
+  function requireSector(sectorSet, sector) {
+    if (!sectorSet.has(sector)) throw new Error(`Invalid Kane-Map sector: ${sector || "unknown"}`);
   }
 
   function newerDocument(localDocument, fileDocument) {
     if (!fileDocument) return localDocument;
-    const localTime = timestampValue(localDocument.updatedAt);
-    const fileTime = timestampValue(fileDocument.updatedAt);
-    return fileTime > localTime ? fileDocument : localDocument;
+    return timestampValue(fileDocument.updatedAt) > timestampValue(localDocument.updatedAt)
+      ? fileDocument
+      : localDocument;
   }
 
   function validCodes(values, sector, level) {
-    return uniqueStrings(values)
-      .filter((code) => validCellCode(code, sector, level))
-      .sort();
+    return uniqueStrings(values).filter((code) => validCellCode(code, sector, level)).sort();
   }
 
   function validCellCode(code, sector, level) {
@@ -254,11 +257,8 @@
       new RegExp(`^${escaped}:r(\\d{2})c(\\d{2}):f(\\d{2})c(\\d{2})$`)
     );
     return Boolean(
-      practical &&
-      inRange(practical[1], 1, 16) &&
-      inRange(practical[2], 1, 16) &&
-      inRange(practical[3], 1, 8) &&
-      inRange(practical[4], 1, 8)
+      practical && inRange(practical[1], 1, 16) && inRange(practical[2], 1, 16) &&
+      inRange(practical[3], 1, 8) && inRange(practical[4], 1, 8)
     );
   }
 
@@ -270,8 +270,7 @@
   function normalizeThreshold(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return 10;
-    const rounded = Math.round(number / 10) * 10;
-    return Math.min(100, Math.max(10, rounded));
+    return Math.min(100, Math.max(10, Math.round(number / 10) * 10));
   }
 
   function nonNegativeInteger(value) {

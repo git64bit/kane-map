@@ -1,6 +1,5 @@
 (function kaneMapImportExportController(global) {
   "use strict";
-
   function installImportExportController(ctx) {
     const storeFactory = global.KaneMapSectorStateStore;
     if (!storeFactory || typeof storeFactory.createSectorStateStore !== "function") {
@@ -35,23 +34,25 @@
       suppressObservation: false,
       journalError: ""
     };
-
     ctx.sectorPersistence = state;
     loadBrowserJournal(ctx, state);
     wrapMapRefresh(ctx, state);
-
     ctx.bindImportExportEvents = function bindImportExportEvents() {
       const { els } = ctx;
-      els.chooseSectorFolder.addEventListener("click", () => chooseProjectFolder(ctx, state));
-      els.saveSectorStateNow.addEventListener("click", () => ctx.saveSectorStateNow());
-      els.autosaveThreshold.addEventListener("change", () => changeThreshold(ctx, state));
+      if (els.reconnectSectorStorage) {
+        els.reconnectSectorStorage.textContent = "Reconnect storage";
+        els.reconnectSectorStorage.addEventListener("click", () => connectProjectStorage(ctx, state));
+      }
+      if (els.saveSectorStateNow) els.saveSectorStateNow.addEventListener("click", () => ctx.saveSectorStateNow());
+      if (els.autosaveThreshold) els.autosaveThreshold.addEventListener("change", () => changeThreshold(ctx, state));
       if (els.clearRecords) els.clearRecords.addEventListener("click", () => clearObservationRecords(ctx));
       ctx.updateSectorStorageUi();
+      connectProjectStorage(ctx, state);
     };
     ctx.saveSectorStateNow = function saveSectorStateNow() {
       observeState(ctx, state);
-      if (!state.store.hasDirectory()) {
-        setMessage(state, "Choose a project folder before saving sector files.", "warning");
+      if (!state.store.isConnected()) {
+        setMessage(state, "TrivialHTTP sector storage is not connected.", "warning");
         ctx.updateSectorStorageUi();
         return Promise.resolve(false);
       }
@@ -62,15 +63,15 @@
       }
       return queueWrite(ctx, state, Array.from(state.dirtySectors), "Manual save complete.");
     };
-
     ctx.updateSectorStorageUi = function updateSectorStorageUi() {
       updateUi(ctx, state);
     };
-
     ctx.updateStorageStatus = function updateStorageStatus() {
       const status = ctx.store.storageStatus();
-      ctx.els.storageStatus.textContent = status.label;
-      ctx.els.storageStatus.title = status.detail;
+      if (ctx.els.storageStatus) {
+        ctx.els.storageStatus.textContent = status.label;
+        ctx.els.storageStatus.title = status.detail;
+      }
     };
   }
 
@@ -83,7 +84,7 @@
       if (els.clearRecords) {
         els.clearRecords.addEventListener("click", () => clearObservationRecords(ctx));
       }
-      if (els.chooseSectorFolder) els.chooseSectorFolder.disabled = true;
+      if (els.reconnectSectorStorage) els.reconnectSectorStorage.disabled = true;
       if (els.saveSectorStateNow) els.saveSectorStateNow.disabled = true;
       if (els.autosaveThreshold) els.autosaveThreshold.disabled = true;
       ctx.updateSectorStorageUi();
@@ -95,7 +96,7 @@
     ctx.updateSectorStorageUi = function updateUnavailableSectorStorageUi() {
       const { els } = ctx;
       if (els.sectorCurrentStatus) els.sectorCurrentStatus.textContent = currentSectorCode(ctx) || "None selected";
-      if (els.sectorFolderStatus) els.sectorFolderStatus.textContent = "Unavailable";
+      if (els.sectorFolderStatus) els.sectorFolderStatus.textContent = "project-data/sectors unavailable";
       if (els.sectorJournalStatus) els.sectorJournalStatus.textContent = "Disabled; map remains operational";
       if (els.sectorPendingStatus) els.sectorPendingStatus.textContent = "Not available";
       if (els.sectorLastWriteStatus) els.sectorLastWriteStatus.textContent = "No write attempted";
@@ -106,8 +107,10 @@
     };
     ctx.updateStorageStatus = function updateStorageStatus() {
       const status = ctx.store.storageStatus();
-      ctx.els.storageStatus.textContent = status.label;
-      ctx.els.storageStatus.title = `${status.detail} Sector-state persistence is disabled.`;
+      if (ctx.els.storageStatus) {
+        ctx.els.storageStatus.textContent = status.label;
+        ctx.els.storageStatus.title = `${status.detail} Sector-state persistence is disabled.`;
+      }
     };
   }
 
@@ -175,7 +178,7 @@
       selectedSector !== state.previousSector &&
       state.previousSector &&
       state.dirtySectors.has(state.previousSector) &&
-      state.store.hasDirectory()
+      state.store.isConnected()
     ) {
       queueWrite(ctx, state, [state.previousSector], `${state.previousSector} saved before sector change.`);
     }
@@ -184,24 +187,24 @@
     if (
       changed.length &&
       state.pendingChanges >= state.autosaveThreshold &&
-      state.store.hasDirectory()
+      state.store.isConnected()
     ) {
       queueWrite(ctx, state, Array.from(state.dirtySectors), "Autosave complete.");
     }
     if (ctx.updateSectorStorageUi) ctx.updateSectorStorageUi();
   }
 
-  async function chooseProjectFolder(ctx, state) {
+  async function connectProjectStorage(ctx, state) {
     if (state.busy) return;
     observeState(ctx, state);
     const startingDocuments = cloneDocuments(state.documents, state.store);
     const startingSignatures = signaturesFor(startingDocuments, state.store);
     const pendingAtStart = state.pendingChanges;
     state.busy = true;
-    setMessage(state, "Connecting project folder and synchronizing 16 sector files…", "neutral");
+    setMessage(state, "Connecting TrivialHTTP storage and synchronizing 16 sector files…", "neutral");
     ctx.updateSectorStorageUi();
     try {
-      const result = await state.store.chooseDirectory(startingDocuments);
+      const result = await state.store.connectServer(startingDocuments);
       const currentDocuments = captureDocuments(ctx, state.documents, state.store);
       const currentSignatures = signaturesFor(currentDocuments, state.store);
       const changedDuringSync = state.store.sectorCodes().filter(
@@ -222,15 +225,15 @@
       const journalSaved = persistJournal(state);
       ctx.refreshMapData();
       const folderMessage = changedDuringSync.length
-        ? `Project folder connected. All 16 files synchronized; ${changedDuringSync.length} sector change remains pending.`
-        : `Project folder connected. ${result.existingCount} existing files read; all 16 sector files synchronized.`;
+        ? `TrivialHTTP storage connected. All 16 files synchronized; ${changedDuringSync.length} sector change remains pending.`
+        : `TrivialHTTP storage connected. ${result.existingCount} existing files read; all 16 sector files synchronized.`;
       setMessage(
         state,
         journalSaved ? folderMessage : `${folderMessage} ${state.journalError}`,
         !journalSaved || changedDuringSync.length ? "warning" : "success"
       );
     } catch (error) {
-      setMessage(state, error && error.message ? error.message : "Project folder could not be connected.", "error");
+      setMessage(state, error && error.message ? error.message : "TrivialHTTP sector storage could not be connected.", "error");
     } finally {
       state.suppressObservation = false;
       state.busy = false;
@@ -239,6 +242,7 @@
   }
 
   function changeThreshold(ctx, state) {
+    if (!ctx.els.autosaveThreshold) return;
     state.autosaveThreshold = Number(ctx.els.autosaveThreshold.value) || 10;
     const journalSaved = persistJournal(state);
     setMessage(
@@ -252,7 +256,7 @@
     if (
       state.pendingChanges >= state.autosaveThreshold &&
       state.dirtySectors.size &&
-      state.store.hasDirectory()
+      state.store.isConnected()
     ) {
       queueWrite(ctx, state, Array.from(state.dirtySectors), "Autosave complete.");
     }
@@ -421,34 +425,30 @@
 
   function updateUi(ctx, state) {
     const { els } = ctx;
-    els.autosaveThreshold.value = String(state.autosaveThreshold);
-    els.sectorCurrentStatus.textContent = currentSectorCode(ctx) || "None selected";
-    els.sectorFolderStatus.textContent = state.store.directoryName() || "Not selected for this session";
-    els.sectorJournalStatus.textContent = state.journalError
-      ? state.journalError
-      : state.store.storageAvailable()
-        ? state.lastLocalSaveAt
-          ? `Saved locally · ${formatTime(state.lastLocalSaveAt)}`
-          : "Ready; no sector changes yet"
+    if (els.autosaveThreshold) els.autosaveThreshold.value = String(state.autosaveThreshold);
+    if (els.sectorCurrentStatus) els.sectorCurrentStatus.textContent = currentSectorCode(ctx) || "None selected";
+    if (els.sectorFolderStatus) els.sectorFolderStatus.textContent = state.store.isConnected()
+      ? `${state.store.storageName()} · connected` : `${state.store.storageName()} · disconnected`;
+    if (els.sectorJournalStatus) els.sectorJournalStatus.textContent = state.journalError
+      ? state.journalError : state.store.storageAvailable()
+        ? state.lastLocalSaveAt ? `Saved locally · ${formatTime(state.lastLocalSaveAt)}` : "Ready; no sector changes yet"
         : "Browser storage unavailable";
-    els.sectorPendingStatus.textContent = `${state.pendingChanges} / ${state.autosaveThreshold} changes`;
-    els.sectorLastWriteStatus.textContent = state.lastWriteAt
-      ? `Successful · ${formatTime(state.lastWriteAt)}`
-      : "No USB write this session";
-    els.sectorStorageMessage.textContent = state.message || defaultMessage(state);
-    els.sectorStorageMessage.dataset.status = state.messageType || "neutral";
-    els.chooseSectorFolder.disabled = state.busy || !state.store.fileAccessSupported();
-    els.saveSectorStateNow.disabled = state.busy || !state.store.hasDirectory() || !state.dirtySectors.size;
+    if (els.sectorPendingStatus) els.sectorPendingStatus.textContent = `${state.pendingChanges} / ${state.autosaveThreshold} changes`;
+    if (els.sectorLastWriteStatus) els.sectorLastWriteStatus.textContent = state.lastWriteAt
+      ? `Successful · ${formatTime(state.lastWriteAt)}` : "No sector write this session";
+    if (els.sectorStorageMessage) {
+      els.sectorStorageMessage.textContent = state.message || defaultMessage(state);
+      els.sectorStorageMessage.dataset.status = state.messageType || "neutral";
+    }
+    if (els.reconnectSectorStorage) els.reconnectSectorStorage.disabled = state.busy;
+    if (els.saveSectorStateNow) els.saveSectorStateNow.disabled = state.busy || !state.store.isConnected() || !state.dirtySectors.size;
   }
 
   function defaultMessage(state) {
-    if (!state.store.fileAccessSupported()) {
-      return "Direct folder access requires a Chromium browser opened through TrivialHTTP.";
+    if (!state.store.isConnected()) {
+      return "TrivialHTTP storage is disconnected. Browser journaling remains active; use Reconnect storage after updating the server executable.";
     }
-    if (!state.store.hasDirectory()) {
-      return "Choose the USB project folder once per browser session. Browser journaling is already active.";
-    }
-    return "Sector autosave is ready.";
+    return "Sector autosave is ready. Files are written under project-data/sectors.";
   }
 
   function clearObservationRecords(ctx) {

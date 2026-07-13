@@ -58,7 +58,7 @@
       planStatusSummary: document.getElementById("planStatusSummary"),
       shortcutStatus: document.getElementById("shortcutStatus"),
       visitSessionRows: document.getElementById("visitSessionRows"),
-      chooseSectorFolder: document.getElementById("chooseSectorFolder"),
+      reconnectSectorStorage: document.getElementById("reconnectSectorStorage") || document.getElementById("chooseSectorFolder"),
       saveSectorStateNow: document.getElementById("saveSectorStateNow"),
       autosaveThreshold: document.getElementById("autosaveThreshold"),
       sectorCurrentStatus: document.getElementById("sectorCurrentStatus"),

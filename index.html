@@ -268,8 +268,8 @@
                 <strong id="sectorCurrentStatus">None selected</strong>
               </div>
               <div class="sector-storage-row">
-                <span>Project folder</span>
-                <output id="sectorFolderStatus">Not selected for this session</output>
+                <span>Storage folder</span>
+                <output id="sectorFolderStatus">Connecting to project-data/sectors</output>
               </div>
               <div class="sector-storage-row">
                 <span>Browser journal</span>
@@ -280,8 +280,8 @@
                 <output id="sectorPendingStatus">0 / 10 changes</output>
               </div>
               <div class="sector-storage-row">
-                <span>Last USB write</span>
-                <output id="sectorLastWriteStatus">No USB write this session</output>
+                <span>Last sector write</span>
+                <output id="sectorLastWriteStatus">No sector write this session</output>
               </div>
             </div>
 
@@ -302,17 +302,17 @@
                 </select>
               </label>
               <div class="button-grid">
-                <button id="chooseSectorFolder" type="button">Choose project folder</button>
+                <button id="reconnectSectorStorage" type="button">Reconnect storage</button>
                 <button id="saveSectorStateNow" type="button" class="secondary">Save now</button>
               </div>
             </div>
 
             <p id="sectorStorageMessage" class="sector-storage-message" data-status="neutral">
-              Browser journaling starts automatically. Choose the USB project folder to write sector files.
+              Connecting to TrivialHTTP sector storage. Browser journaling remains active if the server is unavailable.
             </p>
             <p class="fine-print">
-              Kane-Map maintains one JSON file for each of the 16 sectors. Undiscovered is the default.
-              Roads, buildings, water, forests, and address data are never written to these files.
+              Kane-Map maintains one JSON file for each of the 16 sectors under <code>project-data/sectors</code>.
+              Undiscovered is the default. Roads, buildings, water, forests, and address data are never written.
             </p>
           </div>
         </section>
@@ -322,7 +322,7 @@
             <h2>Project status</h2>
             <div class="summary-box">
               <strong>Offline-first mode</strong><br />
-              No CDN · No database · Browser-local observation records · sector-state journal · 16 sector JSON files
+              No CDN · No database · Browser-local observation records · sector-state journal · 16 TrivialHTTP sector files
             </div>
             <p class="fine-print">Current record schema is managed in <code>src/storage/recordSchema.js</code>. Read <code>docs/PROJECT_STATE.md</code> first when resuming after a pause.</p>
           </div>

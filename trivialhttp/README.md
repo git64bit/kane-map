@@ -1,10 +1,10 @@
 # TrivialHTTP
 
-TrivialHTTP is a minimal local-only static file server for USB/browser applications.
+TrivialHTTP is a minimal local-only server for USB/browser applications. Its first pilot use is Kane-Map production data loading and sector-state persistence.
 
-Its first pilot use is Kane-Map production data loading. Kane-Map can run its demo mode from `file://`, but production mode loads `data/kane-county/chunk_manifest.json` and chunk JSON files with browser `fetch()`. Current browsers block that from `file://`. TrivialHTTP supplies only the missing local HTTP file-access mechanism.
+Kane-Map loads prepared geometry through normal browser `fetch()` requests. TrivialHTTP also provides one tightly restricted write surface so the browser can maintain the 16 Kane-Map sector files without depending on Windows drive letters, macOS volume paths, or browser folder permissions.
 
-TrivialHTTP is not a backend, not a hosted service, not a database, and not internet infrastructure.
+TrivialHTTP is not a hosted service, a database, a general backend, or internet infrastructure.
 
 ## Baseline rule
 
@@ -21,9 +21,7 @@ no registry writes
 no browser setting changes
 ```
 
-The Windows target is a shipped `.exe`.
-
-Linux and macOS may use scripts during early development, but the same small server core should remain usable there too.
+The Windows target is a shipped `.exe`. Linux and macOS may use native builds from the same C source.
 
 ## Pilot command
 
@@ -33,7 +31,7 @@ From the root of a Kane-Map USB app folder:
 trivialhttp --root . --open "/index.html?data=prepared&bundle=data/kane-county"
 ```
 
-Expected browser URL:
+The browser opens on a loopback URL:
 
 ```text
 http://127.0.0.1:<port>/index.html?data=prepared&bundle=data/kane-county
@@ -41,38 +39,40 @@ http://127.0.0.1:<port>/index.html?data=prepared&bundle=data/kane-county
 
 ## Core behavior
 
-TrivialHTTP should:
+TrivialHTTP:
 
-- bind only to `127.0.0.1`
-- serve only files under the selected root folder
-- serve `index.html` for `/`
-- accept only `GET` and `HEAD`
-- block parent traversal such as `../`
-- reject symlinks / reparse points where practical
-- write no files by default
-- open the default browser unless `--no-open` is used
+- binds only to `127.0.0.1`
+- serves only files under the selected root folder
+- serves `index.html` for `/`
+- accepts `GET` and `HEAD` for static files
+- blocks parent traversal and absolute-path attempts
+- rejects symlinks and reparse points where practical
+- opens the default browser unless `--no-open` is used
 
-## Current status
+Kane-Map sector persistence is the only write exception:
 
-This directory starts the TrivialHTTP project as source inside the Kane-Map repo. It is intentionally separate from:
+```text
+GET  /__kane_map/sector-state
+GET  /__kane_map/sector-state/N11-E06.json
+PUT  /__kane_map/sector-state/N11-E06.json
+```
 
-- `src/` browser UI code
-- `processing/` data-processing code
-- generated county data
+Only `N11` through `N14` and `E06` through `E09` are accepted. Files are written beneath the application root:
 
-The server source is in:
+```text
+project-data/sectors/
+```
+
+Writes use a temporary file followed by replacement of the destination file. Arbitrary filenames and arbitrary write paths are not exposed.
+
+## Source layout
 
 ```text
 trivialhttp/src/trivialhttp.c
+trivialhttp/src/platform.c
+trivialhttp/src/http.c
+trivialhttp/src/sector_storage.c
+trivialhttp/src/trivialhttp.h
 ```
 
-Build helpers are in:
-
-```text
-trivialhttp/scripts/
-```
-
-
-## Revision note
-
-This archive revision fixes the MinGW Windows build by moving standard C headers outside the platform-specific include branch and limiting MSVC-only pragma comments to MSVC builds.
+Build helpers are in `trivialhttp/scripts/`.
