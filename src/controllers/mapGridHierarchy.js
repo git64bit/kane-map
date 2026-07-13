@@ -8,54 +8,58 @@
   const geometry = global.KaneMapMapGeometrySupport;
 
   function detailGridCellsForDisplay(ctx) {
-    const parentCodes = new Set();
-    if (ctx.selected && ctx.selected.cell) parentCodes.add(ctx.selected.cell.code);
-    ctx.activeDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
-    ctx.mutedDetailCells.forEach((cell) => parentCodes.add(cell.parentCode));
-    ctx.activeFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
-    ctx.mutedFineCells.forEach((cell) => parentCodes.add(cell.parentCode));
-    if (ctx.selectedDetailCell) parentCodes.add(ctx.selectedDetailCell.parentCode);
-    if (ctx.selectedFineCell) parentCodes.add(ctx.selectedFineCell.parentCode);
+    const parentCode = selectedParentCode(ctx);
+    if (!parentCode) return [];
 
-    return Array.from(parentCodes)
-      .map((code) => ctx.cellForCode(code))
-      .filter(Boolean)
-      .flatMap((cell) => makeInspectionGrid(
-        cell,
-        ctx.detailGridRows || INSPECTION_GRID_ROWS,
-        ctx.detailGridCols || INSPECTION_GRID_COLS
-      ));
+    const parentCell = ctx.cellForCode(parentCode);
+    if (!parentCell) return [];
+
+    return makeInspectionGrid(
+      parentCell,
+      ctx.detailGridRows || INSPECTION_GRID_ROWS,
+      ctx.detailGridCols || INSPECTION_GRID_COLS
+    );
   }
 
   function fineGridCellsForDisplay(ctx) {
-    const detailCodes = new Set();
-    if (ctx.selectedDetailCell) detailCodes.add(ctx.selectedDetailCell.code);
-    if (ctx.selectedFineCell && ctx.selectedFineCell.detailParentCode) {
-      detailCodes.add(ctx.selectedFineCell.detailParentCode);
-    }
-    ctx.activeFineCells.forEach((cell) => {
-      if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
-    });
-    ctx.mutedFineCells.forEach((cell) => {
-      if (cell.detailParentCode) detailCodes.add(cell.detailParentCode);
-    });
+    const detailCell = selectedDetailForDisplay(ctx);
+    if (!detailCell) return [];
 
-    return Array.from(detailCodes)
-      .map((code) => detailCellByCode(ctx, code))
-      .filter(Boolean)
-      .flatMap((cell) => makeFineGrid(
-        cell,
-        ctx.fineGridRows || FINE_GRID_ROWS,
-        ctx.fineGridCols || FINE_GRID_COLS
-      ));
+    return makeFineGrid(
+      detailCell,
+      ctx.fineGridRows || FINE_GRID_ROWS,
+      ctx.fineGridCols || FINE_GRID_COLS
+    );
+  }
+
+  function selectedParentCode(ctx) {
+    if (ctx.selectedFineCell && ctx.selectedFineCell.parentCode) {
+      return ctx.selectedFineCell.parentCode;
+    }
+    if (ctx.selectedDetailCell && ctx.selectedDetailCell.parentCode) {
+      return ctx.selectedDetailCell.parentCode;
+    }
+    if (ctx.selected && ctx.selected.cell && ctx.selected.cell.code) {
+      return ctx.selected.cell.code;
+    }
+    return null;
+  }
+
+  function selectedDetailForDisplay(ctx) {
+    if (ctx.selectedFineCell && ctx.selectedFineCell.detailParentCode) {
+      return detailCellByCode(ctx, ctx.selectedFineCell.detailParentCode);
+    }
+    return ctx.selectedDetailCell || null;
   }
 
   function detailCellByCode(ctx, code) {
     if (!code || typeof code !== "string") return null;
     const parsed = parseDetailCellCode(code);
     if (!parsed) return null;
+
     const parentCell = ctx.cellForCode(parsed.parentCode);
     if (!parentCell) return null;
+
     return makeInspectionGrid(
       parentCell,
       ctx.detailGridRows || INSPECTION_GRID_ROWS,
@@ -100,6 +104,7 @@
     const cells = [];
     const width = (parentCell.maxX - parentCell.minX) / cols;
     const height = (parentCell.maxY - parentCell.minY) / rows;
+
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
         const minX = parentCell.minX + col * width;
@@ -122,6 +127,7 @@
         cells.push(createCell(row, col, bounds));
       }
     }
+
     return cells;
   }
 

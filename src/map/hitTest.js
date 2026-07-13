@@ -11,13 +11,24 @@
     const detailCell = fineCell
       ? findDetailCellByCode(state, fineCell.detailParentCode)
       : findDetailCell(state, worldPoint);
-    const building = config.practicalFeaturesVisible(state)
-      ? [...data.buildings].reverse().find((candidate) => (
-          global.KaneMapGrid.polygonContainsPoint(candidate.polygon, worldPoint)
-        )) || null
-      : null;
+    const building = visibleBuildingAtPoint(data, grid, state, worldPoint);
 
     return { worldPoint, cell, detailCell, fineCell, building };
+  }
+
+  function visibleBuildingAtPoint(data, grid, state, worldPoint) {
+    if (!config.practicalFeaturesVisible(state)) return null;
+
+    const support = global.KaneMapDrawLayerSupport;
+    const clipCells = support && typeof support.activeClipCells === "function"
+      ? support.activeClipCells(state, grid)
+      : [];
+    if (!clipCells.some((cell) => pointInCell(worldPoint, cell))) return null;
+
+    const buildings = Array.isArray(data && data.buildings) ? data.buildings : [];
+    return [...buildings].reverse().find((candidate) => (
+      global.KaneMapGrid.polygonContainsPoint(candidate.polygon, worldPoint)
+    )) || null;
   }
 
   function findDetailCell(state, worldPoint) {

@@ -3,7 +3,6 @@
 
   function toggleMainMute(ctx, cell) {
     if (!cell || !cell.code) return;
-
     if (mainCellMuted(ctx, cell.code)) {
       ctx.mutedCellCodes = ctx.mutedCellCodes.filter((code) => code !== cell.code);
       return;
@@ -11,13 +10,14 @@
 
     ctx.mutedCellCodes = uniqueStrings(ctx.mutedCellCodes.concat(cell.code));
     ctx.activeCellCodes = ctx.activeCellCodes.filter((code) => code !== cell.code);
-    ctx.activeDetailCells = ctx.activeDetailCells.filter((candidate) => candidate.parentCode !== cell.code);
-    ctx.activeFineCells = ctx.activeFineCells.filter((candidate) => candidate.parentCode !== cell.code);
+    ctx.activeDetailCells = ctx.activeDetailCells
+      .filter((candidate) => candidate.parentCode !== cell.code);
+    ctx.activeFineCells = ctx.activeFineCells
+      .filter((candidate) => candidate.parentCode !== cell.code);
   }
 
   function toggleDetailMute(ctx, cell) {
     if (!cell || !cell.code) return;
-
     if (cellListHasCode(ctx.mutedDetailCells, cell.code)) {
       ctx.mutedDetailCells = removeCellByCode(ctx.mutedDetailCells, cell.code);
       return;
@@ -25,12 +25,12 @@
 
     ctx.mutedDetailCells = addUniqueCell(ctx.mutedDetailCells, cell);
     ctx.activeDetailCells = removeCellByCode(ctx.activeDetailCells, cell.code);
-    ctx.activeFineCells = ctx.activeFineCells.filter((candidate) => candidate.detailParentCode !== cell.code);
+    ctx.activeFineCells = ctx.activeFineCells
+      .filter((candidate) => candidate.detailParentCode !== cell.code);
   }
 
   function toggleFineMute(ctx, cell) {
     if (!cell || !cell.code) return;
-
     if (cellListHasCode(ctx.mutedFineCells, cell.code)) {
       ctx.mutedFineCells = removeCellByCode(ctx.mutedFineCells, cell.code);
       return;
@@ -47,12 +47,14 @@
   }
 
   function removeCellByCode(cells, code) {
-    return (Array.isArray(cells) ? cells : []).filter((cell) => cell && cell.code !== code);
+    return (Array.isArray(cells) ? cells : [])
+      .filter((cell) => cell && cell.code !== code);
   }
 
   function uniqueStrings(values) {
     return Array.from(new Set(
-      (Array.isArray(values) ? values : []).filter((value) => typeof value === "string" && value)
+      (Array.isArray(values) ? values : [])
+        .filter((value) => typeof value === "string" && value)
     ));
   }
 
@@ -64,23 +66,18 @@
 
   function activeDataCellCodes(ctx) {
     const codes = new Set(effectiveMainCellCodes(ctx));
-
     effectiveDetailCells(ctx).forEach((cell) => {
       if (cell.parentCode) codes.add(cell.parentCode);
     });
-
     effectiveFineCells(ctx).forEach((cell) => {
       if (cell.parentCode) codes.add(cell.parentCode);
     });
-
     if (ctx.selectedDetailCell && !detailCellMuted(ctx, ctx.selectedDetailCell)) {
       codes.add(ctx.selectedDetailCell.parentCode);
     }
-
     if (ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell)) {
       codes.add(ctx.selectedFineCell.parentCode);
     }
-
     return Array.from(codes);
   }
 
@@ -91,13 +88,23 @@
   }
 
   function effectiveDetailCells(ctx) {
+    const mutedMain = new Set(Array.isArray(ctx.mutedCellCodes) ? ctx.mutedCellCodes : []);
+    const mutedDetail = codeSet(ctx.mutedDetailCells);
     return (Array.isArray(ctx.activeDetailCells) ? ctx.activeDetailCells : [])
-      .filter((cell) => !detailCellMuted(ctx, cell));
+      .filter((cell) => cell &&
+        !mutedMain.has(cell.parentCode) &&
+        !mutedDetail.has(cell.code));
   }
 
   function effectiveFineCells(ctx) {
+    const mutedMain = new Set(Array.isArray(ctx.mutedCellCodes) ? ctx.mutedCellCodes : []);
+    const mutedDetail = codeSet(ctx.mutedDetailCells);
+    const mutedFine = codeSet(ctx.mutedFineCells);
     return (Array.isArray(ctx.activeFineCells) ? ctx.activeFineCells : [])
-      .filter((cell) => !fineCellMuted(ctx, cell));
+      .filter((cell) => cell &&
+        !mutedMain.has(cell.parentCode) &&
+        !mutedDetail.has(cell.detailParentCode) &&
+        !mutedFine.has(cell.code));
   }
 
   function activeAreaClipCells(ctx, activeCells) {
@@ -105,7 +112,6 @@
     const selectedFine = ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell)
       ? ctx.selectedFineCell
       : null;
-
     if (fineCells.length) return fineCells;
     if (selectedFine) return [selectedFine];
     if (fineModeActive(ctx)) return [];
@@ -114,12 +120,13 @@
     const selectedDetail = ctx.selectedDetailCell && !detailCellMuted(ctx, ctx.selectedDetailCell)
       ? ctx.selectedDetailCell
       : null;
-
     if (detailCells.length) return detailCells;
     if (selectedDetail) return [selectedDetail];
     if (detailModeActive(ctx)) return [];
 
-    return activeCells.filter((cell) => !mainCellMuted(ctx, cell.code));
+    const mutedMain = new Set(Array.isArray(ctx.mutedCellCodes) ? ctx.mutedCellCodes : []);
+    return (Array.isArray(activeCells) ? activeCells : [])
+      .filter((cell) => cell && !mutedMain.has(cell.code));
   }
 
   function activeDetailClipCells(ctx) {
@@ -127,7 +134,6 @@
     const selectedFine = ctx.selectedFineCell && !fineCellMuted(ctx, ctx.selectedFineCell)
       ? ctx.selectedFineCell
       : null;
-
     if (fineCells.length) return fineCells;
     if (selectedFine) return [selectedFine];
     return [];
@@ -167,7 +173,9 @@
   function fineCellMuted(ctx, cell) {
     if (!cell) return false;
     if (mainCellMuted(ctx, cell.parentCode)) return true;
-    if (cell.detailParentCode && cellListHasCode(ctx.mutedDetailCells, cell.detailParentCode)) return true;
+    if (cell.detailParentCode && cellListHasCode(ctx.mutedDetailCells, cell.detailParentCode)) {
+      return true;
+    }
     return cellListHasCode(ctx.mutedFineCells, cell.code);
   }
 
@@ -176,6 +184,14 @@
       code &&
       Array.isArray(cells) &&
       cells.some((cell) => cell && cell.code === code)
+    );
+  }
+
+  function codeSet(cells) {
+    return new Set(
+      (Array.isArray(cells) ? cells : [])
+        .filter((cell) => cell && cell.code)
+        .map((cell) => cell.code)
     );
   }
 

@@ -7,13 +7,9 @@
       toggleMainMute,
       toggleDetailMute,
       toggleFineMute,
-      activeCellsForCodes,
-      activeDataCellCodes,
       effectiveMainCellCodes,
       effectiveDetailCells,
       effectiveFineCells,
-      activeAreaClipCells,
-      activeDetailClipCells,
       detailGridCellsForDisplay,
       fineGridCellsForDisplay,
       detailCellByCode,
@@ -22,32 +18,46 @@
     } = global.KaneMapMapSectorSupport;
     const { els, canvas, renderer } = ctx;
 
+    ctx.runtimeSectorCode = null;
+    ctx.runtimeSectorData = null;
+    ctx.runtimeDetailCode = null;
+    ctx.runtimeDetailData = ctx.baseMapData;
+
     ctx.bindCanvasEvents = function bindCanvasEvents() {
       let moved = false;
+
       canvas.addEventListener("pointerdown", (event) => {
         moved = false;
         canvas.setPointerCapture(event.pointerId);
         renderer.beginDrag(ctx.pointerPosition(event));
       });
+
       canvas.addEventListener("pointermove", (event) => {
         if (!renderer.state.dragging) return;
         moved = true;
         renderer.dragTo(ctx.pointerPosition(event));
-        ctx.updateActiveChunks();
-        ctx.updateViewAndChunkStatus();
       });
+
       canvas.addEventListener("pointerup", (event) => {
         renderer.endDrag();
-        if (!moved) ctx.selectAt(event);
+        if (!moved) {
+          ctx.selectAt(event);
+          return;
+        }
         ctx.updateActiveChunks();
         ctx.updateViewAndChunkStatus();
       });
+
       canvas.addEventListener("pointercancel", () => renderer.endDrag());
+
       canvas.addEventListener(
         "wheel",
         (event) => {
           event.preventDefault();
-          renderer.zoomBy(event.deltaY < 0 ? 1.22 : 0.82, ctx.selectedFocusPoint());
+          renderer.zoomBy(
+            event.deltaY < 0 ? 1.22 : 0.82,
+            ctx.selectedFocusPoint()
+          );
           ctx.updateActiveChunks();
           ctx.updateViewAndChunkStatus();
         },
@@ -123,101 +133,92 @@
         visibleBounds
       );
       ctx.visibleCellCodes = visibleCells.map((cell) => cell.code);
-      ctx.refreshMapData();
-      ctx.updateCoverageByCell(ctx.coverageModel.build());
-      ctx.updateFieldPlanUi();
     };
 
     ctx.refreshMapData = function refreshMapData() {
       ctx.detailGridCells = detailGridCellsForDisplay(ctx);
       ctx.fineGridCells = fineGridCellsForDisplay(ctx);
+
+      const sectorCode = currentSectorCode(ctx);
+      const detailCode = currentDetailCode(ctx);
+      const activeDetailCells = cellsForSector(effectiveDetailCells(ctx), sectorCode);
+      const mutedDetailCells = cellsForSector(ctx.mutedDetailCells, sectorCode);
+      const activeFineCells = cellsForDetail(
+        cellsForSector(effectiveFineCells(ctx), sectorCode),
+        detailCode
+      );
+      const mutedFineCells = cellsForDetail(
+        cellsForSector(ctx.mutedFineCells, sectorCode),
+        detailCode
+      );
+
       renderer.setMapLayerState(ctx.layerVisibility, effectiveMainCellCodes(ctx), {
         mutedCellCodes: ctx.mutedCellCodes,
-        activeDetailCells: effectiveDetailCells(ctx),
-        mutedDetailCells: ctx.mutedDetailCells,
+        activeDetailCells,
+        mutedDetailCells,
         selectedDetailCell: ctx.selectedDetailCell,
         detailGridCells: ctx.detailGridCells,
-        activeFineCells: effectiveFineCells(ctx),
-        mutedFineCells: ctx.mutedFineCells,
+        activeFineCells,
+        mutedFineCells,
         selectedFineCell: ctx.selectedFineCell,
         fineGridCells: ctx.fineGridCells
       });
-      renderer.setData(ctx.buildMapData());
       ctx.updateLayerControlStatus();
     };
 
     ctx.buildMapData = function buildMapData() {
-      const dataCellCodes = activeDataCellCodes(ctx);
-      if (!dataCellCodes.length) return ctx.baseMapData;
-      const activeCells = activeCellsForCodes(ctx.grid, dataCellCodes);
-      if (!activeCells.length) return ctx.baseMapData;
-      const areaClipCells = activeAreaClipCells(ctx, activeCells);
-      const detailClipCells = activeDetailClipCells(ctx);
-      const detailData = ctx.featureStore.buildDataForCells(dataCellCodes);
-      return {
-        meta: detailData.meta,
-        countyBoundary: ctx.baseMapData.countyBoundary,
-        roads: ctx.layerVisibility.roads
-          ? filterFeaturesByActiveCells(detailData.roads, areaClipCells, "path")
-          : [],
-        water: ctx.layerVisibility.water
-          ? filterFeaturesByActiveCells(detailData.water, areaClipCells, "polygon")
-          : [],
-        forests: ctx.layerVisibility.forests
-          ? filterFeaturesByActiveCells(detailData.forests, areaClipCells, "polygon")
-          : [],
-        buildings: ctx.layerVisibility.buildings
-          ? filterFeaturesByActiveCells(detailData.buildings, detailClipCells, "polygon")
-          : [],
-        addressPoints: ctx.layerVisibility.addressPoints
-          ? filterFeaturesByActiveCells(detailData.addressPoints, detailClipCells, "point")
-          : []
-      };
+      return ctx.runtimeDetailData || ctx.baseMapData;
     };
 
     ctx.activeChunkStatus = function activeChunkStatus() {
-      const dataCellCodes = activeDataCellCodes(ctx);
-      if (!dataCellCodes.length) {
+      const sectorCode = ctx.runtimeSectorCode || currentSectorCode(ctx);
+      if (!sectorCode) {
         return { selected: 0, total: ctx.totalChunkCount || 0, ids: [] };
       }
-      return ctx.featureStore.statusForCells(dataCellCodes);
+      return ctx.featureStore.statusForCells([sectorCode]);
     };
 
     ctx.activateCell = function activateCell(cellCode) {
       if (!cellCode) return;
-      if (!ctx.activeCellCodes.includes(cellCode)) {
-        ctx.activeCellCodes = ctx.activeCellCodes.concat(cellCode);
-      }
+      ensureMainActive(ctx, cellCode);
+      releaseRuntimeSectorIfChanged(ctx, cellCode, renderer);
       ctx.refreshMapData();
       ctx.updateViewAndChunkStatus();
     };
 
     ctx.selectDetailCell = function selectDetailCell(detailCell) {
       if (!detailCell || !detailCell.parentCode) return;
-      ctx.activateCell(detailCell.parentCode);
+      ensureMainActive(ctx, detailCell.parentCode);
       ctx.selectedDetailCell = detailCell;
       ctx.selectedFineCell = null;
       ctx.refreshMapData();
+      loadRuntimeDetail(ctx, detailCell, renderer, filterFeaturesByActiveCells);
       ctx.updateViewAndChunkStatus();
     };
 
     ctx.activateDetailCell = function activateDetailCell(detailCell) {
       if (!detailCell || !detailCell.parentCode) return;
-      ctx.activateCell(detailCell.parentCode);
+      ensureMainActive(ctx, detailCell.parentCode);
       if (!ctx.activeDetailCells.some((cell) => cell.code === detailCell.code)) {
         ctx.activeDetailCells = ctx.activeDetailCells.concat(detailCell);
       }
       ctx.selectedDetailCell = detailCell;
       ctx.selectedFineCell = null;
       ctx.refreshMapData();
+      loadRuntimeDetail(ctx, detailCell, renderer, filterFeaturesByActiveCells);
       ctx.updateViewAndChunkStatus();
     };
 
     ctx.activateFineCell = function activateFineCell(fineCell) {
       if (!fineCell || !fineCell.parentCode || !fineCell.detailParentCode) return;
-      ctx.activateCell(fineCell.parentCode);
+      ensureMainActive(ctx, fineCell.parentCode);
+
       const detailCell = detailCellByCode(ctx, fineCell.detailParentCode);
       if (detailCell) ctx.selectedDetailCell = detailCell;
+      if (detailCell && ctx.runtimeDetailCode !== detailCell.code) {
+        loadRuntimeDetail(ctx, detailCell, renderer, filterFeaturesByActiveCells);
+      }
+
       if (!ctx.activeFineCells.some((cell) => cell.code === fineCell.code)) {
         ctx.activeFineCells = ctx.activeFineCells.concat(fineCell);
       }
@@ -240,6 +241,7 @@
         ctx.selectedDetailCell = null;
         ctx.selectedFineCell = null;
         toggleMainMute(ctx, hit.cell);
+        releaseRuntimeSectorIfChanged(ctx, hit.cell.code, renderer);
       }
       ctx.refreshMapData();
       ctx.updateViewAndChunkStatus();
@@ -296,11 +298,93 @@
         ctx.selectedFineCell
       );
       if (hit.fineCell || hit.detailCell || hit.cell) ctx.fitSelectedSector();
+      ctx.updateActiveChunks();
       ctx.updateSelectedPanel();
       ctx.updateRecordPanel();
     };
 
     global.KaneMapMapNavigationSupport.installMapNavigationSupport(ctx);
+  }
+
+  function ensureMainActive(ctx, cellCode) {
+    if (!ctx.activeCellCodes.includes(cellCode)) {
+      ctx.activeCellCodes = ctx.activeCellCodes.concat(cellCode);
+    }
+  }
+
+  function currentSectorCode(ctx) {
+    const code = ctx.selected && ctx.selected.cell && ctx.selected.cell.code;
+    return code && ctx.allCellCodes.includes(code) ? code : null;
+  }
+
+  function currentDetailCode(ctx) {
+    if (ctx.selectedFineCell && ctx.selectedFineCell.detailParentCode) {
+      return ctx.selectedFineCell.detailParentCode;
+    }
+    return ctx.selectedDetailCell ? ctx.selectedDetailCell.code : null;
+  }
+
+  function cellsForSector(cells, sectorCode) {
+    if (!sectorCode) return [];
+    return (Array.isArray(cells) ? cells : [])
+      .filter((cell) => cell && cell.parentCode === sectorCode);
+  }
+
+  function cellsForDetail(cells, detailCode) {
+    if (!detailCode) return [];
+    return (Array.isArray(cells) ? cells : [])
+      .filter((cell) => cell && cell.detailParentCode === detailCode);
+  }
+
+  function releaseRuntimeSectorIfChanged(ctx, sectorCode, renderer) {
+    if (!ctx.runtimeSectorCode || ctx.runtimeSectorCode === sectorCode) return;
+    ctx.runtimeSectorCode = null;
+    ctx.runtimeSectorData = null;
+    ctx.runtimeDetailCode = null;
+    ctx.runtimeDetailData = ctx.baseMapData;
+    renderer.setData(ctx.baseMapData);
+  }
+
+  function loadRuntimeDetail(ctx, detailCell, renderer, filterFeatures) {
+    if (!detailCell || !detailCell.parentCode) return;
+    if (ctx.runtimeDetailCode === detailCell.code && ctx.runtimeDetailData) return;
+
+    const sectorData = ensureRuntimeSector(ctx, detailCell.parentCode);
+    const clipCells = [detailCell];
+    const detailData = {
+      meta: sectorData.meta,
+      countyBoundary: ctx.baseMapData.countyBoundary,
+      roads: filterFeatures(sectorData.roads, clipCells, "path"),
+      water: filterFeatures(sectorData.water, clipCells, "polygon"),
+      forests: filterFeatures(sectorData.forests, clipCells, "polygon"),
+      buildings: filterFeatures(sectorData.buildings, clipCells, "polygon"),
+      addressPoints: filterFeatures(sectorData.addressPoints, clipCells, "point")
+    };
+
+    ctx.runtimeDetailCode = detailCell.code;
+    ctx.runtimeDetailData = detailData;
+    renderer.setData(detailData);
+  }
+
+  function ensureRuntimeSector(ctx, sectorCode) {
+    if (ctx.runtimeSectorCode === sectorCode && ctx.runtimeSectorData) {
+      return ctx.runtimeSectorData;
+    }
+
+    const source = ctx.featureStore.buildDataForCells([sectorCode]);
+    ctx.runtimeSectorCode = sectorCode;
+    ctx.runtimeSectorData = {
+      meta: source.meta,
+      countyBoundary: ctx.baseMapData.countyBoundary,
+      roads: Array.isArray(source.roads) ? source.roads : [],
+      water: Array.isArray(source.water) ? source.water : [],
+      forests: Array.isArray(source.forests) ? source.forests : [],
+      buildings: Array.isArray(source.buildings) ? source.buildings : [],
+      addressPoints: Array.isArray(source.addressPoints) ? source.addressPoints : []
+    };
+    ctx.runtimeDetailCode = null;
+    ctx.runtimeDetailData = ctx.baseMapData;
+    return ctx.runtimeSectorData;
   }
 
   global.KaneMapMapController = { installMapController };
