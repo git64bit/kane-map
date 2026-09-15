@@ -1,0 +1,111 @@
+name: TrivialHTTP macOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'trivialhttp/**'
+      - '.github/workflows/trivialhttp-macos.yml'
+  pull_request:
+    paths:
+      - 'trivialhttp/**'
+      - '.github/workflows/trivialhttp-macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            artifact: trivialhttp-macos-arm64
+          - arch: x86_64
+            runner: macos-15-intel
+            artifact: trivialhttp-macos-x86_64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Record native environment
+        run: |
+          sw_vers
+          uname -a
+          uname -m
+          cc --version
+
+      - name: Build TrivialHTTP
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/trivialhttp-build"
+          export TRIVIALHTTP_BUILD_DIR="$out"
+          bash trivialhttp/scripts/build-macos.sh
+          file "$out/trivialhttp"
+          "$out/trivialhttp" --help
+
+      - name: Exercise loopback HTTP
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/trivialhttp-build"
+          root="$RUNNER_TEMP/trivialhttp-root"
+          mkdir -p "$root"
+          printf 'CIVICVS TrivialHTTP macOS smoke test\n' > "$root/index.html"
+
+          "$out/trivialhttp" \
+            --root "$root" \
+            --port 18765 \
+            --no-open \
+            --once \
+            > "$RUNNER_TEMP/trivialhttp-server.log" 2>&1 &
+          pid=$!
+
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:18765/ \
+              -o "$RUNNER_TEMP/actual.html"; then
+              ok=1
+              break
+            fi
+            sleep 0.2
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            cat "$RUNNER_TEMP/trivialhttp-server.log"
+            kill "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          wait "$pid"
+          cmp "$root/index.html" "$RUNNER_TEMP/actual.html"
+          cat "$RUNNER_TEMP/trivialhttp-server.log"
+
+      - name: Prepare evidence artifact
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/trivialhttp-build"
+          dist="$RUNNER_TEMP/dist"
+          mkdir -p "$dist"
+          cp "$out/trivialhttp" "$dist/trivialhttp"
+          chmod 0755 "$dist/trivialhttp"
+          (cd "$dist" && shasum -a 256 trivialhttp > SHA256SUMS)
+          file "$dist/trivialhttp" > "$dist/FILE.txt"
+          sw_vers > "$dist/MACOS.txt"
+          uname -m > "$dist/ARCH.txt"
+          cc --version > "$dist/COMPILER.txt" 2>&1
+
+      - name: Upload native macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/dist/
+          if-no-files-found: error
+          retention-days: 30
