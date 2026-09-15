@@ -8,11 +8,32 @@ TrivialHTTP is intentionally a small native C program. The source is shared acro
 | --- | --- | --- | --- |
 | Linux x86-64 | Linux x86-64 with GCC | `trivialhttp` | supported |
 | Windows x86-64 | Linux x86-64 with MinGW-w64 | `trivialhttp.exe` | supported |
-| macOS | native macOS command-line tools | `trivialhttp` | supported source/build target |
+| macOS arm64 | native Apple Silicon macOS | `trivialhttp` | supported |
+| macOS x86-64 | native Intel macOS | `trivialhttp` | supported |
 
-The CIVICVS Project Environment (CPE) build workstation is authoritative for the Linux x86-64 and Windows x86-64 builds. macOS must be built and tested in a native macOS environment; the CPE Linux workstation does not carry or emulate an Apple SDK.
+The CIVICVS Project Environment (CPE) build workstation is authoritative for the Linux x86-64 and Windows x86-64 builds. macOS is built and tested on native GitHub-hosted macOS runners; the CPE Linux workstation does not carry or emulate an Apple SDK.
 
 Signing and notarization are release/distribution concerns and are separate from source portability and compilation support.
+
+## Native macOS acceptance
+
+The repository workflow `.github/workflows/trivialhttp-macos.yml` runs the same tracked `trivialhttp/scripts/build-macos.sh` on both native macOS architectures:
+
+```text
+macos-15       -> Apple Silicon / arm64
+macos-15-intel -> Intel / x86-64
+```
+
+Each job:
+
+1. records the macOS, architecture, and compiler identity;
+2. builds TrivialHTTP with the repository-owned macOS build script;
+3. executes `trivialhttp --help` natively;
+4. serves a test `index.html` on `127.0.0.1` and verifies the returned bytes;
+5. records the binary type and SHA-256;
+6. uploads the native binary and build evidence as a workflow artifact.
+
+The workflow runs for relevant changes on `main`, relevant pull requests, and manual dispatch.
 
 ## Build scripts
 
