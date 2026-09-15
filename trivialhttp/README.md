@@ -21,7 +21,15 @@ no registry writes
 no browser setting changes
 ```
 
-The Windows target is a shipped `.exe`. Linux and macOS may use native builds from the same C source.
+The Windows target is a shipped `.exe`. Linux and macOS use native builds from the same C source.
+
+Supported build targets are:
+
+- Linux x86-64;
+- Windows x86-64 through MinGW-w64 cross-compilation on Linux;
+- macOS through a native macOS build environment.
+
+The CIVICVS Project Environment build workstation is authoritative for Linux and Windows builds. macOS is not cross-built by transplanting an Apple SDK onto the CPE Linux workstation. See `BUILDING.md`.
 
 ## Pilot command
 
