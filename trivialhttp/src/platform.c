@@ -150,7 +150,7 @@ th_socket_t th_create_listener(unsigned short requested, unsigned short *actual)
   struct sockaddr_in address;
   memset(&address, 0, sizeof(address));
   address.sin_family = AF_INET;
-  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  address.sin_addr.s_addr = htonl(0x7f000001UL); /* 127.0.0.1 */
   address.sin_port = htons(requested);
   if (bind(listener, (struct sockaddr *)&address, sizeof(address)) || listen(listener, 16)) {
     TH_CLOSE(listener);
